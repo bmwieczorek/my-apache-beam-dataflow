@@ -44,6 +44,7 @@ mvn clean compile -DskipTests -Pdataflow-runner exec:java \
 -Dexec.args="--project=${PROJECT} ${JAVA_DATAFLOW_RUN_OPTS} \
   --runner=DataflowRunner \
   --stagingLocation=gs://${BUCKET}/staging \
+  --jobName=${JOB_NAME}-write-$USER \
   --topic=projects/${PROJECT}/topics/$USER-${JOB_NAME}"
 
 */
@@ -89,6 +90,7 @@ mvn clean compile -DskipTests exec:java \
   --runner=DataflowRunner \
   --stagingLocation=gs://${BUCKET}/staging \
   --topic=projects/${PROJECT}/topics/$USER-${JOB_NAME} \
+  --jobName=${JOB_NAME}-read-$USER \
   --subscription=projects/${PROJECT}/subscriptions/$USER-${JOB_NAME}-sub"
 
 */
