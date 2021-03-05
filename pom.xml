@@ -53,6 +53,14 @@
             <version>${slf4j.version}</version>
             <scope>runtime</scope>
         </dependency>
+
+        <!-- required for org.apache.beam.sdk.io.gcp.pubsub.public class PubsubIO -->
+        <dependency>
+            <groupId>org.apache.beam</groupId>
+            <artifactId>beam-sdks-java-io-google-cloud-platform</artifactId>
+            <version>${beam.version}</version>
+        </dependency>
+
     </dependencies>
 
     <profiles>

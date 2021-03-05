@@ -12,6 +12,7 @@ import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Distribution;
 import org.apache.beam.sdk.metrics.Gauge;
 import org.apache.beam.sdk.metrics.Metrics;
+import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.Validation;
 import org.apache.beam.sdk.options.ValueProvider;
@@ -29,7 +30,7 @@ import java.util.Objects;
 public class MyAvroReadWriteDataflowJob {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyAvroReadWriteDataflowJob.class);
 
-    public interface PipelineOptions extends org.apache.beam.sdk.options.PipelineOptions {
+    public interface MyPipelineOptions extends PipelineOptions {
         @Validation.Required
         ValueProvider<String> getInput();
         void setInput(ValueProvider<String> value);
@@ -100,7 +101,7 @@ gcloud dataflow jobs run ${JOB_NAME} \
  */
 
     public static void main(String[] args) {
-        PipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(PipelineOptions.class);
+        MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
         Pipeline pipeline = Pipeline.create(options);
 
 /*        pipeline.apply(Create.of(new Person("Bob", 12), new Person("Alice", 19), new Person("Mike", null)))
