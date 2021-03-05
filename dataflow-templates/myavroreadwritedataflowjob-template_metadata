@@ -1,0 +1,22 @@
+{
+  "description": "Template for MyAvroReadWriteDataflowJob",
+  "name": "myavroreadwritedataflowjob-template",
+  "parameters": [
+    {
+      "regexes": [
+        "^gs:\\/\\/[^\\n\\r]+$"
+      ],
+      "name": "input",
+      "helpText": "Input to read avro file",
+      "label": "Input path to read avro file, e.g. gs://.../input/persons.avro"
+    },
+    {
+      "regexes": [
+        "^gs:\\/\\/[^\\n\\r]+$"
+      ],
+      "name": "output",
+      "helpText": "Output to write to avro file",
+      "label": "output path to write avro file, e.g. gs://.../output/persons.avro"
+    }
+  ]
+}

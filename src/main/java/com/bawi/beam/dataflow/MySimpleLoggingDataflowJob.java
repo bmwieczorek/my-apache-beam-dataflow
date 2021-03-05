@@ -23,7 +23,7 @@ mvn clean package -DskipTests exec:java \
 -Dexec.mainClass=com.bawi.beam.dataflow.MySimpleLoggingDataflowJob \
 -Dexec.args=" \
   --runner=DataflowRunner \
-  --project=${PROJECT} ${ENV_OPTS} \
+  --project=${PROJECT} ${JAVA_DATAFLOW_RUN_OPTS} \
   --stagingLocation=gs://${BUCKET}/staging"
 
 */
