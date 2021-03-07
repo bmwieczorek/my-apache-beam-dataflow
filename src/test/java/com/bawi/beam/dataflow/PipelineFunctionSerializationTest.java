@@ -23,19 +23,29 @@ public class PipelineFunctionSerializationTest {
 
     static A staticNonSerializable = new A();
 
+    @SuppressWarnings("deprecation")
     @Rule
     public final ExpectedException expectedException = ExpectedException.none();
 
     @Test
     public void shouldPassAsStaticFieldsAreNotSerialized() {
         Pipeline pipeline = Pipeline.create();
-
-        PCollection<String> result = pipeline.apply(Create.of("a", "c"))
+        PCollection<String> result = pipeline.apply(Create.of("a", "b"))
                 .apply(MapElements.into(TypeDescriptors.strings()).via(s -> {
                     System.out.println(staticNonSerializable);
                     return s;
                 }));
-        PAssert.that(result).containsInAnyOrder("a", "c");
+        PAssert.that(result).containsInAnyOrder("a", "b");
+        pipeline.run().waitUntilFinish();
+    }
+
+    @Test
+    public void shouldPassWhenSetupMethodInternallyCalled() {
+        Pipeline pipeline = Pipeline.create();
+        PCollection<String> result = pipeline.apply(Create.of("a", "b"))
+                .apply(ParDo.of(new MyDoFn()));
+        PAssert.that(result).containsInAnyOrder("a:com.bawi.beam.dataflow.PipelineFunctionSerializationTest$A",
+                                                "b:com.bawi.beam.dataflow.PipelineFunctionSerializationTest$A");
         pipeline.run().waitUntilFinish();
     }
 
@@ -46,8 +56,7 @@ public class PipelineFunctionSerializationTest {
 
         A nonStaticNonSerializable = new A();
         Pipeline pipeline = Pipeline.create();
-
-        pipeline.apply(Create.of("nonStaticNonSerializable", "c"))
+        pipeline.apply(Create.of("a", "b"))
                 .apply(MapElements.into(TypeDescriptors.strings()).via(s -> {
                     System.out.println(nonStaticNonSerializable);
                     return s;
@@ -56,22 +65,12 @@ public class PipelineFunctionSerializationTest {
     }
 
     @Test
-    public void shouldPassWhenSetupMethodInternallyCalled() {
-        Pipeline pipeline = Pipeline.create();
-        PCollection<String> result = pipeline.apply(Create.of("a", "c"))
-                .apply(ParDo.of(new MyDoFn()));
-        PAssert.that(result).containsInAnyOrder("a:A", "c:A");
-        pipeline.run().waitUntilFinish();
-    }
-
-
-    @Test
     public void throwNotSerializableWhenNonStaticNonSerializableInstancePassedToDoFn() {
         Throwable cause = Assert.assertThrows(IllegalArgumentException.class, () -> {
 
             A nonStaticNonSerializable = new A();
             Pipeline pipeline = Pipeline.create();
-            pipeline.apply(Create.of("a", "c"))
+            pipeline.apply(Create.of("a", "b"))
                     .apply(ParDo.of(new MyDoFn(nonStaticNonSerializable)));
             pipeline.run().waitUntilFinish();
 
@@ -93,7 +92,7 @@ public class PipelineFunctionSerializationTest {
 
         @ProcessElement
         public void process(@Element String element, OutputReceiver<String> outputReceiver) {
-            outputReceiver.output(element + ":" + a.getClass().getSimpleName());
+            outputReceiver.output(element + ":" + a.getClass().getName());
         }
     }
 }
