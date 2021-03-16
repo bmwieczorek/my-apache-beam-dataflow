@@ -11,9 +11,13 @@ import org.apache.avro.reflect.ReflectData;
 import org.apache.avro.util.Utf8;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.coders.AvroGenericCoder;
+import org.apache.beam.sdk.coders.DefaultCoder;
+import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
+import org.apache.beam.sdk.io.gcp.bigquery.SchemaAndRecord;
 import org.apache.beam.sdk.options.*;
 import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.values.TypeDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +28,6 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Objects;
 
-import static com.bawi.beam.dataflow.MyBQReadWriteJob.MySubscription.SCHEMA;
 
 public class MyBQReadWriteJob {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyBQReadWriteJob.class);
@@ -48,21 +51,26 @@ public class MyBQReadWriteJob {
 
         // requires org.apache.beam:beam-sdks-java-io-google-cloud-platform
         String table = pipelineOptions.getTable();
-        pipeline.apply(BigQueryIO.read(schemaAndRecord -> {
+
+        //noinspection Convert2Lambda // to infer type from anonymous class runtime types (not to use .setCoder)
+        pipeline.apply(BigQueryIO.read(new SerializableFunction<SchemaAndRecord, MySubscription>() { //
+                            @Override
+                            public MySubscription apply(SchemaAndRecord schemaAndRecord) {
                                 GenericRecord genericRecord = schemaAndRecord.getRecord();
                                 // avro schema from BQ converts timestamp to micro seconds
                                 MySubscription mySubscription = MySubscription.fromGenericRecord(genericRecord);
                                 LOGGER.info("Read {}, with schema {}", mySubscription, schemaAndRecord.getTableSchema());
                                 return mySubscription;
                             }
-                        )
+                        })
+                        //.from(pipelineOptions.getTableName()))  // all data
                         .fromQuery(ValueProvider.NestedValueProvider.of(pipelineOptions.getExpirationDate(), expirationDate -> getQuery(table, expirationDate)))
                         // non default settings below:
                         .useAvroLogicalTypes() // convert BQ TIMESTAMP to avro long millis/micros and BQ DATE to avro int
                         .withoutValidation() // skip validation if using value provider for query
                         .usingStandardSql() // required for TIMESTAMP function - needs to be below .fromQuery
                         .withTemplateCompatibility() // required to re-run jobs from templates
-                        //.from(pipelineOptions.getTableName()))  // all data
+                        //.withCoder(SerializableCoder.of(MySubscription.class)) // or annotate class with @DefaultCoder(SerializableCoder.class) while using anonymous class SerializableFunction (instead of lambda) to infer the type
                     )
 
                 .apply("To GenericRecords", MapElements.into(TypeDescriptor.of(GenericRecord.class)).via(MySubscription::toGenericRecord))
@@ -75,7 +83,7 @@ public class MyBQReadWriteJob {
                             LOGGER.info("element {}, schema {}", element, r.getSchema());
                             return element;
                         })
-                        .withAvroSchemaFactory(qTableSchema -> SCHEMA)
+                        .withAvroSchemaFactory(qTableSchema -> MySubscription.SCHEMA)
                         .to(table)
                         .useAvroLogicalTypes()
                         .withSchema(new TableSchema().setFields(
@@ -101,8 +109,8 @@ public class MyBQReadWriteJob {
         return value instanceof Utf8 ? value.toString() : (String) value;
     }
 
-    //@DefaultSchema(JavaFieldSchema.class)
-    //@DefaultCoder(AvroCoder.class)
+//    @DefaultSchema(JavaFieldSchema.class)
+    @DefaultCoder(SerializableCoder.class) // or @DefaultCoder(AvroCoder.class), it requires anonymous SerializableFunction (not lambda) or use .withCoder(SerializableCoder.of(MySubscription.class))
     public static class MySubscription implements Serializable {
             // avro schema from BQ converts timestamp to micro seconds
             private static final Schema TIMESTAMP_MICROS_LOGICAL_TYPE = LogicalTypes.timestampMicros().addToSchema(Schema.create(Schema.Type.LONG));
@@ -178,7 +186,6 @@ public class MyBQReadWriteJob {
             return value instanceof Utf8 ? value.toString() : (String) value;
         }
     }
-    
 }
 
 /*
