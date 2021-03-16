@@ -1,5 +1,6 @@
-package com.bawi.beam.dataflow;
+package com.bawi.serialization;
 
+import org.junit.Assert;
 import org.junit.Test;
 import org.xerial.snappy.SnappyOutputStream;
 
@@ -14,7 +15,15 @@ interface MySerFuncIface<T> extends Serializable {
 }
 
 class MyNonSerializable {}
-class MySerializable implements Serializable { }
+class MySerializable implements Serializable {
+    MyNonSerializable myNonSerializable;
+    public void init() { // executed after deserialization
+        myNonSerializable = new MyNonSerializable();
+    }
+    public String apply(String input) {
+        return input + ":" + myNonSerializable;
+    }
+}
 
 public class SerializationTest {
     // static nested classes behave same as standalone classes
@@ -24,6 +33,7 @@ public class SerializationTest {
     MyNonSerializable fieldMyNonSerializable = new MyNonSerializable();
     MySerializable fieldMySerializable = new MySerializable();
 
+    // static fields are not serialized (only instance fields)
     static MyNonSerializable staticMyNonSerializable = new MyNonSerializable();
     static MySerializable staticMySerializable = new MySerializable();
 
@@ -36,17 +46,33 @@ public class SerializationTest {
     MyInnerSerializable fieldMyInnerSerializable = new MyInnerSerializable();
 
     @Test
-    public void testSerialization() throws IOException {
+    public void testSerialization() throws IOException, ClassNotFoundException {
         assertTrue(serializeWithNotSerExMsg(new MyNonSerializable()).endsWith("MyNonSerializable"));
         assertTrue(serializeWithNotSerExMsg(new MyStaticNestedNonSerializable()).endsWith("SerializationTest$MyStaticNestedNonSerializable"));
         assertTrue(serializeWithNotSerExMsg(new MyInnerNonSerializable()).endsWith("SerializationTest$MyInnerNonSerializable"));
+
+
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        MySerializable obj = new MySerializable();
+        //obj.myNonSerializable = new MyNonSerializable(); // causes NotSerializableException
+        try (ObjectOutputStream oos = new ObjectOutputStream(buffer)) {
+            oos.writeObject(obj);
+        }
+        byte[] bytes = buffer.toByteArray();
+        try (ObjectInputStream objectInputStream = new ObjectInputStream(new ByteArrayInputStream(bytes))) {
+            Object o = objectInputStream.readObject();
+            MySerializable mySer = (MySerializable) o;
+            mySer.init(); // after deserialization assign myNonSerializable field with new instance of MyNonSerializable
+            String result = mySer.apply("a");
+            Assert.assertTrue(result.contains("MyNonSerializable"));
+        }
 
                                   serialize(new MySerializable());
                                   serialize(new MyStaticNestedSerializable());
         assertTrue(serializeWithNotSerExMsg(new MyInnerSerializable()).endsWith("SerializationTest"));
 
 
-        assertTrue(serializeWithNotSerExMsg(((Function<String, String>) s -> s)).contains("SerializationTest$$Lambda$1"));
+        assertTrue(serializeWithNotSerExMsg(((Function<String, String>) s -> s)).contains("SerializationTest$$Lambda$"));
 
         // in lambda - MyNonSerializable class
                                   serialize(s -> { print(staticMyNonSerializable); return s; });
