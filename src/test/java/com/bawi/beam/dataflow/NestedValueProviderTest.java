@@ -20,11 +20,9 @@ public class NestedValueProviderTest {
     @Test
     public void shouldUseValueProvider() {
         Pipeline pipeline = Pipeline.create();
-
-        int limit = 5;
-        ValueProvider.NestedValueProvider<List<Integer>, Integer> nestedValueProvider = ValueProvider.NestedValueProvider.of(
-                ValueProvider.StaticValueProvider.of(limit),
-                l -> IntStream.rangeClosed(1, l).boxed().collect(Collectors.toList()));
+        ValueProvider.NestedValueProvider<List<Integer>, int[]> nestedValueProvider = ValueProvider.NestedValueProvider.of(
+                ValueProvider.StaticValueProvider.of(new int[]{1, 5}),
+                startStop -> IntStream.rangeClosed(startStop[0], startStop[1]).boxed().collect(Collectors.toList()));
 
         ListCoder<Integer> integerListCoder = ListCoder.of(SerializableCoder.of(Integer.class));
 
