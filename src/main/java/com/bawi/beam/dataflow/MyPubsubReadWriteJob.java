@@ -30,22 +30,23 @@ public class MyPubsubReadWriteJob {
 /*
 
 PROJECT=$(gcloud config get-value project)
-JOB_NAME=mypubsubreadwritejob
-BUCKET=${PROJECT}-$USER-${JOB_NAME}
+USER=bartek
+JOB=mypubsubreadwritejob
+BUCKET=${PROJECT}-$USER-${JOB}
 gsutil mb gs://${BUCKET}
-gcloud pubsub subscriptions delete $USER-${JOB_NAME}-sub
-gcloud pubsub topics delete $USER-${JOB_NAME}
-gcloud pubsub topics create $USER-${JOB_NAME}
-gcloud pubsub subscriptions create $USER-${JOB_NAME}-sub --topic=$USER-${JOB_NAME}
+gcloud pubsub subscriptions delete $USER-${JOB}-sub
+gcloud pubsub topics delete $USER-${JOB}
+gcloud pubsub topics create $USER-${JOB}
+gcloud pubsub subscriptions create $USER-${JOB}-sub --topic=$USER-${JOB}
 
 
 mvn clean compile -DskipTests -Pdataflow-runner exec:java \
 -Dexec.mainClass=com.bawi.beam.dataflow.MyPubsubReadWriteJob\$Write \
--Dexec.args="--project=${PROJECT} ${JAVA_DATAFLOW_RUN_OPTS} \
+-Dexec.args="${JAVA_DATAFLOW_RUN_OPTS} \
   --runner=DataflowRunner \
   --stagingLocation=gs://${BUCKET}/staging \
-  --jobName=${JOB_NAME}-write-$USER \
-  --topic=projects/${PROJECT}/topics/$USER-${JOB_NAME}"
+  --jobName=${JOB}-write-$USER \
+  --topic=projects/${PROJECT}/topics/$USER-${JOB}"
 
 */
 
@@ -54,7 +55,7 @@ mvn clean compile -DskipTests -Pdataflow-runner exec:java \
             MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
             Pipeline writingPipeline = Pipeline.create(options);
 
-            List<String> strings = IntStream.range(1, 10000).mapToObj(i -> "a" + i).collect(Collectors.toList());
+            List<String> strings = IntStream.rangeClosed(1, 50000).mapToObj(i -> "a" + i).collect(Collectors.toList());
             writingPipeline.apply(Create.of(strings))
                     .apply(ParDo.of(new CreatePubsubMessageFn()))
 
@@ -79,19 +80,20 @@ mvn clean compile -DskipTests -Pdataflow-runner exec:java \
 /*
 
 PROJECT=$(gcloud config get-value project)
-JOB_NAME=mypubsubreadwritejob
-BUCKET=${PROJECT}-$USER-${JOB_NAME}
+USER=bartek
+JOB=mypubsubreadwritejob
+BUCKET=${PROJECT}-$USER-${JOB}
 gsutil mb gs://${BUCKET}
 
 mvn clean compile -DskipTests exec:java \
 -Pdataflow-runner \
 -Dexec.mainClass=com.bawi.beam.dataflow.MyPubsubReadWriteJob\$Read \
--Dexec.args="--project=${PROJECT} ${JAVA_DATAFLOW_RUN_OPTS} \
+-Dexec.args="${JAVA_DATAFLOW_RUN_OPTS} \
   --runner=DataflowRunner \
   --stagingLocation=gs://${BUCKET}/staging \
-  --topic=projects/${PROJECT}/topics/$USER-${JOB_NAME} \
-  --jobName=${JOB_NAME}-read-$USER \
-  --subscription=projects/${PROJECT}/subscriptions/$USER-${JOB_NAME}-sub"
+  --topic=projects/${PROJECT}/topics/$USER-${JOB} \
+  --jobName=${JOB}-read-$USER \
+  --subscription=projects/${PROJECT}/subscriptions/$USER-${JOB}-sub"
 
 */
 
