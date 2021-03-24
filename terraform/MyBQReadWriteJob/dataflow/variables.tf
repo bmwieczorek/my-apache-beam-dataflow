@@ -37,3 +37,24 @@ variable "label" {
   description = "Google label"
   type        = string
 }
+
+variable "zone" {
+  description = "Google Cloud compute zone"
+  type        = string
+}
+
+variable "instance" {
+  description = "Google Cloud compute instance"
+  type        = string
+}
+
+variable "image" {
+  description = "Google Cloud compute image"
+  type        = string
+}
+
+variable "dataflow_jar" {
+  description = "Google dataflow jar name"
+  type        = string
+}
+

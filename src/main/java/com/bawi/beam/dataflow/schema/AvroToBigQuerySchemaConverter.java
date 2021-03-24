@@ -1,15 +1,45 @@
 package com.bawi.beam.dataflow.schema;
 
+import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.bigquery.model.TableFieldSchema;
 import com.google.api.services.bigquery.model.TableSchema;
 import org.apache.avro.LogicalType;
 import org.apache.avro.LogicalTypes;
 import org.apache.avro.Schema;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
 public class AvroToBigQuerySchemaConverter {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AvroToBigQuerySchemaConverter.class);
+
+    public static void main(String[] args) throws IOException {
+        if (args == null || args.length != 2) {
+            throw new IllegalArgumentException("Expected file paths to input avro schema and output table schema");
+        }
+        File inputFile = new File(args[0]);
+        if (!inputFile.exists()) {
+            throw new IllegalArgumentException("File " + inputFile + " with avro schema does not exists");
+        }
+        Schema avroSchema = new Schema.Parser().parse(inputFile);
+        TableSchema tableSchema = convert(avroSchema);
+        tableSchema.setFactory(new JacksonFactory());
+        Path outputPath = Paths.get(args[1]);
+        String tableSchemaString = tableSchema.toPrettyString();
+        int start = tableSchemaString.indexOf("[");
+        int end = tableSchemaString.lastIndexOf("]") + 1;
+        Files.write(outputPath, tableSchemaString.substring(start, end).getBytes(StandardCharsets.UTF_8));
+        LOGGER.info("Converted avro schema from {} and written table schema to {}", inputFile, outputPath);
+    }
+
     public static TableSchema convert(Schema avroSchema) {
         TableSchema tableSchema = new TableSchema();
         List<TableFieldSchema> tableFieldSchemas = new ArrayList<>();

@@ -11,8 +11,8 @@ function run_terraform {
 }
 
 USER=bartek
-JOB_NAME=mybqreadwritejob
-BUCKET=${PROJECT}-${USER}-${JOB_NAME}
+JOB=mybqreadwritejob
+BUCKET=${PROJECT}-${USER}-${JOB}
 EXPIRATION_DATE=2021-03-03
 SCRIPT_DIR=$(PWD)
 
@@ -27,32 +27,38 @@ EOF
 >$SCRIPT_DIR/bigquery/bigquery.tfvars cat <<-EOF
 dataset="${USER}_dataset"
 table="mysubscription_table"
+table_schema_file="../../../target/MyBQReadWriteJob.json"
 load_file="mysubscription_table.csv"
 EOF
 
 >$SCRIPT_DIR/dataflow/dataflow.tfvars cat <<-EOF
 service_account="$SERVICE_ACCOUNT"
 subnetwork="$SUBNETWORK"
-job="${JOB_NAME}"
+job="${JOB}"
 expiration_date="${EXPIRATION_DATE}"
+zone="$ZONE"
+instance="${USER}-vm"
+image="$IMAGE"
+dataflow_jar="my-apache-beam-dataflow-0.1-SNAPSHOT.jar"
 EOF
 
 run_terraform storage
 run_terraform bigquery
 
-cd $SCRIPT_DIR/../..
+
+#cd $SCRIPT_DIR/../..
 ### Create template from java ###
-mvn clean package -DskipTests -Pmake-dist -Pdataflow-runner
-java -cp target/my-apache-beam-dataflow-0.1-SNAPSHOT.jar com.bawi.beam.dataflow.MyBQReadWriteJob \
- ${JAVA_DATAFLOW_RUN_OPTS} \
- --runner=DataflowRunner \
- --stagingLocation=gs://${BUCKET}/staging \
- --templateLocation=gs://${BUCKET}/templates/${JOB_NAME}-template
+#mvn clean package -DskipTests -Pmake-dist -Pdataflow-runner
+#java -cp target/my-apache-beam-dataflow-0.1-SNAPSHOT.jar com.bawi.beam.dataflow.MyBQReadWriteJob \
+# ${JAVA_DATAFLOW_RUN_OPTS} \
+# --runner=DataflowRunner \
+# --stagingLocation=gs://${BUCKET}/staging \
+# --templateLocation=gs://${BUCKET}/templates/${JOB}-template
 
 ### Execute from template ###
-#gcloud dataflow jobs run ${JOB_NAME}-${USER}-template-${EXPIRATION_DATE} \
+#gcloud dataflow jobs run ${JOB}-${USER}-template-${EXPIRATION_DATE} \
 #  ${GCLOUD_DATAFLOW_RUN_OPTS} \
-#  --gcs-location gs://${BUCKET}/templates/${JOB_NAME}-template \
+#  --gcs-location gs://${BUCKET}/templates/${JOB}-template \
 #  --parameters expirationDate=${EXPIRATION_DATE}
 
 run_terraform dataflow

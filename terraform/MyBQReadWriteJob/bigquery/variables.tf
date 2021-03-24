@@ -18,6 +18,11 @@ variable "table" {
   type        = string
 }
 
+variable "table_schema_file" {
+  default = "File with BigQuery table schema in avro format"
+  type        = string
+}
+
 variable "label" {
   description = "Google label"
   type        = string

@@ -5,6 +5,7 @@ resource "google_storage_bucket_object" "my_bucket_object" {
 }
 
 resource "google_dataflow_job" "my_dataflow_job" {
+  depends_on = [google_compute_instance.compute_template]
   project               = var.project
   name                  = "${var.job}-${var.label}-template-${var.expiration_date}"
   temp_gcs_location     = "gs://${var.bucket}/temp"

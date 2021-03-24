@@ -17,6 +17,7 @@
 
         <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
         <maven-exec-plugin.version>3.0.0</maven-exec-plugin.version>
+        <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
     </properties>
 
     <build>
@@ -37,6 +38,22 @@
                 <configuration>
                     <cleanupDaemonThreads>false</cleanupDaemonThreads>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>convert-avro-schema-to-bigquery-table-schema</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>com.bawi.beam.dataflow.schema.AvroToBigQuerySchemaConverter</mainClass>
+                            <arguments>
+                                <argument>src/main/resources/schema/MyBQReadWriteJob.avsc</argument>
+                                <argument>target/MyBQReadWriteJob.json</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

@@ -1,0 +1,26 @@
+{
+  "type": "record",
+  "name": "subscription",
+  "doc": "My Subscription record",
+  "fields": [
+    {
+      "name": "id",
+      "type": "string"
+    },
+    {
+      "name": "creation_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      }
+    },
+    {
+      "name": "expiration_date",
+      "type": {
+        "type": "int",
+        "logicalType": "date"
+      },
+      "doc": "Expiration date field"
+    }
+  ]
+}

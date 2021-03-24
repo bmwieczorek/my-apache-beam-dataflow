@@ -44,6 +44,7 @@ public class MyBQReadWriteJob {
     }
     
     public static void main(String[] args) {
+//        System.out.println(MySubscription.SCHEMA);
 //        System.setProperty("java.util.logging.config.file", "src/main/resources/logging.properties");
 
         MyBQOptions pipelineOptions = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyBQOptions.class);
@@ -55,11 +56,11 @@ public class MyBQReadWriteJob {
         //noinspection Convert2Lambda // to infer type from anonymous class runtime types (not to use .setCoder)
         pipeline.apply(BigQueryIO.read(new SerializableFunction<SchemaAndRecord, MySubscription>() { //
                             @Override
-                            public MySubscription apply(SchemaAndRecord schemaAndRecord) {
-                                GenericRecord genericRecord = schemaAndRecord.getRecord();
+                            public MySubscription apply(SchemaAndRecord tableSchemaAndGenericRecord) {
+                                GenericRecord genericRecord = tableSchemaAndGenericRecord.getRecord();
                                 // avro schema from BQ converts timestamp to micro seconds
-                                MySubscription mySubscription = MySubscription.fromGenericRecord(genericRecord);
-                                LOGGER.info("Read {}, with schema {}", mySubscription, schemaAndRecord.getTableSchema());
+                                MySubscription mySubscription = MySubscription.fromGenericRecord(genericRecord); // timestamp is in micro secs
+                                LOGGER.info("Read {}, with schema {}", mySubscription, tableSchemaAndGenericRecord.getTableSchema());
                                 return mySubscription;
                             }
                         })
@@ -105,22 +106,20 @@ public class MyBQReadWriteJob {
         return query;
     }
 
-    private static String toString(Object value) {
-        return value instanceof Utf8 ? value.toString() : (String) value;
-    }
-
-//    @DefaultSchema(JavaFieldSchema.class)
+    // @DefaultSchema(JavaFieldSchema.class)
     @DefaultCoder(SerializableCoder.class) // or @DefaultCoder(AvroCoder.class), it requires anonymous SerializableFunction (not lambda) or use .withCoder(SerializableCoder.of(MySubscription.class))
     public static class MySubscription implements Serializable {
-            // avro schema from BQ converts timestamp to micro seconds
-            private static final Schema TIMESTAMP_MICROS_LOGICAL_TYPE = LogicalTypes.timestampMicros().addToSchema(Schema.create(Schema.Type.LONG));
-            //private static final Schema TIMESTAMP_MILLIS_LOGICAL_TYPE = LogicalTypes.timestampMillis().addToSchema(Schema.create(Schema.Type.LONG));
-            private static final Schema DATE_LOGICAL_TYPE = LogicalTypes.date().addToSchema(Schema.create(Schema.Type.INT));
-            static Schema SCHEMA = SchemaBuilder.record("subscription").fields()
-                    .requiredString("id")
-                    .name("creation_timestamp").type(TIMESTAMP_MICROS_LOGICAL_TYPE).noDefault()
-                    .name("expiration_date").type(DATE_LOGICAL_TYPE).noDefault()
-                    .endRecord();
+            // when reading with logical types enabled BQ internally converts BQ TIMESTAMP into avro long timestamp-micros logical type
+//            private static final Schema TIMESTAMP_MICROS_LOGICAL_TYPE = LogicalTypes.timestampMicros().addToSchema(Schema.create(Schema.Type.LONG));
+//            private static final Schema DATE_LOGICAL_TYPE = LogicalTypes.date().addToSchema(Schema.create(Schema.Type.INT));
+            static Schema SCHEMA =
+                 getSchemaFromResource("schema/MyBQReadWriteJob.avsc");
+
+//                SchemaBuilder.record("subscription").doc("My Subscription record").fields()
+//                    .requiredString("id")
+//                    .name("creation_timestamp").type(TIMESTAMP_MICROS_LOGICAL_TYPE).noDefault() // needs to be timestamp_micros (not timestamp_millis)
+//                    .name("expiration_date").doc("Expiration date field").type(DATE_LOGICAL_TYPE).noDefault()
+//                .endRecord();
 
         //public static Schema SCHEMA = getSchemaUsingReflection();
 
@@ -218,6 +217,9 @@ bq show --schema --format=prettyjson bartek_dataset.mysubscription_table
 bq query --use_legacy_sql=false 'insert into bartek_dataset.mysubscription_table (id, creation_timestamp, expiration_date) values ("abc",CURRENT_TIMESTAMP(),CURRENT_DATE())'
 
 gsutil cp terraform/MyBQReadWriteJob/mysubscription_table.csv gs://${BUCKET}/bigquery/
+
+INSERT INTO bartek_dataset.mysubscription_table (id,creation_timestamp, expiration_date) values("abc",TIMESTAMP("2021-03-03 03:03:03+00"),DATE '2021-03-03');
+select * from bartek_dataset.mysubscription_table;
 
 
 ### Variables ###

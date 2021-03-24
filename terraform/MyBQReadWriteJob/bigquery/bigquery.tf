@@ -25,6 +25,8 @@ resource "google_bigquery_table" "my_table" {
 
   deletion_protection = false
 
+  schema = file(var.table_schema_file)
+/*
   schema = <<EOF
 [
   {
@@ -47,6 +49,7 @@ resource "google_bigquery_table" "my_table" {
   }
 ]
 EOF
+*/
 
 }
 
