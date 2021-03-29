@@ -1,0 +1,14 @@
+{
+  "description": "Template for MyAutoscalingFactToBQJob",
+  "name": "myautoscalingfacttobqjob-template",
+  "parameters": [
+    {
+      "regexes": [
+        "^[0-9]+,[0-9]+$"
+      ],
+      "name": "sequenceStartCommaEnd",
+      "helpText": "Sequence start and end number separated by comma",
+      "label": "E.g. for 1000,10000 input the calculation is 1000 * 1001 * ... * 10000"
+    }
+  ]
+}

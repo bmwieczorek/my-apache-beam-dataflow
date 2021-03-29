@@ -10,6 +10,7 @@ import org.apache.beam.sdk.options.Validation;
 import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.*;
 
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -55,7 +56,7 @@ mvn clean compile -DskipTests -Pdataflow-runner exec:java \
             MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
             Pipeline writingPipeline = Pipeline.create(options);
 
-            List<String> strings = IntStream.rangeClosed(1, 50000).mapToObj(i -> "a" + i).collect(Collectors.toList());
+            List<String> strings = IntStream.rangeClosed(1, 100000).mapToObj(String::valueOf).collect(Collectors.toList());
             writingPipeline.apply(Create.of(strings))
                     .apply(ParDo.of(new CreatePubsubMessageFn()))
 
@@ -93,6 +94,8 @@ mvn clean compile -DskipTests exec:java \
   --stagingLocation=gs://${BUCKET}/staging \
   --topic=projects/${PROJECT}/topics/$USER-${JOB} \
   --jobName=${JOB}-read-$USER \
+  --workerMachineType=n1-standard-4 \
+  --maxNumWorkers=10 \
   --subscription=projects/${PROJECT}/subscriptions/$USER-${JOB}-sub"
 
 */
@@ -108,7 +111,9 @@ mvn clean compile -DskipTests exec:java \
                     .apply(MapElements.via(new SimpleFunction<PubsubMessage, String>() {
                         @Override
                         public String apply(PubsubMessage msg) {
-                            return "body=" + new String(msg.getPayload()) +
+                            int i = Integer.parseInt(new String(msg.getPayload()));
+                            String factorial = factorial(i);
+                            return "body=" + i +
                                     ", attributes=" + msg.getAttributeMap() +
                                     ", messageId=" + msg.getMessageId();
                         }
@@ -117,6 +122,14 @@ mvn clean compile -DskipTests exec:java \
 
             PipelineResult result = readingPipeline.run();
 //            result.waitUntilFinish();
+        }
+
+        private static String factorial(int limit) {
+            BigInteger factorial = BigInteger.valueOf(1);
+            for (int i = 1; i <= limit; i++) {
+                factorial = factorial.multiply(BigInteger.valueOf(i));
+            }
+            return factorial.toString();
         }
     }
 }

@@ -27,8 +27,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
 
-public class MyAvroReadWriteDataflowJob {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MyAvroReadWriteDataflowJob.class);
+public class MyAvroReadWriteJob {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MyAvroReadWriteJob.class);
 
     public interface MyPipelineOptions extends PipelineOptions {
         @Validation.Required
@@ -54,16 +54,15 @@ java -Dlog4j.configuration=file:src/main/resources/log4j.properties \
 
 
 ### Run from maven ###
-PROJECT=$(gcloud config get-value project)
-JOB_NAME=myavroreadwritedataflowjob
-BUCKET=${PROJECT}-$USER-${JOB_NAME}
+#PROJECT=$(gcloud config get-value project)
+JOB=myavroreadwritejob
+BUCKET=${PROJECT}-$USER-${JOB}
 gsutil mb gs://${BUCKET}
 
 cd src/test/resources/avro ; gsutil cp persons.avro gs://${BUCKET}/input/persons.avro ; cd -
-mvn clean compile -DskipTests exec:java \
--Pdataflow-runner \
--Dexec.mainClass=com.bawi.beam.dataflow.MyAvroReadWriteDataflowJob \
--Dexec.args="--project=${PROJECT} ${JAVA_DATAFLOW_RUN_OPTS} \
+mvn clean compile -DskipTests -Pdataflow-runner exec:java \
+-Dexec.mainClass=com.bawi.beam.dataflow.MyAvroReadWriteJob \
+-Dexec.args="${JAVA_DATAFLOW_RUN_OPTS} \
   --runner=DataflowRunner \
   --stagingLocation=gs://${BUCKET}/staging \
   --input=gs://${BUCKET}/input/persons.avro \
@@ -72,30 +71,29 @@ mvn clean compile -DskipTests exec:java \
 
 ### Create template ###
 PROJECT=$(gcloud config get-value project)
-JOB_NAME=myavroreadwritedataflowjob
-BUCKET=${PROJECT}-$USER-${JOB_NAME}
+JOB=myavroreadwritejob
+BUCKET=${PROJECT}-$USER-${JOB}
 gsutil rm -r gs://${BUCKET}
 gsutil mb gs://${BUCKET}
-gsutil cp dataflow-templates/${JOB_NAME}-template_metadata gs://${BUCKET}/templates/${JOB_NAME}-template_metadata
+gsutil cp dataflow-templates/${JOB}-template_metadata gs://${BUCKET}/templates/${JOB}-template_metadata
 
-mvn clean compile -DskipTests exec:java \
--Pdataflow-runner \
--Dexec.mainClass=com.bawi.beam.dataflow.MyAvroReadWriteDataflowJob \
--Dexec.args="--project=${PROJECT} ${JAVA_DATAFLOW_RUN_OPTS} \
+mvn clean compile -DskipTests -Pdataflow-runner exec:java \
+-Dexec.mainClass=com.bawi.beam.dataflow.MyAvroReadWriteJob \
+-Dexec.args="${JAVA_DATAFLOW_RUN_OPTS} \
  --runner=DataflowRunner \
  --stagingLocation=gs://${BUCKET}/staging \
- --templateLocation=gs://${BUCKET}/templates/${JOB_NAME}-template"
+ --templateLocation=gs://${BUCKET}/templates/${JOB}-template"
 
 
 ### Execute from template
 PROJECT=$(gcloud config get-value project)
-JOB_NAME=myavroreadwritedataflowjob
-BUCKET=${PROJECT}-$USER-${JOB_NAME}
+JOB=myavroreadwritejob
+BUCKET=${PROJECT}-$USER-${JOB}
 cd src/test/resources/avro ; gsutil cp persons.avro gs://${BUCKET}/input/persons.avro ; cd -
 
-gcloud dataflow jobs run ${JOB_NAME} \
+gcloud dataflow jobs run ${JOB} \
   --project=${PROJECT} ${GCLOUD_DATAFLOW_RUN_OPTS} \
-  --gcs-location gs://${BUCKET}/templates/${JOB_NAME}-template \
+  --gcs-location gs://${BUCKET}/templates/${JOB}-template \
   --parameters input=gs://${BUCKET}/input/persons.avro,output=gs://${BUCKET}/output/persons.avro
 
  */
@@ -114,14 +112,15 @@ gcloud dataflow jobs run ${JOB_NAME} \
         ValueProvider<String> outputProvider = options.getOutput();
 
         Schema schema = SchemaBuilder.record("person").fields().requiredString("name").optionalInt("age").endRecord();
+        //Schema schema = ReflectData.get().getSchema(Person.class);
 
-        Counter counter = Metrics.counter(MyAvroReadWriteDataflowJob.class.getSimpleName(), "my-metrics-counter");
-        Gauge gauge = Metrics.gauge(MyAvroReadWriteDataflowJob.class.getSimpleName(), "my-metrics-gauge");
-        Distribution distribution = Metrics.distribution(MyAvroReadWriteDataflowJob.class.getSimpleName(), "my-metrics-distribution");
+        Counter readCounter = Metrics.counter(MyAvroReadWriteJob.class.getSimpleName(), "my-metrics-read-counter");
+        Gauge gauge = Metrics.gauge(MyAvroReadWriteJob.class.getSimpleName(), "my-metrics-gauge");
+        Distribution distribution = Metrics.distribution(MyAvroReadWriteJob.class.getSimpleName(), "my-metrics-distribution");
 
         pipeline.apply(AvroIO.read(Person.class).from(inputProvider))
                 .apply("MapElements lambda", MapElements.into(TypeDescriptor.of(Person.class)).via(person -> {
-                    counter.inc();
+                    readCounter.inc();
                     int nameLength = person.name.length();
                     distribution.update(nameLength);
                     gauge.set(nameLength);
@@ -136,6 +135,7 @@ gcloud dataflow jobs run ${JOB_NAME} \
     }
 
     private static class MyToGenericRecordFn extends DoFn<Person, GenericRecord> {
+        private Counter writeCounter = Metrics.counter(MyAvroReadWriteJob.class.getSimpleName(), "my-metrics-write-counter");
         private String schemaString;
         private ValueProvider<String> inputProvider;
         private ValueProvider<String> outputProvider;
@@ -159,6 +159,7 @@ gcloud dataflow jobs run ${JOB_NAME} \
             genericRecord.put("name", person.name);
             genericRecord.put("age", person.age);
             outputReceiver.output(genericRecord);
+            writeCounter.inc();
         }
     }
 

@@ -1,6 +1,6 @@
 {
-  "description": "Template for MyAvroReadWriteDataflowJob",
-  "name": "myavroreadwritedataflowjob-template",
+  "description": "Template for myavroreadwritejob",
+  "name": "myavroreadwritejob-template",
   "parameters": [
     {
       "regexes": [

@@ -2,9 +2,7 @@ package com.bawi.beam.dataflow;
 
 import com.google.api.services.bigquery.model.TableFieldSchema;
 import com.google.api.services.bigquery.model.TableSchema;
-import org.apache.avro.LogicalTypes;
 import org.apache.avro.Schema;
-import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.reflect.ReflectData;
@@ -226,8 +224,8 @@ select * from bartek_dataset.mysubscription_table;
 PROJECT=$(gcloud config get-value project)
 USER=bartek
 EXPIRATION_DATE=2021-03-03
-JOB_NAME=mybqreadwritejob
-BUCKET=${PROJECT}-${USER}-${JOB_NAME}
+JOB=mybqreadwritejob
+BUCKET=${PROJECT}-${USER}-${JOB}
 gsutil mb gs://${BUCKET}
 
 
@@ -246,7 +244,7 @@ mvn clean compile -DskipTests -Pdataflow-runner exec:java \
 -Dexec.args="${JAVA_DATAFLOW_RUN_OPTS} \
  --runner=DataflowRunner \
  --stagingLocation=gs://${BUCKET}/staging \
- --templateLocation=gs://${BUCKET}/templates/${JOB_NAME}-template"
+ --templateLocation=gs://${BUCKET}/templates/${JOB}-template"
 
 
 ### Create template from java ###
@@ -255,13 +253,13 @@ java -cp target/my-apache-beam-dataflow-0.1-SNAPSHOT.jar com.bawi.beam.dataflow.
  ${JAVA_DATAFLOW_RUN_OPTS} \
  --runner=DataflowRunner \
  --stagingLocation=gs://${BUCKET}/staging \
- --templateLocation=gs://${BUCKET}/templates/${JOB_NAME}-template
+ --templateLocation=gs://${BUCKET}/templates/${JOB}-template
 
 
 ### Execute from template ###
-gcloud dataflow jobs run ${JOB_NAME}-${USER}-template-${EXPIRATION_DATE} \
+gcloud dataflow jobs run ${JOB}-${USER}-template-${EXPIRATION_DATE} \
   ${GCLOUD_DATAFLOW_RUN_OPTS} \
-  --gcs-location gs://${BUCKET}/templates/${JOB_NAME}-template \
+  --gcs-location gs://${BUCKET}/templates/${JOB}-template \
   --parameters expirationDate=${EXPIRATION_DATE}
 
 
