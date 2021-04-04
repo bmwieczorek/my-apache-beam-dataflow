@@ -1,7 +1,6 @@
 package com.bawi.beam.dataflow;
 
-import com.google.api.services.bigquery.model.TableFieldSchema;
-import com.google.api.services.bigquery.model.TableSchema;
+import com.bawi.beam.dataflow.schema.AvroToBigQuerySchemaConverter;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -23,7 +22,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 
@@ -85,13 +85,7 @@ public class MyBQReadWriteJob {
                         .withAvroSchemaFactory(qTableSchema -> MySubscription.SCHEMA)
                         .to(table)
                         .useAvroLogicalTypes()
-                        .withSchema(new TableSchema().setFields(
-                                Arrays.asList(
-                                    new TableFieldSchema().setName("id").setType("STRING").setMode("REQUIRED"),
-                                    new TableFieldSchema().setName("creation_timestamp").setType("TIMESTAMP").setMode("REQUIRED"),
-                                    new TableFieldSchema().setName("expiration_date").setType("DATE").setMode("REQUIRED")
-                                )
-                        ))
+                        .withSchema(AvroToBigQuerySchemaConverter.convert(MySubscription.SCHEMA))
                         .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
                         .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED));
 
@@ -138,6 +132,100 @@ public class MyBQReadWriteJob {
             }
         }
 
+        public static class MyRequiredSubRecord implements Serializable{
+            public int myRequiredInt;
+            public Long myNullableLong;
+            public boolean myRequiredBoolean;
+
+            public static MyRequiredSubRecord fromGenericRecord(GenericRecord genericRecord) {
+                MyRequiredSubRecord myRequiredSubRecord = new MyRequiredSubRecord();
+                myRequiredSubRecord.myRequiredInt = ((Long) genericRecord.get("myRequiredInt")).intValue();
+                myRequiredSubRecord.myNullableLong = (Long) genericRecord.get("myNullableLong");
+                myRequiredSubRecord.myRequiredBoolean = (boolean) genericRecord.get("myRequiredBoolean");
+                return myRequiredSubRecord;
+            }
+
+            public GenericRecord toGenericRecord() {
+                GenericData.Record record = new GenericData.Record(SCHEMA.getField("myRequiredSubRecord").schema());
+                record.put("myRequiredInt", myRequiredInt);
+                record.put("myNullableLong", myNullableLong);
+                record.put("myRequiredBoolean", myRequiredBoolean);
+                return record;
+            }
+
+            @Override
+            public boolean equals(Object o) {
+                if (this == o) return true;
+                if (o == null || getClass() != o.getClass()) return false;
+                MyRequiredSubRecord that = (MyRequiredSubRecord) o;
+                return myRequiredInt == that.myRequiredInt &&
+                        myRequiredBoolean == that.myRequiredBoolean &&
+                        Objects.equals(myNullableLong, that.myNullableLong);
+            }
+
+            @Override
+            public int hashCode() {
+                return Objects.hash(myRequiredInt, myNullableLong, myRequiredBoolean);
+            }
+
+            @Override
+            public String toString() {
+                return "MyRequiredSubRecord{" +
+                        "myRequiredInt=" + myRequiredInt +
+                        ", myNullableLong=" + myNullableLong +
+                        ", myRequiredBoolean=" + myRequiredBoolean +
+                        '}';
+            }
+        }
+
+        public static class MyOptionalArraySubRecord implements Serializable{
+            public double myRequiredDouble;
+            public Float myOptionalFloat;
+
+            public static MyOptionalArraySubRecord fromGenericRecord(GenericRecord genericRecord) {
+                MyOptionalArraySubRecord myOptionalArraySubRecord = new MyOptionalArraySubRecord();
+                myOptionalArraySubRecord.myRequiredDouble = (Double) genericRecord.get("myRequiredDouble");
+                myOptionalArraySubRecord.myOptionalFloat = ((Double) genericRecord.get("myRequiredDouble")).floatValue();
+                return myOptionalArraySubRecord;
+            }
+
+            public GenericRecord toGenericRecord() {
+                Schema myOptionalArraySubRecordsSchema = unwrapUnion(SCHEMA.getField("myOptionalArraySubRecords").schema());
+                GenericData.Record record = new GenericData.Record(myOptionalArraySubRecordsSchema.getElementType());
+                record.put("myRequiredDouble", myRequiredDouble);
+                record.put("myOptionalFloat", myOptionalFloat);
+                return record;
+            }
+
+
+            @Override
+            public boolean equals(Object o) {
+                if (this == o) return true;
+                if (o == null || getClass() != o.getClass()) return false;
+                MyOptionalArraySubRecord that = (MyOptionalArraySubRecord) o;
+                return Double.compare(that.myRequiredDouble, myRequiredDouble) == 0 &&
+                        Objects.equals(myOptionalFloat, that.myOptionalFloat);
+            }
+
+            @Override
+            public int hashCode() {
+                return Objects.hash(myRequiredDouble, myOptionalFloat);
+            }
+
+            @Override
+            public String toString() {
+                return "MyOptionalArraySubRecord{" +
+                        "myRequiredDouble=" + myRequiredDouble +
+                        ", myOptionalFloat=" + myOptionalFloat +
+                        '}';
+            }
+        }
+
+        private static Schema unwrapUnion(Schema unionSchema) {
+            List<Schema> types = unionSchema.getTypes();
+            return types.get(0).getType() != Schema.Type.NULL ? types.get(0) : types.get(1);
+        }
+
         public String id;
         //@AvroSchema("{\"type\":{\"type\":\"long\",\"logicalType\":\"timestamp-millis\"}")
         //@AvroSchema("{\"type\":{\"type\":\"long\",\"logicalType\":\"timestamp-micros\"}")
@@ -146,11 +234,30 @@ public class MyBQReadWriteJob {
         //@AvroSchema("{\"type\":{\"type\":\"int\",\"logicalType\":\"date\"}")
         public int expirationDate;
 
+        public List<Long> numbers;
+
+        public MyRequiredSubRecord myRequiredSubRecord;
+
+        public List<MyOptionalArraySubRecord> myOptionalArraySubRecords;
+
         public GenericRecord toGenericRecord() {
             GenericData.Record record = new GenericData.Record(SCHEMA);
             record.put("id", id);
             record.put("creation_timestamp", creationTimestamp);
             record.put("expiration_date", expirationDate);
+            record.put("numbers", numbers);
+            record.put("myRequiredSubRecord", myRequiredSubRecord.toGenericRecord());
+
+            List<GenericRecord> genericRecords = new ArrayList<>();
+            for (MyOptionalArraySubRecord myOptionalArraySubRecord : myOptionalArraySubRecords) {
+                genericRecords.add(myOptionalArraySubRecord.toGenericRecord());
+            }
+
+            Schema myOptionalArraySubRecordsSchema = unwrapUnion(SCHEMA.getField("myOptionalArraySubRecords").schema());
+            GenericData.Array<GenericRecord> myOptionalArraySubRecords = new GenericData.Array<>(myOptionalArraySubRecordsSchema, genericRecords);
+
+            record.put("myOptionalArraySubRecords", myOptionalArraySubRecords);
+            LOGGER.info("Created {}", record);
             return record;
         }
         public static MySubscription fromGenericRecord(GenericRecord genericRecord) {
@@ -158,6 +265,19 @@ public class MyBQReadWriteJob {
             mySubscription.id = asString(genericRecord.get("id"));
             mySubscription.creationTimestamp = (Long) genericRecord.get("creation_timestamp");
             mySubscription.expirationDate = (Integer) genericRecord.get("expiration_date");
+            @SuppressWarnings("unchecked")
+            List<Long> numbers = (List<Long>) genericRecord.get("numbers");
+            mySubscription.numbers = numbers == null ? null : new ArrayList<>(numbers);
+            GenericData.Record myRequiredSubRecord = (GenericData.Record) genericRecord.get("myRequiredSubRecord");
+            mySubscription.myRequiredSubRecord = MyRequiredSubRecord.fromGenericRecord(myRequiredSubRecord);
+            List<MyOptionalArraySubRecord> myOptionalArraySubRecords = new ArrayList<>();
+            @SuppressWarnings("unchecked")
+            GenericData.Array<GenericRecord> myOptionalArraySubGenericRecords = (GenericData.Array<GenericRecord>) genericRecord.get("myOptionalArraySubRecords");
+            for (GenericRecord myOptionalArraySubGenericRecord : myOptionalArraySubGenericRecords) {
+                myOptionalArraySubRecords.add(MyOptionalArraySubRecord.fromGenericRecord(myOptionalArraySubGenericRecord));
+            }
+            mySubscription.myOptionalArraySubRecords = myOptionalArraySubRecords;
+            LOGGER.info("Created {}", mySubscription);
             return mySubscription;
         }
 
@@ -166,17 +286,27 @@ public class MyBQReadWriteJob {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             MySubscription that = (MySubscription) o;
-            return creationTimestamp == that.creationTimestamp && expirationDate == that.expirationDate && Objects.equals(id, that.id);
+            return creationTimestamp == that.creationTimestamp &&
+                    expirationDate == that.expirationDate &&
+                    Objects.equals(id, that.id) &&
+                    Objects.equals(numbers, that.numbers) &&
+                    Objects.equals(myRequiredSubRecord, that.myRequiredSubRecord);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(id, creationTimestamp, expirationDate);
+            return Objects.hash(id, creationTimestamp, expirationDate, numbers, myRequiredSubRecord);
         }
 
         @Override
         public String toString() {
-            return "MySubscription{id='" + id + '\'' + ", creationTimestamp=" + creationTimestamp + ", expirationDate=" + expirationDate + '}';
+            return "MySubscription{" +
+                    "id='" + id + '\'' +
+                    ", creationTimestamp=" + creationTimestamp +
+                    ", expirationDate=" + expirationDate +
+                    ", numbers=" + numbers +
+                    ", myRequiredSubRecord=" + myRequiredSubRecord +
+                    '}';
         }
 
         private static String asString(Object value) {

@@ -21,6 +21,63 @@
         "logicalType": "date"
       },
       "doc": "Expiration date field"
+    },
+    {
+      "name": "numbers",
+      "type": {
+        "type": "array",
+        "items": "long"
+      }
+    },
+    {
+      "name": "myRequiredSubRecord",
+      "type": {
+        "type": "record",
+        "name": "myRequiredSubRecordType",
+        "fields": [
+          {
+            "name": "myRequiredInt",
+            "type": "int"
+          },
+          {
+            "name": "myNullableLong",
+            "type": [
+              "long",
+              "null"
+            ]
+          },
+          {
+            "name": "myRequiredBoolean",
+            "type": "boolean"
+          }
+        ]
+      }
+    },
+    {
+      "name": "myOptionalArraySubRecords",
+      "type": [
+        {
+          "type": "array",
+          "items": {
+            "type": "record",
+            "name": "myOptionalArraySubRecordType",
+            "fields": [
+              {
+                "name": "myRequiredDouble",
+                "type": "double"
+              },
+              {
+                "name": "myOptionalFloat",
+                "type": [
+                  "float",
+                  "null"
+                ]
+              }
+            ]
+          }
+        },
+        "null"
+      ]
     }
   ]
 }

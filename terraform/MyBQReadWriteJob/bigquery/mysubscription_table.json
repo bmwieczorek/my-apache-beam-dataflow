@@ -1,0 +1,2 @@
+{"id": "def", "creation_timestamp": "2021-03-31 18:54:10.103315 UTC", "expiration_date": "2021-03-31", "numbers": ["555", "666", "777"], "myRequiredSubRecord": { "myRequiredInt": 1, "myRequiredBoolean": false}}
+{"id": "abc", "creation_timestamp": "2021-03-03 03:03:03 UTC", "expiration_date": "2021-03-03", "numbers": [ "111", "222", "333"], "myRequiredSubRecord": { "myRequiredInt": 1, "myNullableLong": 2, "myRequiredBoolean": true}, "myOptionalArraySubRecords": [ { "myRequiredDouble": 1.2 }, { "myRequiredDouble": 3.4, "myOptionalFloat": 5.6 } ]}

@@ -32,8 +32,9 @@ EOF
 >$SCRIPT_DIR/bigquery/bigquery.tfvars cat <<-EOF
 dataset="${USER}_dataset"
 table="mysubscription_table"
+view="mysubscription_view"
 table_schema_file="../../../target/MyBQReadWriteJob.json"
-load_file="mysubscription_table.csv"
+load_file="mysubscription_table.json"
 EOF
 
 >$SCRIPT_DIR/dataflow/dataflow.tfvars cat <<-EOF
