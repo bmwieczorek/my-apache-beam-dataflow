@@ -24,6 +24,11 @@ export TF_VAR_bucket="$BUCKET"
 >$SCRIPT_DIR/storage/storage.tfvars cat <<-EOF
 EOF
 
+>$SCRIPT_DIR/dashboard/dashboard.tfvars cat <<-EOF
+dashboard_file="dashboard.json"
+job="${JOB}"
+EOF
+
 >$SCRIPT_DIR/bigquery/bigquery.tfvars cat <<-EOF
 dataset="${USER}_dataset"
 table="mysubscription_table"
@@ -44,6 +49,7 @@ EOF
 
 run_terraform storage
 run_terraform bigquery
+run_terraform dashboard
 
 
 #cd $SCRIPT_DIR/../..
