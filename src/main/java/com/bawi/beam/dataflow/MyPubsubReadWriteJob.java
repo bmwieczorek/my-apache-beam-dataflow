@@ -47,7 +47,9 @@ mvn clean compile -DskipTests -Pdataflow-runner exec:java \
   --runner=DataflowRunner \
   --stagingLocation=gs://${BUCKET}/staging \
   --jobName=${JOB}-write-$USER \
-  --topic=projects/${PROJECT}/topics/$USER-${JOB}"
+  --topic=projects/${PROJECT}/topics/$USER-${JOB} \
+  --experiments=enable_stackdriver_agent_metrics \
+  --labels='{ \"my_job_name\" : \"${JOB}-write-$USER\"}'"
 
 */
 
@@ -96,7 +98,9 @@ mvn clean compile -DskipTests exec:java \
   --jobName=${JOB}-read-$USER \
   --workerMachineType=n1-standard-4 \
   --maxNumWorkers=10 \
-  --subscription=projects/${PROJECT}/subscriptions/$USER-${JOB}-sub"
+  --subscription=projects/${PROJECT}/subscriptions/$USER-${JOB}-sub \
+  --experiments=enable_stackdriver_agent_metrics \
+  --labels='{ \"my_job_name\" : \"${JOB}-read-$USER\"}'"
 
 */
 
