@@ -27,14 +27,15 @@ echo "WAIT_SECS_BEFORE_VM_DELETE=$WAIT_SECS_BEFORE_VM_DELETE" | tee -a ${LOG}
 
 echo "Installing java" | tee -a ${LOG}
 max_retry=10; counter=1; until which java ; do sleep $((counter*10)); [[ counter -eq $max_retry ]] && echo "Failed" && break; echo "Trying to install java-1.8.0-openjdk-devel: $counter attempt" | tee -a ${LOG} ; yum install java-1.8.0-openjdk-devel -y 2>&1 | tee -a ${LOG} ; ((counter++)); done
-gsutil cp ${DATAFLOW_JAR_GCS_PATH} . | tee -a ${LOG}
+java -version 2>&1 | tee -a ${LOG}
+gsutil cp ${DATAFLOW_JAR_GCS_PATH} . 2>&1 | tee -a ${LOG}
 JAVA_DATAFLOW_RUN_OPTS="--project=$PROJECT --region=$REGION --serviceAccount=$SERVICE_ACCOUNT --subnetwork=$SUBNETWORK --usePublicIps=false"
 echo "Creating template $DATAFLOW_TEMPLATE_GCS_PATH" | tee -a ${LOG}
-java -Dorg.xerial.snappy.tempdir=$(PWD) -cp ${DATAFLOW_JAR} com.bawi.beam.dataflow.MyBQReadWriteJob \
+java -Dorg.xerial.snappy.tempdir=$(pwd) -cp ${DATAFLOW_JAR} com.bawi.beam.dataflow.MyBQReadWriteJob \
   ${JAVA_DATAFLOW_RUN_OPTS} \
   --runner=DataflowRunner \
   --stagingLocation=gs://${BUCKET}/staging \
-  --templateLocation=${DATAFLOW_TEMPLATE_GCS_PATH} | tee -a ${LOG}
+  --templateLocation=${DATAFLOW_TEMPLATE_GCS_PATH} 2>&1 | tee -a ${LOG}
 echo "Done" | tee -a ${LOG}
 echo "Uploading log file and deleting instance in $WAIT_SECS_BEFORE_VM_DELETE secs: gcloud compute instances delete $INSTANCE --zone=$ZONE --quiet" | tee -a ${LOG}
 gsutil cp ${LOG} gs://${BUCKET}/compute/
