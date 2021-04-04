@@ -60,14 +60,26 @@ public class AvroToBigQuerySchemaConverter {
     }
 
     private static List<TableFieldSchema> getTableSubFields(Schema.Field field) {
+        return getTableFieldSchemas(field.schema());
+    }
+
+    private static List<TableFieldSchema> getTableFieldSchemas(Schema schema) {
         List<TableFieldSchema> tableSubFieldsSchemas = new ArrayList<>();
-        Schema schema = field.schema();
         if (schema.getType() == Schema.Type.RECORD) {
             for (Schema.Field subField : schema.getFields()) {
                 TableFieldSchema tableSubFieldSchema = getFieldSchema(subField);
                 tableSubFieldsSchemas.add(tableSubFieldSchema);
             }
             return tableSubFieldsSchemas;
+        }
+        if (schema.getType() == Schema.Type.ARRAY) {
+            Schema subSchema = schema.getElementType();
+            return getTableFieldSchemas(subSchema);
+        }
+        if (schema.getType() == Schema.Type.UNION) {
+            List<Schema> types = schema.getTypes();
+            Schema subSchema = types.get(0).getType() == Schema.Type.NULL ?  types.get(1) : types.get(0);
+            return getTableFieldSchemas(subSchema);
         }
         return null;
     }
@@ -93,6 +105,8 @@ public class AvroToBigQuerySchemaConverter {
                 return "BYTES";
             case STRING:
                 return "STRING";
+            case ARRAY:
+                return getTableFieldType(fieldSchema.getElementType());
             case UNION:
                 return getTableFieldType(getUnionNotNullType(fieldSchema.getTypes()));
             default:
@@ -106,6 +120,11 @@ public class AvroToBigQuerySchemaConverter {
 
     private static String getTableFieldMode(Schema.Field field) {
         Schema schema = field.schema();
-        return Schema.Type.UNION == schema.getType() ? "NULLABLE" : "REQUIRED";
+        Schema.Type type = schema.getType();
+        if (Schema.Type.UNION != type) {
+            return Schema.Type.ARRAY == type ? "REPEATED" : "REQUIRED";
+        }
+        Schema subSchema = getUnionNotNullType(schema.getTypes());
+        return Schema.Type.ARRAY == subSchema.getType() ? "REPEATED" : "NULLABLE";
     }
 }

@@ -33,7 +33,14 @@ public class AvroToBigQuerySchemaConverterTest {
         TableFieldSchema optionalLong = new TableFieldSchema().setName("myNullableLong").setType("INTEGER").setMode("NULLABLE");
         TableFieldSchema requiredBoolean = new TableFieldSchema().setName("myRequiredBoolean").setType("BOOLEAN").setMode("REQUIRED");
         requiredRecord.setFields(Arrays.asList(optionalLong, requiredBoolean));
-        return new TableSchema().setFields(Arrays.asList(requiredString, optionalInt, requiredDateWithDoc, optionalTimestamp, requiredRecord));
+        TableFieldSchema myRequiredArrayLongs = new TableFieldSchema().setName("myRequiredArrayLongs").setType("INTEGER").setMode("REPEATED");
+        TableFieldSchema myOptionalArraySubRecords = new TableFieldSchema().setName("myOptionalArraySubRecords").setType("RECORD").setMode("REPEATED");
+        TableFieldSchema myRequiredDouble = new TableFieldSchema().setName("myRequiredDouble").setType("FLOAT").setMode("REQUIRED");
+        TableFieldSchema myOptionalFloat = new TableFieldSchema().setName("myOptionalFloat").setType("FLOAT").setMode("NULLABLE");
+        myOptionalArraySubRecords.setFields(Arrays.asList(myRequiredDouble, myOptionalFloat));
+        return new TableSchema().setFields(Arrays.asList(
+                requiredString, optionalInt, requiredDateWithDoc, optionalTimestamp, requiredRecord, myRequiredArrayLongs, myOptionalArraySubRecords
+        ));
     }
 
     private Schema getAvroSchema() {
@@ -48,6 +55,15 @@ public class AvroToBigQuerySchemaConverterTest {
                             .nullableLong("myNullableLong", 1)
                             .requiredBoolean("myRequiredBoolean")
                         .endRecord().noDefault()
-                    .endRecord();
+                    .name("myRequiredArrayLongs").type().array().items().longType().noDefault()
+                    .name("myOptionalArraySubRecords").type().nullable().array()
+                    .items(
+                            SchemaBuilder.record("myOptionalArraySubRecordType")
+                                .fields()
+                                    .requiredDouble("myRequiredDouble")
+                                    .optionalFloat("myOptionalFloat")
+                                .endRecord()
+                    ).noDefault()
+                .endRecord();
     }
 }
