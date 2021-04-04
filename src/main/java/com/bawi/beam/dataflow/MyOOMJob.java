@@ -52,7 +52,7 @@ public class MyOOMJob {
         void setTable(ValueProvider<String> value);
 
         @Validation.Required
-        @Default.String("1,10")
+        @Default.String("1,9000")
         ValueProvider<String> getSequenceStartCommaEnd();
         void setSequenceStartCommaEnd(ValueProvider<String> value);
     }
@@ -74,7 +74,9 @@ mvn clean compile -DskipTests -Pdataflow-runner exec:java \
   --dumpHeapOnOOM \
   --saveHeapDumpsToGcsPath=gs://${BUCKET}/oom \
   --workerLogLevelOverrides='{ \"com.bawi.beam.dataflow.MyOOMJob\": \"DEBUG\" }' \
-  --profilingAgentConfiguration='{ \"APICurated\" : true }'"
+  --profilingAgentConfiguration='{ \"APICurated\" : true }' \
+  --experiments=enable_stackdriver_agent_metrics \
+  --labels='{ \"my_job_name\" : \"${JOB}\"}'"
 
 WORKER="$(gcloud compute instances list --filter="name~$JOB" | tail -n 1)"
 echo WORKER=$WORKER
