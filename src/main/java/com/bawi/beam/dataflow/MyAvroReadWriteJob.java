@@ -56,6 +56,7 @@ java -Dlog4j.configuration=file:src/main/resources/log4j.properties \
 ### Run from maven ###
 #PROJECT=$(gcloud config get-value project)
 JOB=myavroreadwritejob
+USER=bartek
 BUCKET=${PROJECT}-$USER-${JOB}
 gsutil mb gs://${BUCKET}
 
@@ -72,6 +73,7 @@ mvn clean compile -DskipTests -Pdataflow-runner exec:java \
 ### Create template ###
 PROJECT=$(gcloud config get-value project)
 JOB=myavroreadwritejob
+USER=bartek
 BUCKET=${PROJECT}-$USER-${JOB}
 gsutil rm -r gs://${BUCKET}
 gsutil mb gs://${BUCKET}
@@ -88,11 +90,11 @@ mvn clean compile -DskipTests -Pdataflow-runner exec:java \
 ### Execute from template
 PROJECT=$(gcloud config get-value project)
 JOB=myavroreadwritejob
+USER=bartek
 BUCKET=${PROJECT}-$USER-${JOB}
 cd src/test/resources/avro ; gsutil cp persons.avro gs://${BUCKET}/input/persons.avro ; cd -
 
-gcloud dataflow jobs run ${JOB} \
-  --project=${PROJECT} ${GCLOUD_DATAFLOW_RUN_OPTS} \
+gcloud dataflow jobs run ${JOB} ${GCLOUD_DATAFLOW_RUN_OPTS} \
   --gcs-location gs://${BUCKET}/templates/${JOB}-template \
   --parameters input=gs://${BUCKET}/input/persons.avro,output=gs://${BUCKET}/output/persons.avro
 
