@@ -13,3 +13,7 @@ target
 
 # terraform
 .terraform
+/terraform/MyBQReadWriteJob/storage/storage.tfvars
+/terraform/MyBQReadWriteJob/dashboard/dashboard.tfvars
+/terraform/MyBQReadWriteJob/bigquery/bigquery.tfvars
+/terraform/MyBQReadWriteJob/dataflow/dataflow.tfvars
