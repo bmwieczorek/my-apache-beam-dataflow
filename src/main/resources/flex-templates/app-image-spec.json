@@ -1,0 +1,6 @@
+{
+  "image": "gcr.io/${gcp.project.id}/dataflow/${app.name}:latest",
+  "sdk_info": {
+    "language": "JAVA"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "mainClass": "${main.class}",
+  "classPath": "/template/${app.name}/resources:/template/${app.name}/libs/*:/template/${app.name}/classes",
+  "defaultParameterValues": {
+    "labels": "{\"goog-dataflow-provided-template-type\":\"flex\", \"goog-dataflow-provided-template-name\":\"${app.name}\"}"
+  }
+}
