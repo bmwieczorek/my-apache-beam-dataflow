@@ -10,11 +10,22 @@ function run_terraform {
   rm $SCRIPT_DIR/$service/$service.tfvars
 }
 
+SCRIPT_DIR=$(pwd)
+cd ../..
+#JAVA_HOME_OLD=${JAVA_HOME}
+#export JAVA_HOME=${JAVA_11_HOME}
+mvn clean package -Pdist
+cd $SCRIPT_DIR
+
 USER=bartek
-JOB=mybqreadwritejob
-BUCKET=${PROJECT}-${USER}-${JOB}
+JOB=${USER}-mybqreadwritejob
+BUCKET=${JOB}
 EXPIRATION_DATE=2021-03-03
-SCRIPT_DIR=$(PWD)
+
+# gsutil rm -r gs://${JOB}
+# gsutil rm -r gs://${USER}-terraform/*
+# bq rm -r -f -d ${PROJECT}:${USER}_dataset
+# gcloud beta logging sinks delete "${JOB}-logging-sink" --quiet
 
 export TF_VAR_project="$PROJECT"
 export TF_VAR_region="$REGION"
@@ -27,6 +38,11 @@ EOF
 >$SCRIPT_DIR/dashboard/dashboard.tfvars cat <<-EOF
 dashboard_file="dashboard.json"
 job="${JOB}"
+EOF
+
+>$SCRIPT_DIR/alerting/alerting.tfvars cat <<-EOF
+job="${JOB}"
+notification_email="${EMAIL}"
 EOF
 
 >$SCRIPT_DIR/bigquery/bigquery.tfvars cat <<-EOF
@@ -46,11 +62,15 @@ zone="$ZONE"
 instance="${USER}-vm"
 image="$IMAGE"
 dataflow_jar="my-apache-beam-dataflow-0.1-SNAPSHOT.jar"
+dataflow_start_time="$(date -u "+%Y-%m-%dT%H:%M:%SZ")"
+dashboard_file="dashboard-last.json"
+notification_email="${EMAIL}"
 EOF
 
 run_terraform storage
 run_terraform bigquery
 run_terraform dashboard
+run_terraform alerting
 
 
 #cd $SCRIPT_DIR/../..
@@ -70,4 +90,4 @@ run_terraform dashboard
 
 run_terraform dataflow
 
-
+#export JAVA_HOME=${JAVA_HOME_OLD}

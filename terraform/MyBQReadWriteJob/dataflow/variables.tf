@@ -58,3 +58,17 @@ variable "dataflow_jar" {
   type        = string
 }
 
+variable "dataflow_start_time" {
+  description = "Google dataflow job start time"
+  type        = string
+}
+
+variable "dashboard_file" {
+  description = "Google dashboard file name"
+  type        = string
+}
+
+variable "notification_email" {
+  description = "Notification email"
+  type        = string
+}
