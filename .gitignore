@@ -13,7 +13,9 @@ target
 
 # terraform
 .terraform
-/terraform/MyBQReadWriteJob/storage/storage.tfvars
-/terraform/MyBQReadWriteJob/dashboard/dashboard.tfvars
+/terraform/MyBQReadWriteJob/alerting/alerting.tfvars
 /terraform/MyBQReadWriteJob/bigquery/bigquery.tfvars
+/terraform/MyBQReadWriteJob/dashboard/dashboard.tfvars
 /terraform/MyBQReadWriteJob/dataflow/dataflow.tfvars
+/terraform/MyBQReadWriteJob/storage/storage.tfvars
+/terraform/MyPubsubToConsoleJob/dev.tfvars
