@@ -48,7 +48,12 @@ variable "output" {
   type        = string
 }
 
-variable "label" {
-  description = "Google label"
+variable "dashboard_file" {
+  description = "Google dashboard file name"
+  type        = string
+}
+
+variable "owner" {
+  description = "Google resource owner"
   type        = string
 }

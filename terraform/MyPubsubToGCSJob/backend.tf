@@ -1,7 +1,7 @@
 terraform {
   backend "gcs" {
     bucket = "bartek-terraform"
-    prefix = "MyPubsubToConsoleJob/dataflow/tfstate"
+    prefix = "bartek-mypubsubtogcsjob/tfstate"
   }
   required_providers {
     google = {
@@ -10,4 +10,3 @@ terraform {
   }
   required_version = "~> 0.12.29"
 }
-

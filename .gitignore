@@ -18,4 +18,4 @@ target
 /terraform/MyBQReadWriteJob/dashboard/dashboard.tfvars
 /terraform/MyBQReadWriteJob/dataflow/dataflow.tfvars
 /terraform/MyBQReadWriteJob/storage/storage.tfvars
-/terraform/MyPubsubToConsoleJob/dev.tfvars
+/terraform/MyPubsubToGCSJob/dev.tfvars

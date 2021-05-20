@@ -1,0 +1,1388 @@
+ {
+    "displayName": "${dashboard_name}",
+    "mosaicLayout": {
+      "columns": 12,
+      "tiles": [
+        {
+          "height": 4,
+          "widget": {
+            "title": "Elapsed time [MEAN]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      },
+                      "filter": "metric.type=\"dataflow.googleapis.com/job/elapsed_time\" resource.type=\"dataflow_job\" ${dataflow_job_filter}"
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4,
+          "xPos": 4,
+          "yPos": 18
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "Current vCPUs in use [MEAN]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      },
+                      "filter": "metric.type=\"dataflow.googleapis.com/job/current_num_vcpus\" resource.type=\"dataflow_job\" ${dataflow_job_filter}"
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4,
+          "xPos": 8,
+          "yPos": 10
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "Publish requests for ${topic} [MEAN]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_RATE"
+                      },
+                      "filter": "metric.type=\"pubsub.googleapis.com/topic/send_request_count\" resource.type=\"pubsub_topic\" resource.label.\"topic_id\"=\"${topic}\"",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 6,
+          "yPos": 46
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "Backlog size for ${subscription} [MEAN]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      },
+                      "filter": "metric.type=\"pubsub.googleapis.com/subscription/backlog_bytes\" resource.type=\"pubsub_subscription\" resource.label.\"subscription_id\"=\"${subscription}\""
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4,
+          "yPos": 42
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "Sent message count for ${subscription} [MEAN]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_RATE"
+                      },
+                      "filter": "metric.type=\"pubsub.googleapis.com/subscription/sent_message_count\" resource.type=\"pubsub_subscription\" resource.label.\"subscription_id\"=\"${subscription}\"",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 6,
+          "xPos": 6,
+          "yPos": 50
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "Pull rqs for ${subscription} [MEAN]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_RATE"
+                      },
+                      "filter": "metric.type=\"pubsub.googleapis.com/subscription/pull_request_count\" resource.type=\"pubsub_subscription\" resource.label.\"subscription_id\"=\"${subscription}\"",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4,
+          "xPos": 8,
+          "yPos": 18
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "Unacked messages for ${subscription} [MEAN]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      },
+                      "filter": "metric.type=\"pubsub.googleapis.com/subscription/num_undelivered_messages\" resource.type=\"pubsub_subscription\" resource.label.\"subscription_id\"=\"${subscription}\""
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4,
+          "xPos": 4,
+          "yPos": 42
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "Cloud Pub/Sub Subscription - Oldest unacked message age [MEAN]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      },
+                      "filter": "metric.type=\"pubsub.googleapis.com/subscription/oldest_unacked_message_age\" resource.type=\"pubsub_subscription\" resource.label.\"subscription_id\"=\"${subscription}\""
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4,
+          "xPos": 8,
+          "yPos": 42
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "Ack latency for ${subscription} [50TH PC]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_PERCENTILE_50"
+                      },
+                      "filter": "metric.type=\"pubsub.googleapis.com/subscription/ack_latencies\" resource.type=\"pubsub_subscription\" resource.label.\"subscription_id\"=\"${subscription}\""
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4,
+          "xPos": 4,
+          "yPos": 54
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "Ack message count for ${subscription} [MEAN]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_RATE"
+                      },
+                      "filter": "metric.type=\"pubsub.googleapis.com/subscription/ack_message_count\" resource.type=\"pubsub_subscription\" resource.label.\"subscription_id\"=\"${subscription}\"",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 6,
+          "yPos": 50
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "Acknowledge requests for ${subscription} [MEAN]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_RATE"
+                      },
+                      "filter": "metric.type=\"pubsub.googleapis.com/subscription/pull_ack_request_count\" resource.type=\"pubsub_subscription\" resource.label.\"subscription_id\"=\"${subscription}\"",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 6,
+          "xPos": 6,
+          "yPos": 46
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "PubsubIO.Read Elements Produced",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_RATE"
+                      },
+                      "filter": "metric.type=\"dataflow.googleapis.com/job/elements_produced_count\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"pcollection\"=\"PubsubIO.Read/PubsubUnboundedSource.out0\""
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "MapElements Elements Produced",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_RATE"
+                      },
+                      "filter": "metric.type=\"dataflow.googleapis.com/job/elements_produced_count\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"pcollection\"=\"MapElements/Map.out0\""
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4,
+          "xPos": 4
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "AvroWrShrdKECnt",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      },
+                      "filter": "metric.type=\"dataflow.googleapis.com/job/element_count\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"pcollection\"=\"AvroIO.Write/AvroIO.TypedWrite/Write/WriteShardedBundlesToTempFiles/ApplyShardingKey.out0\""
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 3,
+          "xPos": 6,
+          "yPos": 4
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "AvroWrMrgBcktECnt",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      },
+                      "filter": "metric.type=\"dataflow.googleapis.com/job/element_count\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"pcollection\"=\"AvroIO.Write/AvroIO.TypedWrite/Write/WriteShardedBundlesToTempFiles/GroupIntoShards/MergeBuckets.out0\""
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 3,
+          "xPos": 9,
+          "yPos": 4
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "AvroIO.Write Elements Produced",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_RATE"
+                      },
+                      "filter": "metric.type=\"dataflow.googleapis.com/job/elements_produced_count\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"pcollection\"=\"AvroIO.Write/AvroIO.TypedWrite/Write/WriteShardedBundlesToTempFiles/ApplyShardingKey.out0\""
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4,
+          "xPos": 8
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "PubsubRdECnt",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      },
+                      "filter": "metric.type=\"dataflow.googleapis.com/job/element_count\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"pcollection\"=\"PubsubIO.Read/PubsubUnboundedSource.out0\""
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 3,
+          "yPos": 4
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "MapElementsECnt",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      },
+                      "filter": "metric.type=\"dataflow.googleapis.com/job/element_count\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"pcollection\"=\"MapElements/Map.out0\""
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 3,
+          "xPos": 3,
+          "yPos": 4
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "VM - CPU utilization [MEAN]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MAX"
+                      },
+                      "filter": "metric.type=\"compute.googleapis.com/instance/cpu/utilization\" resource.type=\"gce_instance\" ${instance_dataflow_job_filter}",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4,
+          "yPos": 10
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "VM - CPU usage [MAX]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_RATE"
+                      },
+                      "filter": "metric.type=\"compute.googleapis.com/instance/cpu/usage_time\" resource.type=\"gce_instance\" ${instance_dataflow_job_filter}",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MAX"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4,
+          "xPos": 4,
+          "yPos": 10
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "Failed [MEAN]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      },
+                      "filter": "metric.type=\"dataflow.googleapis.com/job/is_failed\" resource.type=\"dataflow_job\" ${dataflow_job_filter}",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4,
+          "yPos": 18
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "VM - Memory Heap used usage [MAX]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MAX"
+                      },
+                      "filter": "metric.type=\"agent.googleapis.com/jvm/memory/usage\" resource.type=\"gce_instance\" ${instance_dataflow_job_filter} metric.label.\"memory_type\"=\"heap\" metric.label.\"usage_kind\"=\"used\"",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4,
+          "yPos": 14
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "VM - Memory Heap committed [MAX]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MAX"
+                      },
+                      "filter": "metric.type=\"agent.googleapis.com/jvm/memory/usage\" resource.type=\"gce_instance\" ${instance_dataflow_job_filter} metric.label.\"memory_type\"=\"heap\" metric.label.\"usage_kind\"=\"committed\"",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4,
+          "xPos": 4,
+          "yPos": 14
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "VM - Memory Heap max [MAX]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MAX"
+                      },
+                      "filter": "metric.type=\"agent.googleapis.com/jvm/memory/usage\" resource.type=\"gce_instance\" ${instance_dataflow_job_filter} metric.label.\"memory_type\"=\"heap\" metric.label.\"usage_kind\"=\"max\"",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4,
+          "xPos": 8,
+          "yPos": 14
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "Data watermark lag [MEAN]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      },
+                      "filter": "metric.type=\"dataflow.googleapis.com/job/data_watermark_age\" resource.type=\"dataflow_job\" ${dataflow_job_filter}",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 6,
+          "yPos": 22
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "System lag [MEAN]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      },
+                      "filter": "metric.type=\"dataflow.googleapis.com/job/system_lag\" resource.type=\"dataflow_job\" ${dataflow_job_filter}",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 6,
+          "xPos": 6,
+          "yPos": 22
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "Per-stage data watermark lag [MEAN]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      },
+                      "filter": "metric.type=\"dataflow.googleapis.com/job/per_stage_data_watermark_age\" resource.type=\"dataflow_job\" ${dataflow_job_filter}",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 6,
+          "yPos": 26
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "Per-stage system lag [MEAN]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MEAN"
+                      },
+                      "filter": "metric.type=\"dataflow.googleapis.com/job/per_stage_system_lag\" resource.type=\"dataflow_job\" ${dataflow_job_filter}",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 6,
+          "xPos": 6,
+          "yPos": 26
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "Ack latency for ${subscription} [5TH PC]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_PERCENTILE_05"
+                      },
+                      "filter": "metric.type=\"pubsub.googleapis.com/subscription/ack_latencies\" resource.type=\"pubsub_subscription\" resource.label.\"subscription_id\"=\"${subscription}\"",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4,
+          "yPos": 54
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "Ack latency for ${subscription} [95TH PC]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_PERCENTILE_95"
+                      },
+                      "filter": "metric.type=\"pubsub.googleapis.com/subscription/ack_latencies\" resource.type=\"pubsub_subscription\" resource.label.\"subscription_id\"=\"${subscription}\"",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 4,
+          "xPos": 8,
+          "yPos": 54
+        },
+        {
+          "height": 2,
+          "widget": {
+            "scorecard": {
+              "sparkChartView": {
+                "sparkChartType": "SPARK_LINE"
+              },
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "crossSeriesReducer": "REDUCE_MEAN",
+                    "perSeriesAligner": "ALIGN_MEAN"
+                  },
+                  "filter": "metric.type=\"dataflow.googleapis.com/job/element_count\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"pcollection\"=\"PubsubIO.Read/PubsubUnboundedSource.out0\""
+                }
+              }
+            },
+            "title": "PubsubIO.Read Element count"
+          },
+          "width": 3,
+          "yPos": 8
+        },
+        {
+          "height": 2,
+          "widget": {
+            "scorecard": {
+              "sparkChartView": {
+                "sparkChartType": "SPARK_LINE"
+              },
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "crossSeriesReducer": "REDUCE_MEAN",
+                    "perSeriesAligner": "ALIGN_MEAN"
+                  },
+                  "filter": "metric.type=\"dataflow.googleapis.com/job/element_count\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"pcollection\"=\"PubsubIO.Read/PubsubUnboundedSource.out0\""
+                }
+              }
+            },
+            "title": "MapElements Element count"
+          },
+          "width": 3,
+          "xPos": 3,
+          "yPos": 8
+        },
+        {
+          "height": 2,
+          "widget": {
+            "scorecard": {
+              "sparkChartView": {
+                "sparkChartType": "SPARK_LINE"
+              },
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "crossSeriesReducer": "REDUCE_MEAN",
+                    "perSeriesAligner": "ALIGN_MEAN"
+                  },
+                  "filter": "metric.type=\"dataflow.googleapis.com/job/element_count\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"pcollection\"=\"AvroIO.Write/AvroIO.TypedWrite/Write/WriteShardedBundlesToTempFiles/ApplyShardingKey.out0\""
+                }
+              }
+            },
+            "title": "AvroIO.Write ApplyShardingKey Element count"
+          },
+          "width": 3,
+          "xPos": 6,
+          "yPos": 8
+        },
+        {
+          "height": 2,
+          "widget": {
+            "scorecard": {
+              "sparkChartView": {
+                "sparkChartType": "SPARK_LINE"
+              },
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "crossSeriesReducer": "REDUCE_MEAN",
+                    "perSeriesAligner": "ALIGN_MEAN"
+                  },
+                  "filter": "metric.type=\"dataflow.googleapis.com/job/element_count\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"pcollection\"=\"AvroIO.Write/AvroIO.TypedWrite/Write/WriteShardedBundlesToTempFiles/GroupIntoShards/MergeBuckets.out0\""
+                }
+              }
+            },
+            "title": "AvroIO.Write MergeBuckets Element count"
+          },
+          "width": 3,
+          "xPos": 9,
+          "yPos": 8
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "VM - Threads [MAX]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MAX"
+                      },
+                      "filter": "metric.type=\"agent.googleapis.com/jvm/thread/num_live\" resource.type=\"gce_instance\" ${instance_dataflow_job_filter}",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 6,
+          "xPos": 6,
+          "yPos": 34
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "GC time [MAX]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_RATE"
+                      },
+                      "filter": "metric.type=\"agent.googleapis.com/jvm/gc/time\" resource.type=\"gce_instance\" ${instance_dataflow_job_filter}",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MAX"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 6,
+          "xPos": 6,
+          "yPos": 38
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "VM - GC count [MAX]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_RATE"
+                      },
+                      "filter": "metric.type=\"agent.googleapis.com/jvm/gc/count\" resource.type=\"gce_instance\" ${instance_dataflow_job_filter}",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MAX"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 6,
+          "yPos": 34
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "VM - GC count [MAX]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_RATE"
+                      },
+                      "filter": "metric.type=\"agent.googleapis.com/jvm/gc/count\" resource.type=\"gce_instance\" ${instance_dataflow_job_filter}",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MAX"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 6,
+          "yPos": 38
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "VM - Memory free utilization [MAX]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MAX"
+                      },
+                      "filter": "metric.type=\"agent.googleapis.com/memory/percent_used\" resource.type=\"gce_instance\" ${instance_dataflow_job_filter} metric.label.\"state\"=\"free\"",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 6,
+          "xPos": 6,
+          "yPos": 30
+        },
+        {
+          "height": 4,
+          "widget": {
+            "title": "VM - Memory used utilization [MAX]",
+            "xyChart": {
+              "chartOptions": {
+                "mode": "COLOR"
+              },
+              "dataSets": [
+                {
+                  "minAlignmentPeriod": "60s",
+                  "plotType": "LINE",
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_MAX"
+                      },
+                      "filter": "metric.type=\"agent.googleapis.com/memory/percent_used\" resource.type=\"gce_instance\" ${instance_dataflow_job_filter} metric.label.\"state\"=\"used\"",
+                      "secondaryAggregation": {
+                        "alignmentPeriod": "60s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "timeshiftDuration": "0s",
+              "yAxis": {
+                "label": "y1Axis",
+                "scale": "LINEAR"
+              }
+            }
+          },
+          "width": 6,
+          "yPos": 30
+        }
+      ]
+    }
+  }

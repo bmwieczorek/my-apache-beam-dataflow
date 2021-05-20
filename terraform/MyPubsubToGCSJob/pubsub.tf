@@ -8,7 +8,7 @@ resource "google_pubsub_topic" "my_topic" {
   name = var.topic
 
   labels = {
-    user = var.label
+    owner = var.owner
   }
 }
 resource "google_pubsub_subscription" "my_subscription" {
@@ -17,6 +17,6 @@ resource "google_pubsub_subscription" "my_subscription" {
   topic   = google_pubsub_topic.my_topic.name
 
   labels = {
-    user = var.label
+    owner = var.owner
   }
 }

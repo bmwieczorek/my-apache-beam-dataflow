@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import static org.apache.beam.vendor.guava.v26_0_jre.com.google.common.base.MoreObjects.firstNonNull;
 
-public class MyPubsubToConsoleJob {
+public class MyPubsubToGCSJob {
 
 
     public interface MyPipelineOptions extends PipelineOptions {
@@ -68,15 +68,15 @@ public class MyPubsubToConsoleJob {
 
 PROJECT=$(gcloud config get-value project)
 APP=pubsub-to-console-flex
-USER=bartek
-BUCKET=$APP-$USER
+OWNER=bartek
+BUCKET=$APP-$OWNER
 java11
 
 gsutil mb gs://${BUCKET}
 mvn clean package -Pbuild-and-deploy-flex-template -Dgcp.project.id=$PROJECT
 gsutil cp target/classes/flex-templates/app-image-spec.json gs://${BUCKET}/
 
-gcloud dataflow flex-template run $APP-$USER \
+gcloud dataflow flex-template run $APP-$OWNER \
  ${GCLOUD_DATAFLOW_RUN_OPTS} \
  --template-file-gcs-location gs://${BUCKET}/app-image-spec.json  \
  --worker-machine-type n2-standard-2 --num-workers 1  --max-workers 2 \
@@ -90,7 +90,7 @@ gcloud dataflow flex-template run $APP-$USER \
 
     public static final String BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID = "bodyWithAttributesAndMessageId";
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MyPubsubToConsoleJob.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MyPubsubToGCSJob.class);
     private static final Schema SCHEMA = SchemaBuilder.record("record").fields().requiredString(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID).endRecord();
     private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("yyyy/MM/dd/HH/mm");
 

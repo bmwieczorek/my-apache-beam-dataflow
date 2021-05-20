@@ -212,9 +212,9 @@
         <profile>
             <id>build-and-deploy-flex-template</id>
             <properties>
-                <app.name>pubsub-to-console</app.name>
+                <app.name>pubsub-to-gcs</app.name>
                 <gcp.project.id>my-gcp-project</gcp.project.id>
-                <main.class>com.bawi.beam.dataflow.MyPubsubToConsoleJob</main.class>
+                <main.class>com.bawi.beam.dataflow.MyPubsubToGCSJob</main.class>
             </properties>
             <build>
                 <resources>
