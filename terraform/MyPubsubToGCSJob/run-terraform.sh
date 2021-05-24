@@ -29,15 +29,15 @@ echo "TOPIC=$TOPIC"
 SUBSCRIPTION=${TOPIC}-sub
 echo "SUBSCRIPTION=$SUBSCRIPTION"
 
-#echo "Deleting manually resources owned by $OWNER ..."
-#gsutil rm -r gs://${OWNER}-terraform/${JOB}
-#gcloud pubsub subscriptions delete ${SUBSCRIPTION}
-#gcloud pubsub topics delete ${TOPIC}
-#gcloud monitoring dashboards list --filter="displayName='bartek-mypubsubtogcsjob last run by job id'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
-#gcloud monitoring dashboards list --filter="displayName='bartek-mypubsubtogcsjob all runs by job name'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
-#gcloud dataflow jobs list --filter "NAME:${JOB} AND STATE=Running" --format 'value(JOB_ID)' --region "$REGION" | xargs gcloud dataflow jobs cancel --region "$REGION"
-#max_retry=10; counter=1; sleep_secs=5; until [ -z "$(gcloud dataflow jobs list --filter "NAME:${JOB} AND (STATE=Cancelling OR STATE=Running)" --format 'value(JOB_ID)' --region $REGION)" ] ; do sleep $sleep_secs; [[ counter -eq $max_retry ]] && echo "Failed" && break; echo "waiting $sleep_secs secs for job to stop: attempt $counter" ; ((counter++)); done
-#gsutil rm -r gs://${JOB}
+echo "Deleting manually resources owned by $OWNER ..."
+gsutil rm -r gs://${OWNER}-terraform/${JOB}
+gcloud pubsub subscriptions delete ${SUBSCRIPTION}
+gcloud pubsub topics delete ${TOPIC}
+gcloud monitoring dashboards list --filter="displayName='${JOB} job id'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
+gcloud monitoring dashboards list --filter="displayName='${JOB} job name'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
+gcloud dataflow jobs list --filter "NAME:${JOB} AND STATE=Running" --format 'value(JOB_ID)' --region "$REGION" | xargs gcloud dataflow jobs cancel --region "$REGION"
+max_retry=10; counter=1; sleep_secs=5; until [ -z "$(gcloud dataflow jobs list --filter "NAME:${JOB} AND (STATE=Cancelling OR STATE=Running)" --format 'value(JOB_ID)' --region $REGION)" ] ; do sleep $sleep_secs; [[ counter -eq $max_retry ]] && echo "Failed" && break; echo "waiting $sleep_secs secs for job to stop: attempt $counter" ; ((counter++)); done
+gsutil rm -r gs://${JOB}
 
 export TF_VAR_project="$PROJECT"
 export TF_VAR_region="$REGION"

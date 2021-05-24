@@ -12,11 +12,14 @@ import org.apache.beam.sdk.io.fs.ResolveOptions;
 import org.apache.beam.sdk.io.fs.ResourceId;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubMessage;
+import org.apache.beam.sdk.metrics.Counter;
+import org.apache.beam.sdk.metrics.Distribution;
+import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.Validation;
-import org.apache.beam.sdk.transforms.MapElements;
-import org.apache.beam.sdk.transforms.SimpleFunction;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.windowing.*;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.joda.time.Duration;
@@ -88,12 +91,44 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
     */
 
-    public static final String BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID = "bodyWithAttributesAndMessageId";
-
     private static final Logger LOGGER = LoggerFactory.getLogger(MyPubsubToGCSJob.class);
+
+    static final String BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID = "bodyWithAttributesAndMessageId";
     private static final Schema SCHEMA = SchemaBuilder.record("record").fields().requiredString(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID).endRecord();
     private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("yyyy/MM/dd/HH/mm");
 
+
+
+
+    private static class ConcatBodyAttrAndMsgIdFn extends DoFn<PubsubMessage, GenericRecord> {
+        private static final String CLASS_NAME = ConcatBodyAttrAndMsgIdFn.class.getSimpleName();
+        private static final Distribution PUBSUB_MESSAGE_SIZE_BYTES = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_pubsubMessageSizeBytes");
+        private static final Distribution PROCESSING_TIME_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_processingTimeMs");
+        private static final Counter COUNTER = Metrics.counter(CLASS_NAME, CLASS_NAME + "_counter");
+
+        @ProcessElement
+        public void process(@Element PubsubMessage pubsubMessage, OutputReceiver<GenericRecord> outputReceiver) {
+            long startMs = System.currentTimeMillis();
+            PUBSUB_MESSAGE_SIZE_BYTES.update(pubsubMessage.getPayload() != null ? pubsubMessage.getPayload().length : 0);
+
+            GenericData.Record record = doProcess(pubsubMessage);
+            outputReceiver.output(record);
+
+            long processingTimeMs = System.currentTimeMillis() - startMs;
+            PROCESSING_TIME_MS.update(processingTimeMs);
+            COUNTER.inc();
+        }
+
+        private GenericData.Record doProcess(@Element PubsubMessage pubsubMessage) {
+            String body = new String(pubsubMessage.getPayload());
+            GenericData.Record record = new GenericData.Record(SCHEMA);
+            String value = "body=" + body + ", attributes=" + pubsubMessage.getAttributeMap() + ", messageId=" + pubsubMessage.getMessageId();
+            record.put(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID, value);
+            LOGGER.info("record {}", record);
+            return record;
+        }
+
+    }
 
     public static void main(String[] args) {
         MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
@@ -103,16 +138,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
         String output = options.getOutput();
         readingPipeline
                 .apply(PubsubIO.readMessagesWithAttributesAndMessageId().fromSubscription(options.getSubscription()))
-                .apply(MapElements.via(new SimpleFunction<PubsubMessage, GenericRecord>() {
-                    @Override
-                    public GenericData.Record apply(PubsubMessage msg) {
-                        String body = new String(msg.getPayload());
-                        LOGGER.info("body {}", body);
-                        GenericData.Record record = new GenericData.Record(SCHEMA);
-                        record.put(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID, "body=" + body + ", attributes=" + msg.getAttributeMap() + ", messageId=" + msg.getMessageId());
-                        return record;
-                    }
-                }))
+                .apply(ConcatBodyAttrAndMsgIdFn.CLASS_NAME, ParDo.of(new ConcatBodyAttrAndMsgIdFn()))
                 .setCoder(AvroGenericCoder.of(SCHEMA)) // required to explicitly set coder for GenericRecord
 //                .apply(MyConsoleIO.write());
                 .apply(Window.into(FixedWindows.of(Duration.standardSeconds(60))))
@@ -127,18 +153,9 @@ gcloud dataflow flex-template run $APP-$OWNER \
                                 String prefix = resource.isDirectory() ? "" : firstNonNull(resource.getFilename(), "");
                                 String suggestedFilenameSuffix = outputFileHints.getSuggestedFilenameSuffix();
                                 String suffix = suggestedFilenameSuffix != null && !suggestedFilenameSuffix.isEmpty() ? suggestedFilenameSuffix : ".avro";
-                                String filename =
-                                        String.format(
-                                                "%s/%s-of-%s%s",
-                                                String.format("%s/%s", prefix, FORMATTER.print(intervalWindow.start())),
-                                                shardNumber,
-                                                numShards,
-                                                suffix);
-
+                                String filename = String.format("%s/%s-of-%s%s", String.format("%s/%s", prefix, FORMATTER.print(intervalWindow.start())), shardNumber, numShards, suffix);
                                 LOGGER.info("filename='{}'", filename);
-                                return resource
-                                        .getCurrentDirectory()
-                                        .resolve(filename, ResolveOptions.StandardResolveOptions.RESOLVE_FILE);
+                                return resource.getCurrentDirectory().resolve(filename, ResolveOptions.StandardResolveOptions.RESOLVE_FILE);
                             }
 
                             @Override
