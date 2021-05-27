@@ -252,7 +252,7 @@
         {
           "height": 4,
           "widget": {
-            "title": "Cloud Pub/Sub Subscription - Oldest unacked message age  [MAX]",
+            "title": "Oldest unacked message age for ${subscription} [MAX]",
             "xyChart": {
               "chartOptions": {
                 "mode": "COLOR"
@@ -1001,7 +1001,7 @@
         {
           "height": 4,
           "widget": {
-            "title": "${transform_step_name}_counter",
+            "title": "inputDataFreshnessMs",
             "xyChart": {
               "chartOptions": {
                 "mode": "COLOR"
@@ -1016,7 +1016,7 @@
                         "alignmentPeriod": "60s",
                         "perSeriesAligner": "ALIGN_MEAN"
                       },
-                      "filter": "metric.type=\"dataflow.googleapis.com/job/user_counter\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"metric_name\"=\"${transform_step_name}_counter\""
+                      "filter": "metric.type=\"dataflow.googleapis.com/job/user_counter\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"metric_name\"=monitoring.regex.full_match(\".*nputDataFreshnessMs_M.*\")"
                     }
                   }
                 }
@@ -1282,7 +1282,7 @@
         {
           "height": 4,
           "widget": {
-            "title": "${transform_step_name}_pubsubMessageSizeBytes",
+            "title": "pubsubMessageSizeBytes",
             "xyChart": {
               "chartOptions": {
                 "mode": "COLOR"
@@ -1297,7 +1297,7 @@
                         "alignmentPeriod": "60s",
                         "perSeriesAligner": "ALIGN_MEAN"
                       },
-                      "filter": "metric.type=\"dataflow.googleapis.com/job/user_counter\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"metric_name\"=monitoring.regex.full_match(\"${transform_step_name}_pubsubMessageSizeBytes_M.*\")",
+                      "filter": "metric.type=\"dataflow.googleapis.com/job/user_counter\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"metric_name\"=monitoring.regex.full_match(\".*_pubsubMessage.*SizeBytes_M.*\")",
                       "secondaryAggregation": {
                         "alignmentPeriod": "60s"
                       }

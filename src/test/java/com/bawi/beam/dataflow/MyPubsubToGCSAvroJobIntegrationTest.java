@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import static com.bawi.beam.dataflow.MyPubsubToGCSJob.BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID;
+import static com.bawi.beam.dataflow.MyPubsubToGCSJob.ConcatBodyAttrAndMsgIdFn.CUSTOM_TIMESTAMP_ATTRIBUTE;
 
 public class MyPubsubToGCSAvroJobIntegrationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyPubsubToGCSAvroJobIntegrationTest.class);
@@ -51,7 +52,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         String topic = get("OWNER") + "-topic";
         String gcsBucket = get("OWNER") + "-" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase();
         LOGGER.info("topic={}, bucket={}", topic, gcsBucket);
-        int numMessages = 15 * 60;
+        int numMessages = 2 * 60;
 
         // when
         Process process = runTerraformInfrastructureSetupAsBashProcess("terraform/" + MyPubsubToGCSJob.class.getSimpleName());
@@ -69,10 +70,10 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         LOGGER.info("Content of avro file(s) read from GCS: {}", avroRecordsAsStrings);
 
         Assert.assertEquals(numMessages, avroRecordsAsStrings.size());
-        Assert.assertTrue(avroRecordsAsStrings.contains("{\"" + BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID + "\": \"" +
+        Assert.assertTrue(avroRecordsAsStrings.stream().anyMatch(s -> s.startsWith("{\"" + BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID + "\": \"" +
                 "body=" + MY_MSG_BODY + "1, " +
                 "attributes={" + MY_MSG_ATTR_NAME + "1=" + MY_MSG_ATTR_VALUE + "1}, " +
-                "messageId=" + messageIds.get(0) + "\"}"));
+                "messageId=" + messageIds.get(0) + ", inputDataFreshnessMs=")));
 
     }
 
@@ -95,7 +96,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         Publisher publisher = Publisher.newBuilder(TopicName.of(get("PROJECT"), topic)).build();
         PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
                 .setData(ByteString.copyFromUtf8(myMsgBody))
-                .putAllAttributes(ImmutableMap.of(myMsgAttrName, myMsgAttrValue))
+                .putAllAttributes(ImmutableMap.of(myMsgAttrName, myMsgAttrValue, CUSTOM_TIMESTAMP_ATTRIBUTE, String.valueOf(System.currentTimeMillis())))
                 .build();
 
         ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
