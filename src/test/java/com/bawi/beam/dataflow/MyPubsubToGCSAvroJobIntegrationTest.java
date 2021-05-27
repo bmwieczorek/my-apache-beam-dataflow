@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -52,7 +53,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         String topic = get("OWNER") + "-topic";
         String gcsBucket = get("OWNER") + "-" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase();
         LOGGER.info("topic={}, bucket={}", topic, gcsBucket);
-        int numMessages = 2 * 60;
+        int numMessages = 5 * 60;
 
         // when
         Process process = runTerraformInfrastructureSetupAsBashProcess("terraform/" + MyPubsubToGCSJob.class.getSimpleName());
@@ -70,10 +71,10 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         LOGGER.info("Content of avro file(s) read from GCS: {}", avroRecordsAsStrings);
 
         Assert.assertEquals(numMessages, avroRecordsAsStrings.size());
-        Assert.assertTrue(avroRecordsAsStrings.stream().anyMatch(s -> s.startsWith("{\"" + BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID + "\": \"" +
-                "body=" + MY_MSG_BODY + "1, " +
-                "attributes={" + MY_MSG_ATTR_NAME + "1=" + MY_MSG_ATTR_VALUE + "1}, " +
-                "messageId=" + messageIds.get(0) + ", inputDataFreshnessMs=")));
+        String format = String.format("\\{\"%s\": \"body=%s, attributes=\\{customTimestampAttribute=\\d+, %s=%s}, messageId=%s, inputDataFreshnessMs=\\d+, customInputDataFreshnessMs=\\d+\"}",
+                BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID, MY_MSG_BODY + "1", MY_MSG_ATTR_NAME + "1", MY_MSG_ATTR_VALUE + "1", messageIds.get(0));
+        Pattern pattern = Pattern.compile(format);
+        Assert.assertTrue(avroRecordsAsStrings.stream().anyMatch(s -> pattern.matcher(s).matches()));
 
     }
 
