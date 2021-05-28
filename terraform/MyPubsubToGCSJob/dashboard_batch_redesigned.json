@@ -531,40 +531,7 @@
         {
           "height": 4,
           "widget": {
-            "title": "Custom processingTimeMs distribution",
-            "xyChart": {
-              "chartOptions": {
-                "mode": "COLOR"
-              },
-              "dataSets": [
-                {
-                  "minAlignmentPeriod": "60s",
-                  "plotType": "LINE",
-                  "timeSeriesQuery": {
-                    "timeSeriesFilter": {
-                      "aggregation": {
-                        "alignmentPeriod": "60s",
-                        "perSeriesAligner": "ALIGN_MEAN"
-                      },
-                      "filter": "metric.type=\"dataflow.googleapis.com/job/user_counter\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"metric_name\"=monitoring.regex.full_match(\".*processingTimeMs_M.*\")"
-                    }
-                  }
-                }
-              ],
-              "timeshiftDuration": "0s",
-              "yAxis": {
-                "label": "y1Axis",
-                "scale": "LINEAR"
-              }
-            }
-          },
-          "width": 6,
-          "yPos": 26
-        },
-        {
-          "height": 4,
-          "widget": {
-            "title": "VM - Memory Heap usage USED/COMMITTED/MAX",
+            "title": "VM - Memory Heap used/committed/max",
             "xyChart": {
               "chartOptions": {
                 "mode": "COLOR"
@@ -767,44 +734,6 @@
           },
           "width": 6,
           "yPos": 4
-        },
-        {
-          "height": 4,
-          "widget": {
-            "title": "BigQueryIO.Write Requests",
-            "xyChart": {
-              "chartOptions": {
-                "mode": "COLOR"
-              },
-              "dataSets": [
-                {
-                  "minAlignmentPeriod": "60s",
-                  "plotType": "LINE",
-                  "timeSeriesQuery": {
-                    "timeSeriesFilter": {
-                      "aggregation": {
-                        "alignmentPeriod": "60s",
-                        "perSeriesAligner": "ALIGN_RATE"
-                      },
-                      "filter": "metric.type=\"dataflow.googleapis.com/job/bigquery/write_count\" resource.type=\"dataflow_job\" ${dataflow_job_filter}",
-                      "secondaryAggregation": {
-                        "alignmentPeriod": "60s",
-                        "perSeriesAligner": "ALIGN_MEAN"
-                      }
-                    }
-                  }
-                }
-              ],
-              "timeshiftDuration": "0s",
-              "yAxis": {
-                "label": "y1Axis",
-                "scale": "LINEAR"
-              }
-            }
-          },
-          "width": 6,
-          "xPos": 6,
-          "yPos": 26
         }
       ]
     },
