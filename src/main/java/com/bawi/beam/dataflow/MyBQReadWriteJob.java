@@ -352,10 +352,10 @@ select * from bartek_dataset.mysubscription_table;
 
 ### Variables ###
 PROJECT=$(gcloud config get-value project)
-USER=bartek
+OWNER=bartek
 EXPIRATION_DATE=2021-03-03
 JOB=mybqreadwritejob
-BUCKET=${PROJECT}-${USER}-${JOB}
+BUCKET=${PROJECT}-${OWNER}-${JOB}
 gsutil mb gs://${BUCKET}
 
 
@@ -387,7 +387,7 @@ java -cp target/my-apache-beam-dataflow-0.1-SNAPSHOT.jar com.bawi.beam.dataflow.
 
 
 ### Execute from template ###
-gcloud dataflow jobs run ${JOB}-${USER}-template-${EXPIRATION_DATE} \
+gcloud dataflow jobs run ${JOB}-${OWNER}-template-${EXPIRATION_DATE} \
   ${GCLOUD_DATAFLOW_RUN_OPTS} \
   --gcs-location gs://${BUCKET}/templates/${JOB}-template \
   --parameters expirationDate=${EXPIRATION_DATE}

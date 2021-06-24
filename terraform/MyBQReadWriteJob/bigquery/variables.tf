@@ -28,13 +28,12 @@ variable "table_schema_file" {
   type        = string
 }
 
-variable "label" {
-  description = "Google label"
-  type        = string
-}
-
 variable "load_file" {
   description = "My load file"
   type = string
 }
 
+variable "owner" {
+  description = "Google resource owner"
+  type        = string
+}

@@ -33,11 +33,6 @@ variable "expiration_date" {
   type        = string
 }
 
-variable "label" {
-  description = "Google label"
-  type        = string
-}
-
 variable "zone" {
   description = "Google Cloud compute zone"
   type        = string
@@ -70,5 +65,10 @@ variable "dashboard_file" {
 
 variable "notification_email" {
   description = "Notification email"
+  type        = string
+}
+
+variable "owner" {
+  description = "Google resource owner"
   type        = string
 }

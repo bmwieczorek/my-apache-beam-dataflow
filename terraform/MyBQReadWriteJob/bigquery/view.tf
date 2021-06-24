@@ -3,9 +3,10 @@ resource "google_bigquery_table" "view" {
   project = var.project
   dataset_id = google_bigquery_table.my_table.dataset_id
   table_id = var.view
-
   deletion_protection = false
-
+  labels = {
+    owner   = var.owner
+  }
   view {
     query = templatefile("view.tpl", {
       dataset = var.dataset,

@@ -12,9 +12,7 @@ locals {
 }
 
 resource "null_resource" "udf" {
-
   depends_on = [google_bigquery_table.my_table]
-
   triggers = {
     udf = local.udf_create
   }
@@ -23,8 +21,7 @@ resource "null_resource" "udf" {
     interpreter = [
       "bq",
       "query",
-      "--use_legacy_sql=false",
-      "--project_id=${var.project}"
+      "--use_legacy_sql=false"
     ]
     command = local.udf_create
   }
@@ -34,8 +31,7 @@ resource "null_resource" "udf" {
     interpreter = [
       "bq",
       "query",
-      "--use_legacy_sql=false",
-      "--project_id=${var.project}"
+      "--use_legacy_sql=false"
     ]
     command = local.udf_destroy
   }

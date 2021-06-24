@@ -1,4 +1,4 @@
-package com.bawi;
+package com.bawi.beam.dataflow;
 
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.BigQueryOptions;

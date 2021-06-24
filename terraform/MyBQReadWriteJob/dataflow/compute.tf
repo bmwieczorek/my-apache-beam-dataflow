@@ -32,6 +32,10 @@ resource "google_compute_instance" "compute_template" {
     "template_gcs_path" = "gs://${var.bucket}/templates/${var.job}-template",
     "wait_secs_before_delete" = 300
   }
+  labels = {
+    owner   = var.owner
+  }
+
   boot_disk {
     initialize_params {
       image = var.image

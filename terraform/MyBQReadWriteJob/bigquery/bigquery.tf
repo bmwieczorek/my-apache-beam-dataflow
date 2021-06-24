@@ -9,9 +9,8 @@ resource "google_bigquery_dataset" "my_dataset" {
   description                 = "My dataset description"
 
   labels = {
-    user = var.label
+    owner = var.owner
   }
-
 }
 
 resource "google_bigquery_table" "my_table" {
@@ -20,7 +19,7 @@ resource "google_bigquery_table" "my_table" {
   table_id   = var.table
 
   labels = {
-    user = var.label
+    owner = var.owner
   }
 
   deletion_protection = false
@@ -62,9 +61,8 @@ resource "google_storage_bucket_object" "my_bucket_object" {
 resource "google_bigquery_job" "my_bigquery_job" {
   project    = var.project
   job_id     = "my_bigquery_job_${local.ts}"
-
   labels = {
-    user = var.label
+    owner = var.owner
   }
 
   load {

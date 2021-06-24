@@ -13,7 +13,7 @@ variable "job" {
   type        = string
 }
 
-variable "label" {
-  description = "Google label"
+variable "owner" {
+  description = "Google resource owner"
   type        = string
 }

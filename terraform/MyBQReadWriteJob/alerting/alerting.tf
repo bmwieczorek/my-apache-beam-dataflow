@@ -9,7 +9,7 @@ resource "google_monitoring_notification_channel" "email" {
   }
 
   user_labels = {
-    user = var.label
+    owner = var.owner
   }
 }
 
