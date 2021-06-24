@@ -8,19 +8,20 @@ resource "google_dataflow_flex_template_job" "my_dataflow_flex_job" {
   project               = var.project
   provider              = google-beta
   name                  = var.job
-  container_spec_gcs_path = "gs://${var.bucket}/templates/app-image-spec.json"
+  container_spec_gcs_path = "gs://${google_storage_bucket_object.my_bucket_object.bucket}/${google_storage_bucket_object.my_bucket_object.name}" // id bartek-mypubsubtogcsjob-templates/app-image-spec.json // output_name: templates/app-image-spec.json
   on_delete             = "cancel"
   region                = var.region
   parameters = {
     subscription = google_pubsub_subscription.my_subscription.id
     output = var.output
     workerMachineType = "n2-standard-2"
-    workerDiskType = "compute.googleapis.com/projects/${var.project}/zones/us-central1-c/diskTypes/pd-standard"
+    workerDiskType = "compute.googleapis.com/projects/${var.project}/zones/${var.zone}/diskTypes/pd-standard"
     diskSizeGb = 200
     serviceAccount = var.service_account
     subnetwork = var.subnetwork
     usePublicIps = false
     experiments = "enable_stackdriver_agent_metrics"
+    labels = "{\"owner\":\"bartek\",\"dataflow-template\":\"flex\"}"
   }
 
   provisioner "local-exec" {

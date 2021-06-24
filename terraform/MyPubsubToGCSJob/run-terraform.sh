@@ -11,7 +11,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd ../..
 JAVA_HOME_OLD=${JAVA_HOME}
 export JAVA_HOME=${JAVA_11_HOME}
-mvn clean package -Pbuild-and-deploy-flex-template -Dgcp.project.id=${PROJECT}
+mvn clean package -Pbuild-and-deploy-flex-template -Dgcp.project.id=${PROJECT} -DskipTests
 cd $SCRIPT_DIR
 
 if [ -z "$OWNER" ]
@@ -35,6 +35,14 @@ gcloud pubsub subscriptions delete ${SUBSCRIPTION}
 gcloud pubsub topics delete ${TOPIC}
 gcloud monitoring dashboards list --filter="displayName='${JOB} job id'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
 gcloud monitoring dashboards list --filter="displayName='${JOB} job name'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
+gcloud monitoring dashboards list --filter="displayName='${JOB} redesigned job id'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
+gcloud monitoring dashboards list --filter="displayName='${JOB} redesigned job name'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
+
+#gcloud monitoring dashboards list --filter="displayName='airshopping-data-ingestion redesigned job name'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
+#gcloud monitoring dashboards list --filter="displayName='robotic-shopping redesigned job name'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
+#gcloud monitoring dashboards list --filter="displayName='robotic-shopping redesigned job id 2021-05-27_05_53_24-8109596674050890303'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
+#gcloud monitoring dashboards list --filter="displayName='airshopping-data-ingestion redesigned job id 2021-05-26_09_34_30-17149002215298212728'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
+
 gcloud dataflow jobs list --filter "NAME:${JOB} AND STATE=Running" --format 'value(JOB_ID)' --region "$REGION" | xargs gcloud dataflow jobs cancel --region "$REGION"
 max_retry=10; counter=1; sleep_secs=5; until [ -z "$(gcloud dataflow jobs list --filter "NAME:${JOB} AND (STATE=Cancelling OR STATE=Running)" --format 'value(JOB_ID)' --region $REGION)" ] ; do sleep $sleep_secs; [[ counter -eq $max_retry ]] && echo "Failed" && break; echo "waiting $sleep_secs secs for job to stop: attempt $counter" ; ((counter++)); done
 gsutil rm -r gs://${JOB}

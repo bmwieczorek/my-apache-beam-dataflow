@@ -12,7 +12,6 @@ import org.apache.beam.sdk.io.fs.ResolveOptions;
 import org.apache.beam.sdk.io.fs.ResourceId;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubMessage;
-import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Distribution;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.options.PipelineOptions;
@@ -23,12 +22,16 @@ import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.windowing.*;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.joda.time.Duration;
+import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.beam.vendor.guava.v26_0_jre.com.google.common.base.MoreObjects.firstNonNull;
+import java.util.TreeMap;
+
+import static com.google.common.base.MoreObjects.firstNonNull;
+
 
 public class MyPubsubToGCSJob {
 
@@ -93,36 +96,43 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MyPubsubToGCSJob.class);
 
-    static final String BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID = "bodyWithAttributesAndMessageId";
+    static final String BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID = "bodyWithAttributesMessageId";
     private static final Schema SCHEMA = SchemaBuilder.record("record").fields().requiredString(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID).endRecord();
     private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("yyyy/MM/dd/HH/mm");
 
 
-
-
-    private static class ConcatBodyAttrAndMsgIdFn extends DoFn<PubsubMessage, GenericRecord> {
+    static class ConcatBodyAttrAndMsgIdFn extends DoFn<PubsubMessage, GenericRecord> {
         private static final String CLASS_NAME = ConcatBodyAttrAndMsgIdFn.class.getSimpleName();
         private static final Distribution PUBSUB_MESSAGE_SIZE_BYTES = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_pubsubMessageSizeBytes");
         private static final Distribution PROCESSING_TIME_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_processingTimeMs");
-        private static final Counter COUNTER = Metrics.counter(CLASS_NAME, CLASS_NAME + "_counter");
+        private static final Distribution INPUT_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_inputDataFreshnessMs");
+        private static final Distribution CUSTOM_INPUT_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_customInputDataFreshnessMs");
+        static final String CUSTOM_TIMESTAMP_ATTRIBUTE = "customTimestampAttribute";
 
         @ProcessElement
-        public void process(@Element PubsubMessage pubsubMessage, OutputReceiver<GenericRecord> outputReceiver) {
+        public void process(@Element PubsubMessage pubsubMessage, @Timestamp Instant timestamp, OutputReceiver<GenericRecord> outputReceiver) {
             long startMs = System.currentTimeMillis();
             PUBSUB_MESSAGE_SIZE_BYTES.update(pubsubMessage.getPayload() != null ? pubsubMessage.getPayload().length : 0);
 
-            GenericData.Record record = doProcess(pubsubMessage);
+            long inputDataFreshnessMs = startMs - timestamp.getMillis();
+            String customTimestamp = pubsubMessage.getAttribute(CUSTOM_TIMESTAMP_ATTRIBUTE);
+            long customInputDataFreshnessMs = customTimestamp != null ? (startMs - Long.parseLong(customTimestamp)) : -1;
+
+            GenericData.Record record = doProcess(pubsubMessage, inputDataFreshnessMs, customInputDataFreshnessMs);
             outputReceiver.output(record);
 
-            long processingTimeMs = System.currentTimeMillis() - startMs;
-            PROCESSING_TIME_MS.update(processingTimeMs);
-            COUNTER.inc();
+            if (inputDataFreshnessMs > 0) INPUT_DATA_FRESHNESS_MS.update(inputDataFreshnessMs);
+            if (customInputDataFreshnessMs > 0) CUSTOM_INPUT_DATA_FRESHNESS_MS.update(customInputDataFreshnessMs);
+
+            long endTimeMs = System.currentTimeMillis();
+            PROCESSING_TIME_MS.update(endTimeMs - startMs);
         }
 
-        private GenericData.Record doProcess(@Element PubsubMessage pubsubMessage) {
+        private GenericData.Record doProcess(PubsubMessage pubsubMessage, long inputDataFreshnessMs, long customInputDataFreshnessMs) {
             String body = new String(pubsubMessage.getPayload());
             GenericData.Record record = new GenericData.Record(SCHEMA);
-            String value = "body=" + body + ", attributes=" + pubsubMessage.getAttributeMap() + ", messageId=" + pubsubMessage.getMessageId();
+            String value = "body=" + body + ", attributes=" + new TreeMap<>(pubsubMessage.getAttributeMap()) + ", messageId=" + pubsubMessage.getMessageId()
+                    + ", inputDataFreshnessMs=" + inputDataFreshnessMs + ", customInputDataFreshnessMs=" + customInputDataFreshnessMs;
             record.put(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID, value);
             LOGGER.info("record {}", record);
             return record;

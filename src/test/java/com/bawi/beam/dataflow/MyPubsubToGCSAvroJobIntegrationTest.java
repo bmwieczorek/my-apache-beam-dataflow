@@ -53,7 +53,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         String topic = get("OWNER") + "-topic";
         String gcsBucket = get("OWNER") + "-" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase();
         LOGGER.info("topic={}, bucket={}", topic, gcsBucket);
-        int numMessages = 5 * 60;
+        int numMessages = 3 * 60;
 
         // when
         Process process = runTerraformInfrastructureSetupAsBashProcess("terraform/" + MyPubsubToGCSJob.class.getSimpleName());
