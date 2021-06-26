@@ -10,12 +10,14 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- https://github.com/apache/beam/blob/release-2.29.0/buildSrc/src/main/groovy/org/apache/beam/gradle/BeamModulePlugin.groovy -->
-<!--
-        <beam.version>2.29.0</beam.version>
+
+        <beam.version>2.30.0</beam.version>
         <guava.version>30.1-jre</guava.version>
--->
+
+<!--
         <beam.version>2.28.0</beam.version>
         <guava.version>25.1-jre</guava.version>
+-->
 
         <slf4j.version>1.7.30</slf4j.version>
         <junit.version>4.13.2</junit.version>
@@ -35,6 +37,15 @@
                 <configuration>
                     <source>11</source>
                     <target>11</target>
+
+                    <!-- used for @AutoService(JvmInitializer.class) -->
+                    <annotationProcessorPaths>
+                        <annotationProcessorPath>
+                            <groupId>com.google.auto.service</groupId>
+                            <artifactId>auto-service</artifactId>
+                            <version>1.0</version>
+                        </annotationProcessorPath>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>
@@ -103,17 +114,17 @@
         </dependency>
 
         <!-- required for org.apache.beam.sdk.io.gcp.pubsub class KafkaIO -->
-<!--        <dependency>-->
-<!--            <groupId>org.apache.beam</groupId>-->
-<!--            <artifactId>beam-sdks-java-io-kafka</artifactId>-->
-<!--            <version>${beam.version}</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>org.apache.beam</groupId>
+            <artifactId>beam-sdks-java-io-kafka</artifactId>
+            <version>${beam.version}</version>
+        </dependency>
 
-<!--        <dependency>-->
-<!--            <groupId>org.apache.kafka</groupId>-->
-<!--            <artifactId>kafka-clients</artifactId>-->
-<!--            <version>1.1.1</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>1.1.1</version>
+        </dependency>
 
         <!-- ParquetIO -->
 <!--        <dependency>
@@ -138,13 +149,6 @@
             <scope>runtime</scope>
         </dependency>-->
 
-<!--        <dependency>-->
-<!--            <groupId>com.google.cloud</groupId>-->
-<!--            <artifactId>google-cloud-bigquery</artifactId>-->
-<!--            <version>1.129.0</version>-->
-<!--            <scope>test</scope>-->
-<!--        </dependency>-->
-
         <dependency>
             <groupId>com.google.cloud</groupId>
             <artifactId>google-cloud-storage</artifactId>
@@ -156,6 +160,13 @@
                     <artifactId>google-api-services-storage</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+
+        <!-- Used for @AutoService(JvmInitializer.class) -->
+        <dependency>
+            <groupId>com.google.auto.service</groupId>
+            <artifactId>auto-service-annotations</artifactId>
+            <version>1.0</version>
         </dependency>
 
     </dependencies>
