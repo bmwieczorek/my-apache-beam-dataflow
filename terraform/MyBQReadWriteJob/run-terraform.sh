@@ -87,6 +87,7 @@ dataflow_jar="my-apache-beam-dataflow-0.1-SNAPSHOT.jar"
 dataflow_start_time="$(date -u "+%Y-%m-%dT%H:%M:%SZ")"
 dashboard_file="dashboard.json"
 notification_email="${EMAIL}"
+class="com.bawi.beam.dataflow.MyBQReadWriteJob"
 EOF
 
 run_terraform_all storage

@@ -53,6 +53,11 @@ variable "dataflow_jar" {
   type        = string
 }
 
+variable "class" {
+  description = "Google dataflow job class"
+  type        = string
+}
+
 variable "dataflow_start_time" {
   description = "Google dataflow job start time"
   type        = string
