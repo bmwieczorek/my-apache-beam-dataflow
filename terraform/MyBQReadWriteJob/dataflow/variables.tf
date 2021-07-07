@@ -53,8 +53,8 @@ variable "dataflow_jar" {
   type        = string
 }
 
-variable "class" {
-  description = "Google dataflow job class"
+variable "main_class" {
+  description = "Google dataflow job main class"
   type        = string
 }
 

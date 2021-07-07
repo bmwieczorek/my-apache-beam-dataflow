@@ -22,8 +22,8 @@ DATAFLOW_JAR=$(curl http://metadata.google.internal/computeMetadata/v1/instance/
 echo "DATAFLOW_JAR=$DATAFLOW_JAR" | tee -a ${LOG}
 DATAFLOW_JAR_GCS_PATH=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/dataflow_jar_gcs_path -H "Metadata-Flavor: Google")
 echo "DATAFLOW_JAR_GCS_PATH=$DATAFLOW_JAR_GCS_PATH" | tee -a ${LOG}
-DATAFLOW_JAR_CLASS=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/dataflow_jar_class -H "Metadata-Flavor: Google")
-echo "DATAFLOW_JAR_CLASS=$DATAFLOW_JAR_CLASS" | tee -a ${LOG}
+DATAFLOW_JAR_MAIN_CLASS=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/dataflow_jar_main_class -H "Metadata-Flavor: Google")
+echo "DATAFLOW_JAR_MAIN_CLASS=$DATAFLOW_JAR_MAIN_CLASS" | tee -a ${LOG}
 WAIT_SECS_BEFORE_VM_DELETE=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/wait_secs_before_delete -H "Metadata-Flavor: Google")
 echo "WAIT_SECS_BEFORE_VM_DELETE=$WAIT_SECS_BEFORE_VM_DELETE" | tee -a ${LOG}
 
@@ -33,7 +33,7 @@ java -version 2>&1 | tee -a ${LOG}
 gsutil cp ${DATAFLOW_JAR_GCS_PATH} . 2>&1 | tee -a ${LOG}
 JAVA_DATAFLOW_RUN_OPTS="--project=$PROJECT --region=$REGION --serviceAccount=$SERVICE_ACCOUNT --subnetwork=$SUBNETWORK --usePublicIps=false"
 echo "Creating template $DATAFLOW_TEMPLATE_GCS_PATH" | tee -a ${LOG}
-java -Dorg.xerial.snappy.tempdir=$(pwd) -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_CLASS} \
+java -Dorg.xerial.snappy.tempdir=$(pwd) -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAIN_CLASS} \
   ${JAVA_DATAFLOW_RUN_OPTS} \
   --runner=DataflowRunner \
   --stagingLocation=gs://${BUCKET}/staging \

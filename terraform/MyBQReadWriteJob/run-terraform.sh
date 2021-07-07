@@ -43,7 +43,7 @@ bq rm -r -f -d ${PROJECT}:${OWNER}_dataset
 gcloud beta logging sinks delete "${JOB}-logging-sink" --quiet
 gcloud monitoring dashboards list --filter="displayName='$JOB redesigned job id'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
 gcloud monitoring dashboards list --filter="displayName='$JOB redesigned job name'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
-for name in $(gcloud alpha monitoring policies list --filter "display_name='bartek-mybqreadwritejob last run did not run for last 300s alert policy'" --format 'value(NAME)'); do gcloud alpha monitoring policies delete $name --quiet ; done
+for name in $(gcloud alpha monitoring policies list --filter "display_name='bartek-mybqreadwritejob did not run for last 300s alert policy new'" --format 'value(NAME)'); do gcloud alpha monitoring policies delete $name --quiet ; done
 max_retry=20; counter=1; sleep_secs=5; until [ -z "$(gcloud dataflow jobs list --filter "NAME:${JOB}-${EXPIRATION_DATE} AND (STATE=Cancelling OR STATE=Running)" --format 'value(JOB_ID)' --region $REGION)" ] ; do sleep $sleep_secs; [[ counter -eq $max_retry ]] && echo "Failed" && break; echo "waiting $sleep_secs secs for job to stop: attempt $counter" ; ((counter++)); done
 gsutil rm -r "gs://${JOB}"
 gsutil -q stat "gs://$OWNER-terraform/**" || gsutil mb "gs://$OWNER-terraform"
@@ -87,7 +87,7 @@ dataflow_jar="my-apache-beam-dataflow-0.1-SNAPSHOT.jar"
 dataflow_start_time="$(date -u "+%Y-%m-%dT%H:%M:%SZ")"
 dashboard_file="dashboard.json"
 notification_email="${EMAIL}"
-class="com.bawi.beam.dataflow.MyBQReadWriteJob"
+main_class="com.bawi.beam.dataflow.MyBQReadWriteJob"
 EOF
 
 run_terraform_all storage

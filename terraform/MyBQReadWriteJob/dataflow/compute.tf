@@ -30,7 +30,7 @@ resource "google_compute_instance" "compute_template" {
     "dataflow_jar" = var.dataflow_jar,
     "dataflow_jar_gcs_path" = "gs://${var.bucket}/compute/${var.dataflow_jar}",
     "template_gcs_path" = "gs://${var.bucket}/templates/${var.job}-template",
-    "dataflow_jar_class" = var.class,
+    "dataflow_jar_main_class" = var.main_class,
     "wait_secs_before_delete" = 300
   }
   labels = {
