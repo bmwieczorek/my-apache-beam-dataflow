@@ -22,15 +22,16 @@ public class KerberosJvmInitializer implements JvmInitializer {
     @Override
     public void beforeProcessing(PipelineOptions options) {
         MyKerberizedKafkaToPubsub.Options kerberizedOptions = options.as(MyKerberizedKafkaToPubsub.Options.class);
-
-        try {
-            copyToLocal(kerberizedOptions.getGcsKeyTabPath(), kerberizedOptions.getLocalKeyTabPath());
-            copyToLocal(kerberizedOptions.getGcsKrb5Path(), kerberizedOptions.getLocalKrb5Path());
-            copyToLocal(kerberizedOptions.getGcsTrustStorePath(), kerberizedOptions.getLocalTrustStorePath());
-            System.setProperty("java.security.krb5.conf", kerberizedOptions.getLocalKrb5Path());
-        } catch (IOException e) {
-            LOGGER.error("Unable to copy from GCS to local");
-            throw new RuntimeException(e);
+        if (kerberizedOptions.getIsClusterKerberized()) {
+            try {
+                copyToLocal(kerberizedOptions.getGcsKeyTabPath(), kerberizedOptions.getLocalKeyTabPath());
+                copyToLocal(kerberizedOptions.getGcsKrb5Path(), kerberizedOptions.getLocalKrb5Path());
+                copyToLocal(kerberizedOptions.getGcsTrustStorePath(), kerberizedOptions.getLocalTrustStorePath());
+                System.setProperty("java.security.krb5.conf", kerberizedOptions.getLocalKrb5Path());
+            } catch (IOException e) {
+                LOGGER.error("Unable to copy from GCS to local");
+                throw new RuntimeException(e);
+            }
         }
     }
 

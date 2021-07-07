@@ -5,9 +5,7 @@ import org.apache.beam.sdk.coders.ByteArrayCoder;
 import org.apache.beam.sdk.coders.NullableCoder;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.io.kafka.KafkaIO;
-import org.apache.beam.sdk.options.PipelineOptions;
-import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.options.Validation;
+import org.apache.beam.sdk.options.*;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.TypeDescriptors;
@@ -31,6 +29,11 @@ public class MyKerberizedKafkaToPubsub {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyKerberizedKafkaToPubsub.class);
 
     public interface Options extends PipelineOptions {
+        @Description("Is Kafka cluster Kerberized")
+        @Default.Boolean(false)
+        boolean getIsClusterKerberized();
+        void setIsClusterKerberized(boolean value);
+
         @Validation.Required
         String getLocalKrb5Path();
         void setLocalKrb5Path(String value);
@@ -63,6 +66,7 @@ public class MyKerberizedKafkaToPubsub {
         @Validation.Required
         String getConsumerGroupId();
         void setConsumerGroupId(String value);
+
 
         @Validation.Required
         String getPrincipal();
