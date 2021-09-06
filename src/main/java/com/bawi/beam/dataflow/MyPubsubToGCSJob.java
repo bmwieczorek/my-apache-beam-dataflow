@@ -147,6 +147,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
         // requires org.apache.beam:beam-sdks-java-io-google-cloud-platform
         String output = options.getOutput();
         readingPipeline
+//                .apply(PubsubIO.readMessagesWithAttributesAndMessageId().fromSubscription(options.getSubscription()).withIdAttribute("myMsgAttrName")) // deduplicated based on myMsgAttrName
                 .apply(PubsubIO.readMessagesWithAttributesAndMessageId().fromSubscription(options.getSubscription()))
                 .apply(ConcatBodyAttrAndMsgIdFn.CLASS_NAME, ParDo.of(new ConcatBodyAttrAndMsgIdFn()))
                 .setCoder(AvroGenericCoder.of(SCHEMA)) // required to explicitly set coder for GenericRecord

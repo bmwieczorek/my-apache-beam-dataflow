@@ -53,7 +53,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         String topic = get("OWNER") + "-topic";
         String gcsBucket = get("OWNER") + "-" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase();
         LOGGER.info("topic={}, bucket={}", topic, gcsBucket);
-        int numMessages = 3 * 60;
+        int numMessages = 5 * 60;
 
         // when
         Process process = runTerraformInfrastructureSetupAsBashProcess("terraform/" + MyPubsubToGCSJob.class.getSimpleName());
@@ -63,7 +63,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
 
         Thread.sleep(10 * 1000);
 
-        List<String> messageIds = sendNPubsubMessagesWithDelay(topic, numMessages, Duration.ofSeconds(1));
+        List<String> messageIds = sendNPubsubMessagesWithDelay(topic, numMessages, Duration.ofMillis(500));
 
         // then
         List<String> avroRecordsAsStrings = waitUpTo5MinsForDataflowJobToWriteAvroFileToGCSBucket(gcsBucket, numMessages);
@@ -72,6 +72,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
 
         Assert.assertEquals(numMessages, avroRecordsAsStrings.size());
         String format = String.format("\\{\"%s\": \"body=%s, attributes=\\{customTimestampAttribute=\\d+, %s=%s}, messageId=%s, inputDataFreshnessMs=\\d+, customInputDataFreshnessMs=\\d+\"}",
+//                BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID, MY_MSG_BODY, MY_MSG_ATTR_NAME, MY_MSG_ATTR_VALUE + "0", messageIds.get(0));  // deduplication
                 BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID, MY_MSG_BODY + "1", MY_MSG_ATTR_NAME + "1", MY_MSG_ATTR_VALUE + "1", messageIds.get(0));
         Pattern pattern = Pattern.compile(format);
         Assert.assertTrue(avroRecordsAsStrings.stream().anyMatch(s -> pattern.matcher(s).matches()));
@@ -85,6 +86,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
     private List<String> sendNPubsubMessagesWithDelay(String topic, int numMessages, Duration sleepDuration) throws IOException, InterruptedException, ExecutionException {
         List<String> messageIds = new ArrayList<>();
         for (int i = 1; i <= numMessages; i++) {
+//            String messageId = sendMessageToPubsub(MY_MSG_BODY + i, MY_MSG_ATTR_NAME, MY_MSG_ATTR_VALUE + (i - (i % 2)), topic); // deduplication
             String messageId = sendMessageToPubsub(MY_MSG_BODY + i, MY_MSG_ATTR_NAME + i, MY_MSG_ATTR_VALUE + i, topic);
             LOGGER.info("Sent pubsub message ({} of {}), messageId={}", i, numMessages, messageId);
             messageIds.add(messageId);
