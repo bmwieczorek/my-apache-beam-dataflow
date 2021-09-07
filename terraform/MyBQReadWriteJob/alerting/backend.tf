@@ -1,6 +1,5 @@
 terraform {
   backend "gcs" {
-    bucket = "bartek-terraform"
     prefix = "MyBQReadWriteJob/alerting/tfstate"
   }
   required_providers {
