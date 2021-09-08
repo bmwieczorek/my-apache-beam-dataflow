@@ -18,6 +18,8 @@ function run_terraform_apply {
   rm "$SCRIPT_DIR/$service/$service.tfvars"
 }
 
+. ~/.gcp
+
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd ../..
 JAVA_HOME_OLD=${JAVA_HOME}
