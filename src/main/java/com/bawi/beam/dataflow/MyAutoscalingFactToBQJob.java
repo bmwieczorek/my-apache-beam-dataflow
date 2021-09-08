@@ -54,8 +54,8 @@ public class MyAutoscalingFactToBQJob {
 
 #PROJECT=$(gcloud config get-value project)
 JOB=myautoscalingfacttobqjob
-USER=bartek
-BUCKET=${PROJECT}-$USER-${JOB}
+OWNER=bartek
+BUCKET=${PROJECT}-$OWNER-${JOB}
 gsutil mb gs://${BUCKET}
 
 mvn clean compile -DskipTests -Pdataflow-runner exec:java \
