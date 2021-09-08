@@ -22,8 +22,8 @@ public class MyConsoleIO<T> extends PTransform<PCollection<T>, PDone> {
         input.apply("MyConsoleIO", MapElements.via(new SimpleFunction<T, Void>() {
             @Override
             public Void apply(T input) {
-                LOGGER.info("ConsoleIO: {}", input);
-                System.out.println("ConsoleIO: " + input);
+                LOGGER.info("ConsoleIO LOGGER: {}", input);
+                System.out.println("ConsoleIO System.out: " + input);
                 return null;
             }
         }));
