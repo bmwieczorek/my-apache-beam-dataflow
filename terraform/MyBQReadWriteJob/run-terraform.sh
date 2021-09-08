@@ -130,6 +130,15 @@ run_terraform_all bigquery
 #  --gcs-location gs://${BUCKET}/templates/${JOB}-template \
 #  --parameters expirationDate=${EXPIRATION_DATE}
 
+run_terraform_all dataflow_template
+#run_terraform_apply dataflow_template
+
+if [ -f "$GOOGLE_APPLICATION_CREDENTIALS__JSON_FILE" ]
+then
+  echo "Exporting GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS__JSON_FILE"
+  export GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS__JSON_FILE
+fi
+
 run_terraform_all dataflow
 #run_terraform_apply dataflow
 
