@@ -15,7 +15,7 @@ public class MySimpleLoggingJob {
 /*
 
 PROJECT=$(gcloud config get-value project)
-BUCKET=${PROJECT}-$USER-mysimpleloggingjob
+BUCKET=${PROJECT}-$OWNER-mysimpleloggingjob
 gsutil mb gs://${BUCKET}
 
 #Machine type	vCPUs	Memory	Price (USD)	Preemptible price (same for certral,east,west-1)
