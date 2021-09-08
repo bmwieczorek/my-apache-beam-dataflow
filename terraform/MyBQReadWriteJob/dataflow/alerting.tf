@@ -20,23 +20,23 @@ resource "time_sleep" "wait_100_seconds" {
 }
 
 
-resource "google_monitoring_alert_policy" "my_alert_job_id" {
+resource "google_monitoring_alert_policy" "my_alert_job_name" {
   depends_on = [time_sleep.wait_100_seconds]
 //  depends_on = [google_dataflow_job.my_dataflow_job]
   project = var.project
-  display_name = "${var.job} did not run for last 10m alert policy"
+  display_name = "${var.job} did not run for last 10 minutes alert policy"
   enabled = true
   combiner = "OR"
 
   notification_channels = [google_monitoring_notification_channel.email.name]
 
   documentation {
-    content = "${var.job} did not run for last 10m documentation - please check"
+    content = "${var.job} did not run for last 10 minutes documentation"
     mime_type = "text/markdown"
   }
 
   conditions {
-    display_name = "${var.job} did not run for last 10m condition"
+    display_name = "${var.job} did not run for last 10 minutes condition"
     condition_absent {
       filter        = "metric.type=\"dataflow.googleapis.com/job/element_count\" resource.type=\"dataflow_job\" resource.label.\"job_name\"=monitoring.regex.full_match(\"${var.job}.*\") metric.label.\"pcollection\"=\"BigQueryIO.TypedRead/ReadFiles.out0\""
       duration      = "600s" // 10 min time that a time series must violate the threshold to be considered failing
@@ -45,8 +45,8 @@ resource "google_monitoring_alert_policy" "my_alert_job_id" {
       }
       aggregations {
         alignment_period = "300s" // 5 min aggregation duration, at least 60s
-        cross_series_reducer = "REDUCE_MEAN"
-        per_series_aligner = "ALIGN_MEAN"
+        cross_series_reducer = "REDUCE_SUM"
+        per_series_aligner = "ALIGN_MAX"
       }
     }
   }
