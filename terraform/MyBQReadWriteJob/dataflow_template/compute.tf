@@ -24,7 +24,6 @@ resource "google_compute_instance" "compute_template" {
     "zone" = var.zone,
     "region" = var.region,
     "service_account" = var.service_account,
-    "subnetwork" = var.subnetwork,
     "bucket" = var.bucket,
     "instance" = var.instance,
     "dataflow_jar" = var.dataflow_jar,
@@ -46,6 +45,9 @@ resource "google_compute_instance" "compute_template" {
   }
 
   network_interface {
+    //network = "default" // sandbox: default network, no subnetwork; dev: network null, subnetwork vpc
+    network    = var.network
+    //    subnetwork = var.subnetwork == "null" ? null : var.subnetwork
     subnetwork = var.subnetwork
   }
 
@@ -59,7 +61,7 @@ resource "google_compute_instance" "compute_template" {
 
   provisioner "local-exec" {
     command = <<EOT
-      max_retry=50; counter=1; until gsutil stat gs://${var.bucket}/templates/${var.job}-template ; do sleep 10; [[ counter -eq $max_retry ]] && echo "Failed" && break; echo "Wating for template to be generated: $counter attempt" ; ((counter++)); done
+      max_retry=40; counter=1; until gsutil stat gs://${var.bucket}/templates/${var.job}-template ; do sleep 5; [[ counter -eq $max_retry ]] && echo "Failed" && break; echo "Wating for template to be generated: $counter attempt" ; ((counter++)); done
     EOT
   }
 }

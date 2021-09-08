@@ -14,7 +14,7 @@ variable "service_account" {
 }
 
 variable "network" {
-  description = "Google Cloud network"
+  description = "Google Cloud subnetwork"
   type        = string
   default     = null
 }
