@@ -9,8 +9,13 @@ import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.Validation;
 import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.text.NumberFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,14 +36,14 @@ public class MyPubsubReadWriteJob {
 /*
 
 PROJECT=$(gcloud config get-value project)
-USER=bartek
+OWNER=bartek
 JOB=mypubsubreadwritejob
-BUCKET=${PROJECT}-$USER-${JOB}
+BUCKET=${PROJECT}-$OWNER-${JOB}
 gsutil mb gs://${BUCKET}
-gcloud pubsub subscriptions delete $USER-${JOB}-sub
-gcloud pubsub topics delete $USER-${JOB}
-gcloud pubsub topics create $USER-${JOB}
-gcloud pubsub subscriptions create $USER-${JOB}-sub --topic=$USER-${JOB}
+gcloud pubsub subscriptions delete $OWNER-${JOB}-sub
+gcloud pubsub topics delete $OWNER-${JOB}
+gcloud pubsub topics create $OWNER-${JOB}
+gcloud pubsub subscriptions create $OWNER-${JOB}-sub --topic=$OWNER-${JOB}
 
 
 mvn clean compile -DskipTests -Pdataflow-runner exec:java \
@@ -46,10 +51,10 @@ mvn clean compile -DskipTests -Pdataflow-runner exec:java \
 -Dexec.args="${JAVA_DATAFLOW_RUN_OPTS} \
   --runner=DataflowRunner \
   --stagingLocation=gs://${BUCKET}/staging \
-  --jobName=${JOB}-write-$USER \
-  --topic=projects/${PROJECT}/topics/$USER-${JOB} \
+  --jobName=${JOB}-write-$OWNER \
+  --topic=projects/${PROJECT}/topics/$OWNER-${JOB} \
   --experiments=enable_stackdriver_agent_metrics \
-  --labels='{ \"my_job_name\" : \"${JOB}-write-$USER\"}'"
+  --labels='{ \"my_job_name\" : \"${JOB}-write-$OWNER\"}'"
 
 */
 
@@ -83,9 +88,9 @@ mvn clean compile -DskipTests -Pdataflow-runner exec:java \
 /*
 
 PROJECT=$(gcloud config get-value project)
-USER=bartek
+OWNER=bartek
 JOB=mypubsubreadwritejob
-BUCKET=${PROJECT}-$USER-${JOB}
+BUCKET=${PROJECT}-$OWNER-${JOB}
 gsutil mb gs://${BUCKET}
 
 mvn clean compile -DskipTests exec:java \
@@ -94,17 +99,20 @@ mvn clean compile -DskipTests exec:java \
 -Dexec.args="${JAVA_DATAFLOW_RUN_OPTS} \
   --runner=DataflowRunner \
   --stagingLocation=gs://${BUCKET}/staging \
-  --topic=projects/${PROJECT}/topics/$USER-${JOB} \
-  --jobName=${JOB}-read-$USER \
-  --workerMachineType=n1-standard-4 \
-  --maxNumWorkers=10 \
-  --subscription=projects/${PROJECT}/subscriptions/$USER-${JOB}-sub \
+  --topic=projects/${PROJECT}/topics/$OWNER-${JOB} \
+  --jobName=${JOB}-read-$OWNER \
+  --maxNumWorkers=5 \
+  --subscription=projects/${PROJECT}/subscriptions/$OWNER-${JOB}-sub \
   --experiments=enable_stackdriver_agent_metrics \
-  --labels='{ \"my_job_name\" : \"${JOB}-read-$USER\"}'"
+  --profilingAgentConfiguration='{ \"APICurated\" : true }' \
+  --labels='{ \"my_job_name\" : \"${JOB}-read-$OWNER\"}'"
 
+  --workerMachineType=n1-standard-4 \
 */
 
     public static class Read {
+        private static final Logger LOGGER = LoggerFactory.getLogger(Read.class);
+
         public static void main(String[] args) {
             MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
             Pipeline readingPipeline = Pipeline.create(options);
@@ -117,9 +125,11 @@ mvn clean compile -DskipTests exec:java \
                         public String apply(PubsubMessage msg) {
                             int i = Integer.parseInt(new String(msg.getPayload()));
                             String factorial = factorial(i);
+                            LOGGER.info("{}, fact={}", getMessage(), i);
                             return "body=" + i +
                                     ", attributes=" + msg.getAttributeMap() +
                                     ", messageId=" + msg.getMessageId();
+
                         }
                     }))
                     .apply(MyConsoleIO.write());
@@ -135,5 +145,32 @@ mvn clean compile -DskipTests exec:java \
             }
             return factorial.toString();
         }
+
+        private static String getMessage() {
+            InetAddress localHostAddress = getLocalHostAddress();
+            Thread thread = Thread.currentThread();
+            String total = format(Runtime.getRuntime().totalMemory());
+            String free = format(Runtime.getRuntime().freeMemory());
+            String used = format(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
+            String max = format(Runtime.getRuntime().maxMemory());
+            return String.format("%s|i:%s|n:%s|g:%s|c:%s|u:%s|f:%s|t:%s|m:%s",
+                    localHostAddress, thread.getId(), thread.getName(), thread.getThreadGroup().getName(), Runtime.getRuntime().availableProcessors(), used, free, total, max);
+        }
+
+        private static InetAddress getLocalHostAddress() {
+            try {
+                return InetAddress.getLocalHost();
+            } catch (UnknownHostException e) {
+                LOGGER.error("Unable to get local host address", e);
+                return null;
+            }
+        }
+
+        private static String format(long value) {
+            NumberFormat numberFormat = NumberFormat.getInstance();
+            numberFormat.setGroupingUsed(true);
+            return numberFormat.format(value);
+        }
+
     }
 }
