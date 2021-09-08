@@ -52,7 +52,7 @@ public class MyOOMJob {
         void setTable(ValueProvider<String> value);
 
         @Validation.Required
-        @Default.String("1,9000")
+        @Default.String("1,20000")
         ValueProvider<String> getSequenceStartCommaEnd();
         void setSequenceStartCommaEnd(ValueProvider<String> value);
     }
@@ -61,8 +61,8 @@ public class MyOOMJob {
 
 #PROJECT=$(gcloud config get-value project)
 JOB=myoomjob
-USER=bartek
-BUCKET=${PROJECT}-$USER-${JOB}
+OWNER=bartek
+BUCKET=${PROJECT}-$OWNER-${JOB}
 gsutil mb gs://${BUCKET}
 
 mvn clean compile -DskipTests -Pdataflow-runner exec:java \
