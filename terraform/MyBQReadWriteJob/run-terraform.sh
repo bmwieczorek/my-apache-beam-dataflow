@@ -43,7 +43,9 @@ bq rm -r -f -d ${PROJECT}:${OWNER}_dataset
 gcloud beta logging sinks delete "${JOB}-logging-sink" --quiet
 gcloud monitoring dashboards list --filter="displayName='$JOB redesigned job id'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
 gcloud monitoring dashboards list --filter="displayName='$JOB redesigned job name'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
-for name in $(gcloud alpha monitoring policies list --filter "display_name='bartek-mybqreadwritejob did not run for last 300s alert policy new'" --format 'value(NAME)'); do gcloud alpha monitoring policies delete $name --quiet ; done
+for name in $(gcloud alpha monitoring policies list --filter "display_name~'bartek-mybqreadwritejob.*'" --format 'value(NAME)'); do gcloud alpha monitoring policies delete $name --quiet ; done
+for name in $(gcloud logging metrics list --filter "name~'bartek-mybqreadwritejob.*'" --format 'value(NAME)'); do gcloud logging metrics delete $name --quiet; done
+for name in $(gcloud beta monitoring channels list --filter "labels.email_address='${EMAIL}'" --format 'value(NAME)'); do gcloud beta monitoring channels delete $name --quiet ; done
 max_retry=20; counter=1; sleep_secs=5; until [ -z "$(gcloud dataflow jobs list --filter "NAME:${JOB}-${EXPIRATION_DATE} AND (STATE=Cancelling OR STATE=Running)" --format 'value(JOB_ID)' --region $REGION)" ] ; do sleep $sleep_secs; [[ counter -eq $max_retry ]] && echo "Failed" && break; echo "waiting $sleep_secs secs for job to stop: attempt $counter" ; ((counter++)); done
 gsutil rm -r "gs://${BUCKET}"
 gsutil -q stat "gs://${PROJECT}-$OWNER-terraform/**" || gsutil mb "gs://${PROJECT}-$OWNER-terraform"
@@ -146,5 +148,5 @@ export JAVA_HOME=${JAVA_HOME_OLD}
 
 #gcloud dataflow jobs run bartek-mybqreadwritejob-template-2021-03-03 \
 #  ${GCLOUD_DATAFLOW_RUN_OPTS} \
-#  --gcs-location gs://bartek-mybqreadwritejob/templates/bartek-mybqreadwritejob-template \
+#  --gcs-location gs://$PROJECT-bartek-mybqreadwritejob/templates/bartek-mybqreadwritejob-template \
 #  --parameters expirationDate=2021-03-03
