@@ -10,6 +10,7 @@ target
 *.iml
 .idea/*
 !/.idea/runConfigurations
+terraform.tfstate*
 
 # terraform
 .terraform
