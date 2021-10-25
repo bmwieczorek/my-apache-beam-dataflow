@@ -8,7 +8,7 @@ resource "google_bigquery_table" "view" {
     owner   = var.owner
   }
   view {
-    query = templatefile("view.tpl", {
+    query = templatefile("bigquery/view.tpl", {
       dataset = var.dataset,
       project = var.project,
       table = var.table

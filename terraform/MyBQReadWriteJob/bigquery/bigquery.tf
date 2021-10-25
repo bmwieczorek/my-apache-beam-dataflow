@@ -1,5 +1,8 @@
 locals {
   ts = formatdate("YYYYMMDDhhmmss", timestamp())
+  labels = {
+    owner = var.owner
+  }
 }
 
 resource "google_bigquery_dataset" "my_dataset" {
@@ -7,23 +10,15 @@ resource "google_bigquery_dataset" "my_dataset" {
   dataset_id                  = var.dataset
   friendly_name               = "My dataset friendly name"
   description                 = "My dataset description"
-
-  labels = {
-    owner = var.owner
-  }
+  labels = local.labels
 }
 
 resource "google_bigquery_table" "my_table" {
   project    = var.project
   dataset_id = google_bigquery_dataset.my_dataset.dataset_id
   table_id   = var.table
-
-  labels = {
-    owner = var.owner
-  }
-
+  labels = local.labels
   deletion_protection = false
-
   schema = file(var.table_schema_file)
 /*
   schema = <<EOF
@@ -52,22 +47,20 @@ EOF
 
 }
 
-resource "google_storage_bucket_object" "my_bucket_object" {
+resource "google_storage_bucket_object" "my_load_file" {
   name   = "bigquery/${var.load_file}"
-  source = var.load_file
+  source = "bigquery/${var.load_file}"
   bucket = var.bucket
 }
 
 resource "google_bigquery_job" "my_bigquery_job" {
-  project    = var.project
-  job_id     = "my_bigquery_job_${local.ts}"
-  labels = {
-    owner = var.owner
-  }
+  project = var.project
+  job_id  = "my_bigquery_job_${local.ts}"
+  labels  = local.labels
 
   load {
     source_uris = [
-      "gs://${google_storage_bucket_object.my_bucket_object.bucket}/${google_storage_bucket_object.my_bucket_object.name}"
+      "gs://${google_storage_bucket_object.my_load_file.bucket}/${google_storage_bucket_object.my_load_file.name}"
     ]
     source_format = "NEWLINE_DELIMITED_JSON"
 

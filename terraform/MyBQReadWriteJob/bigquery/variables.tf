@@ -16,21 +16,24 @@ variable "dataset" {
 variable "table" {
   description = "Google BQ table"
   type        = string
+  default     = "mysubscription_table"
 }
 
 variable "view" {
   description = "Google BQ view"
   type        = string
+  default     = "mysubscription_view"
 }
 
 variable "table_schema_file" {
-  default = "File with BigQuery table schema in avro format"
+  description = "File with BigQuery table schema in avro format"
   type        = string
 }
 
 variable "load_file" {
   description = "My load file"
-  type = string
+  type        = string
+  default     = "mysubscription_table.json"
 }
 
 variable "owner" {

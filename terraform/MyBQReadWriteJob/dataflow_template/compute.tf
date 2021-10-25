@@ -1,34 +1,39 @@
-resource "google_storage_bucket_object" "my_bucket_object_jar" {
-  name   = "compute/${var.dataflow_jar}"
-  source = "../../../target/${var.dataflow_jar}"
+locals {
+  instance          = "${var.owner}-${var.job}-vm"
+  template_gcs_path = "gs://${var.bucket}/templates/${var.job}-template"
+  dataflow_jar     = basename(var.dataflow_jar_local_path)
+}
+
+resource "google_storage_bucket_object" "dataflow_jar" {
+  name   = "compute/${local.dataflow_jar}"
+  source = var.dataflow_jar_local_path
   bucket = var.bucket
 }
 
-resource "google_storage_bucket_object" "my_bucket_object_startup_script" {
+resource "google_storage_bucket_object" "startup_script" {
   name   = "compute/startup-script.sh"
-  source = "startup-script.sh"
+  source = var.startup_script_local_path
   bucket = var.bucket
 }
 
 resource "google_compute_instance" "compute_template" {
-  depends_on = [google_storage_bucket_object.my_bucket_object_jar,google_storage_bucket_object.my_bucket_object_startup_script]
   project      = var.project
-  name         = var.instance
+  name         = local.instance
   machine_type = "e2-medium"
   zone         = var.zone
   tags = ["default-uscentral1"]
   metadata = {
     "enable-oslogin" = "TRUE",
-    "startup-script-url" = "gs://${var.bucket}/compute/startup-script.sh"
+    "startup-script-url" = "gs://${var.bucket}/${google_storage_bucket_object.startup_script.name}"
     "project" = var.project
     "zone" = var.zone,
     "region" = var.region,
     "service_account" = var.service_account,
     "bucket" = var.bucket,
-    "instance" = var.instance,
-    "dataflow_jar" = var.dataflow_jar,
-    "dataflow_jar_gcs_path" = "gs://${var.bucket}/compute/${var.dataflow_jar}",
-    "template_gcs_path" = "gs://${var.bucket}/templates/${var.job}-template",
+    "instance" = local.instance,
+    "dataflow_jar" = local.dataflow_jar
+    "dataflow_jar_gcs_path" = "gs://${var.bucket}/${google_storage_bucket_object.dataflow_jar.name}",
+    "template_gcs_path" = local.template_gcs_path,
     "dataflow_jar_main_class" = var.main_class,
     "wait_secs_before_delete" = 300
   }
@@ -61,7 +66,7 @@ resource "google_compute_instance" "compute_template" {
 
   provisioner "local-exec" {
     command = <<EOT
-      max_retry=40; counter=1; until gsutil stat gs://${var.bucket}/templates/${var.job}-template ; do sleep 5; [[ counter -eq $max_retry ]] && echo "Failed" && break; echo "Wating for template to be generated: $counter attempt" ; ((counter++)); done
+      max_retry=40; counter=1; until gsutil stat ${local.template_gcs_path} ; do sleep 5; [[ counter -eq $max_retry ]] && echo "Failed" && break; echo "Wating for template to be generated: $counter attempt" ; ((counter++)); done
     EOT
   }
 }

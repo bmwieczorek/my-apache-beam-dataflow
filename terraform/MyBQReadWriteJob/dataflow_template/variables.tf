@@ -34,19 +34,15 @@ variable "job" {
   type        = string
 }
 
-variable "expiration_date" {
-  description = "Dataflow expiration date param in yyyy-MM-dd format"
-  type        = string
-}
-
 variable "zone" {
   description = "Google Cloud compute zone"
   type        = string
 }
 
-variable "instance" {
-  description = "Google Cloud compute instance"
+variable "startup_script_local_path" {
+  description = "Path to startup script on local file system"
   type        = string
+  default     = "dataflow_template/startup-script.sh"
 }
 
 variable "image" {
@@ -54,28 +50,14 @@ variable "image" {
   type        = string
 }
 
-variable "dataflow_jar" {
-  description = "Google dataflow jar name"
+
+variable "dataflow_jar_local_path" {
+  description = "Path to dataflow jar on local file system"
   type        = string
 }
 
 variable "main_class" {
   description = "Google dataflow job main class"
-  type        = string
-}
-
-variable "dataflow_start_time" {
-  description = "Google dataflow job start time"
-  type        = string
-}
-
-variable "dashboard_file" {
-  description = "Google dashboard file name"
-  type        = string
-}
-
-variable "notification_email" {
-  description = "Notification email"
   type        = string
 }
 

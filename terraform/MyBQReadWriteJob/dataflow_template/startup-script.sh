@@ -25,9 +25,9 @@ echo "DATAFLOW_JAR_MAIN_CLASS=$DATAFLOW_JAR_MAIN_CLASS" | tee -a ${LOG}
 WAIT_SECS_BEFORE_VM_DELETE=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/wait_secs_before_delete -H "Metadata-Flavor: Google")
 echo "WAIT_SECS_BEFORE_VM_DELETE=$WAIT_SECS_BEFORE_VM_DELETE" | tee -a ${LOG}
 
-echo "Installing java" | tee -a ${LOG}
-sudo yum-config-manager --enable rhui-rhel*
-max_retry=10; counter=1; until which java ; do sleep $((counter*10)); [[ counter -eq $max_retry ]] && echo "Failed" && break; echo "Trying to install java-11-openjdk-devel: $counter attempt" | tee -a ${LOG} ; sudo yum install java-11-openjdk-devel -y 2>&1 | tee -a ${LOG} ; ((counter++)); done
+#echo "Installing java" | tee -a ${LOG}
+#sudo yum-config-manager --enable rhui-rhel*
+#max_retry=10; counter=1; until which java ; do sleep $((counter*10)); [[ counter -eq $max_retry ]] && echo "Failed" && break; echo "Trying to install java-11-openjdk-devel: $counter attempt" | tee -a ${LOG} ; sudo yum install java-11-openjdk-devel -y 2>&1 | tee -a ${LOG} ; ((counter++)); done
 java -version 2>&1 | tee -a ${LOG}
 gsutil cp ${DATAFLOW_JAR_GCS_PATH} . 2>&1 | tee -a ${LOG}
 JAVA_DATAFLOW_RUN_OPTS="--project=$PROJECT --region=$REGION --serviceAccount=$SERVICE_ACCOUNT --usePublicIps=false"

@@ -1,7 +1,4 @@
 terraform {
-  backend "gcs" {
-    prefix = "MyBQReadWriteJob/storage/tfstate"
-  }
   required_providers {
     google = {
       version = "~> 3.58.0"
@@ -9,4 +6,3 @@ terraform {
   }
   required_version = "~> 0.12.29"
 }
-

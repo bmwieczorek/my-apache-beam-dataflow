@@ -1,6 +1,6 @@
 resource "google_storage_bucket" "my_bucket" {
+  project	    = var.project
   name          = var.bucket
-  project	      = var.project
   force_destroy = true
   labels = {
     owner   = var.owner

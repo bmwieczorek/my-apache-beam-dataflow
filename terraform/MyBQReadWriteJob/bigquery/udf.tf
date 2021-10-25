@@ -1,11 +1,11 @@
 # when trigger detects a change in template it will re-run the provisioner
 
 locals {
-  udf_create = templatefile("udf_create.tpl", {
+  udf_create = templatefile("bigquery/udf_create.tpl", {
     project = var.project,
     dataset = google_bigquery_dataset.my_dataset.dataset_id
   })
-  udf_destroy = templatefile("udf_destroy.tpl", {
+  udf_destroy = templatefile("bigquery/udf_destroy.tpl", {
     project = var.project,
     dataset = google_bigquery_dataset.my_dataset.dataset_id
   })
