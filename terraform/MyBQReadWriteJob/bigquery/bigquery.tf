@@ -5,7 +5,7 @@ locals {
   }
 }
 
-resource "google_bigquery_dataset" "my_dataset" {
+resource "google_bigquery_dataset" "dataset" {
   project                     = var.project
   dataset_id                  = var.dataset
   friendly_name               = "My dataset friendly name"
@@ -13,9 +13,9 @@ resource "google_bigquery_dataset" "my_dataset" {
   labels = local.labels
 }
 
-resource "google_bigquery_table" "my_table" {
+resource "google_bigquery_table" "table" {
   project    = var.project
-  dataset_id = google_bigquery_dataset.my_dataset.dataset_id
+  dataset_id = google_bigquery_dataset.dataset.dataset_id
   table_id   = var.table
   labels = local.labels
   deletion_protection = false
@@ -47,27 +47,27 @@ EOF
 
 }
 
-resource "google_storage_bucket_object" "my_load_file" {
+resource "google_storage_bucket_object" "load_file" {
   name   = "bigquery/${var.load_file}"
   source = "bigquery/${var.load_file}"
   bucket = var.bucket
 }
 
-resource "google_bigquery_job" "my_bigquery_job" {
+resource "google_bigquery_job" "bigquery_job" {
   project = var.project
   job_id  = "my_bigquery_job_${local.ts}"
   labels  = local.labels
 
   load {
     source_uris = [
-      "gs://${google_storage_bucket_object.my_load_file.bucket}/${google_storage_bucket_object.my_load_file.name}"
+      "gs://${google_storage_bucket_object.load_file.bucket}/${google_storage_bucket_object.load_file.name}"
     ]
     source_format = "NEWLINE_DELIMITED_JSON"
 
     destination_table {
       project_id = var.project
-      dataset_id = google_bigquery_table.my_table.dataset_id
-      table_id = google_bigquery_table.my_table.table_id
+      dataset_id = google_bigquery_table.table.dataset_id
+      table_id = google_bigquery_table.table.table_id
     }
     write_disposition = "WRITE_TRUNCATE"
   }

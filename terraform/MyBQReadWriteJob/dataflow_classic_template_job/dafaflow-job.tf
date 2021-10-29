@@ -2,7 +2,7 @@ locals {
   dataflow_start_time = formatdate("YYYY-MM-DD'T'hh:mm:ss'.000Z'", timestamp())
 }
 
-resource "google_dataflow_job" "my_dataflow_job" {
+resource "google_dataflow_job" "job" {
   project               = var.project
   name                  = "${var.job}-${var.expiration_date}"
   temp_gcs_location     = "gs://${var.bucket}/temp"

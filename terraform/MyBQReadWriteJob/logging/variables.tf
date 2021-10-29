@@ -21,7 +21,6 @@ variable "job" {
 variable "log_message_pattern" {
   description = "Message pattern to search in logs"
   type        = string
-  default     = "Worker pool stopped."
 }
 
 variable "dataflow_start_time" {

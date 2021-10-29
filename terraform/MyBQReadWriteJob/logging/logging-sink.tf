@@ -1,4 +1,4 @@
-resource "google_logging_project_sink" "dataflow_logging_sink" {
+resource "google_logging_project_sink" "dataflow_gcs_logging_sink" {
   project     = var.project
   name        = "dataflow-logging-sink"
   destination = "storage.googleapis.com/${var.bucket}"
@@ -7,10 +7,8 @@ resource "google_logging_project_sink" "dataflow_logging_sink" {
   unique_writer_identity = true
 }
 
-resource "google_project_iam_binding" "log_writer" {
-  project      = var.project
-  role = "roles/storage.objectCreator"
-  members = [
-    google_logging_project_sink.dataflow_logging_sink.writer_identity
-  ]
+resource "google_project_iam_binding" "gcs_log_writer" {
+  project     = var.project
+  role        = "roles/storage.objectCreator"
+  members     = [ google_logging_project_sink.dataflow_gcs_logging_sink.writer_identity ]
 }

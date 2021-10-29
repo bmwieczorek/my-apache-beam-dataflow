@@ -1,6 +1,6 @@
-resource "google_monitoring_dashboard" "dashboard_job_name" {
+resource "google_monitoring_dashboard" "job_name_dashboard" {
   project = var.project
-  dashboard_json = templatefile(var.dashboard_file, {
+  dashboard_json = templatefile("${path.module}/${var.dashboard_file}", {
     job = var.job
     dataflow_job_filter = "resource.label.\\\"job_name\\\"=monitoring.regex.full_match(\\\"${var.job}.*\\\")"
     instance_dataflow_job_filter = "metadata.user_labels.\\\"dataflow_job_name\\\"=monitoring.regex.full_match(\\\"${var.job}.*\\\")"
@@ -12,13 +12,13 @@ resource "google_monitoring_dashboard" "dashboard_job_name" {
     write_step_name = "BigQueryIO.Write"
     // BigQueryIO.Write/PrepareWrite/ParDo(Anonymous).out0
     write_step_pcollection = "BigQueryIO.Write/BatchLoads/rewindowIntoGlobal/Window.Assign.out0"
-    log_based_metric = "logging.googleapis.com/user/${var.job}/log_message_counter/Created_MySubscription"
+    logs_based_metric_type = var.logs_based_metric_type
   })
 }
 
-resource "google_monitoring_dashboard" "dashboard_job_id" {
+resource "google_monitoring_dashboard" "job_id_dashboard" {
   project = var.project
-  dashboard_json = templatefile(var.dashboard_file, {
+  dashboard_json = templatefile("${path.module}/${var.dashboard_file}", {
     job = var.job
     dataflow_job_filter = "metric.label.\\\"job_id\\\"=\\\"${var.dataflow_job_id}\\\""
     instance_dataflow_job_filter = "metadata.user_labels.\\\"dataflow_job_id\\\"=\\\"${var.dataflow_job_id}\\\""
@@ -29,5 +29,6 @@ resource "google_monitoring_dashboard" "dashboard_job_id" {
     transform_step_pcollection = "To GenericRecords/Map.out0"
     write_step_name = "BigQueryIO.Write"
     write_step_pcollection = "BigQueryIO.Write/BatchLoads/rewindowIntoGlobal/Window.Assign.out0"
+    logs_based_metric_type = var.logs_based_metric_type
   })
 }

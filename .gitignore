@@ -10,13 +10,9 @@ target
 *.iml
 .idea/*
 !/.idea/runConfigurations
-terraform.tfstate*
 
 # terraform
 .terraform
-/terraform/MyBQReadWriteJob/alerting/alerting.tfvars
-/terraform/MyBQReadWriteJob/bigquery/bigquery.tfvars
-/terraform/MyBQReadWriteJob/dashboard/dashboard.tfvars
-/terraform/MyBQReadWriteJob/dataflow/dataflow.tfvars
-/terraform/MyBQReadWriteJob/storage/storage.tfvars
+terraform.tfstate*
+*.tfbackend
 /terraform/MyPubsubToGCSJob/dev.tfvars

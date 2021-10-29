@@ -2,6 +2,7 @@ locals {
   instance          = "${var.owner}-${var.job}-vm"
   template_gcs_path = "gs://${var.bucket}/templates/${var.job}-template"
   dataflow_jar     = basename(var.dataflow_jar_local_path)
+  startup_script_local_path = "${path.module}/startup-script.sh"
 }
 
 resource "google_storage_bucket_object" "dataflow_jar" {
@@ -12,11 +13,11 @@ resource "google_storage_bucket_object" "dataflow_jar" {
 
 resource "google_storage_bucket_object" "startup_script" {
   name   = "compute/startup-script.sh"
-  source = var.startup_script_local_path
+  source = local.startup_script_local_path
   bucket = var.bucket
 }
 
-resource "google_compute_instance" "compute_template" {
+resource "google_compute_instance" "dataflow_classic_template_compute" {
   project      = var.project
   name         = local.instance
   machine_type = "e2-medium"

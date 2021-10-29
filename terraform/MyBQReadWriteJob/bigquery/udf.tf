@@ -1,38 +1,51 @@
+resource "google_bigquery_routine" "my_sum_udf" {
+  project         = var.project
+  dataset_id      = google_bigquery_dataset.dataset.dataset_id
+  routine_id      = "my_sum"
+  routine_type    = "SCALAR_FUNCTION"
+  definition_body = "((SELECT SUM(x) FROM UNNEST(arr) AS x))"
+  arguments {
+    name = "arr"
+    argument_kind = "ANY_TYPE"
+  }
+  return_type = "{\"typeKind\" :  \"INT64\"}"
+}
+
 # when trigger detects a change in template it will re-run the provisioner
-
-locals {
-  udf_create = templatefile("bigquery/udf_create.tpl", {
-    project = var.project,
-    dataset = google_bigquery_dataset.my_dataset.dataset_id
-  })
-  udf_destroy = templatefile("bigquery/udf_destroy.tpl", {
-    project = var.project,
-    dataset = google_bigquery_dataset.my_dataset.dataset_id
-  })
-}
-
-resource "null_resource" "udf" {
-  depends_on = [google_bigquery_table.my_table]
-  triggers = {
-    udf = local.udf_create
-  }
-
-  provisioner "local-exec" {
-    interpreter = [
-      "bq",
-      "query",
-      "--use_legacy_sql=false"
-    ]
-    command = local.udf_create
-  }
-
-  provisioner "local-exec" {
-    when = destroy
-    interpreter = [
-      "bq",
-      "query",
-      "--use_legacy_sql=false"
-    ]
-    command = local.udf_destroy
-  }
-}
+//locals {
+//  udf_create = <<-EOF
+//      CREATE OR REPLACE FUNCTION `${var.project}.${google_bigquery_dataset.my_dataset.dataset_id}.my_sum` (arr ANY TYPE) AS (
+//        (SELECT SUM(x) FROM UNNEST(arr) AS x)
+//      );
+//  EOF
+//
+//  udf_destroy = <<-EOF
+//      DROP FUNCTION IF EXISTS `${var.project}.${google_bigquery_dataset.my_dataset.dataset_id}.my_sum`;
+//  EOF
+//}
+//
+//resource "null_resource" "my_sum_udf" {
+//  depends_on = [google_bigquery_table.my_table]
+//  triggers = {
+//    udf = local.udf_create
+//  }
+//
+//  provisioner "local-exec" {
+//    interpreter = [
+//      "bq",
+//      "query",
+//      "--use_legacy_sql=false"
+//    ]
+//    command = local.udf_create
+//  }
+//
+//  provisioner "local-exec" {
+//    when = destroy
+//    interpreter = [
+//      "bq",
+//      "query",
+//      "--use_legacy_sql=false"
+//    ]
+//    command = local.udf_destroy
+//  }
+//}

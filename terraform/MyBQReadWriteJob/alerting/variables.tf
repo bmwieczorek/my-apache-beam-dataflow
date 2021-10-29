@@ -13,18 +13,20 @@ variable "job" {
   type        = string
 }
 
-variable "log_message_pattern" {
+variable "logs_based_metrics_message_pattern" {
   description = "Message pattern to search in logs"
   type        = string
-  default     = "Created MySubscription"
 }
-
-//variable "dataflow_start_time" {
-//  description = "Google dataflow job start time"
-//  type        = string
-//}
 
 variable "notification_email" {
   description = "Notification email"
   type        = string
+}
+
+// workaround to wait for job to be created
+
+variable "module_depends_on" {
+  type        = any
+  description = "(optional) A list of external resources the module depends_on. Default is []."
+  default     = []
 }

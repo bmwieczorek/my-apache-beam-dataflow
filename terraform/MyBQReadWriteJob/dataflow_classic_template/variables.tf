@@ -39,12 +39,6 @@ variable "zone" {
   type        = string
 }
 
-variable "startup_script_local_path" {
-  description = "Path to startup script on local file system"
-  type        = string
-  default     = "dataflow_template/startup-script.sh"
-}
-
 variable "image" {
   description = "Google Cloud compute image"
   type        = string

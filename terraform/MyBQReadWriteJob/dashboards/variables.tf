@@ -16,5 +16,10 @@ variable "dataflow_job_id" {
 variable "dashboard_file" {
   description = "Google dashboard file name"
   type        = string
-  default     = "monitoring/dashboard.json"
+  default     = "dashboard.json"
+}
+
+variable "logs_based_metric_type" {
+  description = "Google logs based metric type"
+  type        = string
 }
