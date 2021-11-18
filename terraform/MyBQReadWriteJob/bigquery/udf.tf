@@ -3,6 +3,7 @@ resource "google_bigquery_routine" "my_sum_udf" {
   dataset_id      = google_bigquery_dataset.dataset.dataset_id
   routine_id      = "my_sum"
   routine_type    = "SCALAR_FUNCTION"
+  //  language        = "SQL"
   definition_body = "((SELECT SUM(x) FROM UNNEST(arr) AS x))"
   arguments {
     name = "arr"
