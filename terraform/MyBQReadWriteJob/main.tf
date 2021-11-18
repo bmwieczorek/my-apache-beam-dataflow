@@ -3,6 +3,17 @@ locals {
   bucket              = "${var.project}-${var.owner}-${local.job}"
 }
 
+data "google_compute_network" "network" {
+  project = var.project
+  name    = var.network
+}
+
+data "google_compute_subnetwork" "subnetwork" {
+  project = var.project
+  region  = var.region
+  name    = var.subnetwork
+}
+
 module "storage" {
   source              = "./storage"
   project             = var.project
@@ -28,8 +39,11 @@ module "dataflow_classic_template" {
   bucket              = module.storage.bucket_name
   main_class          = "com.bawi.beam.dataflow.MyBQReadWriteJob"
   job                 = local.job
-  network             = var.network
-  subnetwork          = var.subnetwork
+//  network             = var.network
+  network             = data.google_compute_network.network.self_link
+//  subnetwork          = var.subnetwork
+//  subnetwork          = var.subnetwork == "default" ? null : var.subnetwork
+  subnetwork          = data.google_compute_subnetwork.subnetwork.self_link
   service_account     = var.service_account
   dataflow_jar_local_path = "../../target/my-apache-beam-dataflow-0.1-SNAPSHOT.jar"
   image               = var.image
@@ -42,8 +56,11 @@ module "dataflow_classic_template_job" {
   zone                = var.zone
   owner               = var.owner
   bucket              = module.storage.bucket_name
-  network             = var.network
-  subnetwork          = var.subnetwork
+  //  network             = var.network
+  network             = data.google_compute_network.network.self_link
+  //  subnetwork          = var.subnetwork
+  //  subnetwork          = var.subnetwork == "default" ? null : var.subnetwork
+  subnetwork          = data.google_compute_subnetwork.subnetwork.self_link
   service_account     = var.service_account
   template_gcs_path   = module.dataflow_classic_template.template_gcs_path
   job                 = local.job
