@@ -70,8 +70,8 @@ module "alerting" {
   module_depends_on    = [module.dataflow_classic_template_job]
 }
 
-module "logging" {
-  source = "./logging"
+module "logging-sink" {
+  source = "./logging-sink"
   project             = var.project
   owner               = var.owner
   bucket              = module.storage.bucket_name
