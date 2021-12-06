@@ -19,10 +19,10 @@ public class MySimpleLoggingJob {
 #g1-small	    0.5	    1.70GB	$0.0230084	$0.0048439.  Running Dataflow jobs with shared-core instance types (g1-small, f1-micro) is not officially supported.
 #n1-standard-1	1	    3.75GB	$0.04749975	$0.01
 
+
 BUCKET=${PROJECT}-$OWNER-mysimpleloggingjob
 gsutil -q ls -d gs://${BUCKET} || if [ $? -ne 0 ]; then gsutil mb gs://${BUCKET}; fi
-
-mvn clean package -DskipTests -Pdataflow-runner exec:java \
+mvn compile -DskipTests -Pdataflow-runner exec:java \
 -Dexec.mainClass=com.bawi.beam.dataflow.MySimpleLoggingJob \
 -Dexec.args=" \
   --runner=DataflowRunner \
