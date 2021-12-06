@@ -23,7 +23,7 @@ public class MyConsoleIO<T> extends PTransform<PCollection<T>, PDone> {
             @Override
             public Void apply(T input) {
                 LOGGER.info("ConsoleIO LOGGER: {}", input);
-                System.out.println("ConsoleIO System.out: " + input);
+                //System.out.println("ConsoleIO System.out: " + input);
                 return null;
             }
         }));
