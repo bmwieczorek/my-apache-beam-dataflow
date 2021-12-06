@@ -1,6 +1,5 @@
 package com.bawi.beam.dataflow;
 
-import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.BigQueryOptions;
 import com.google.cloud.bigquery.QueryJobConfiguration;
 import org.junit.Assert;
@@ -13,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class MyBQReadWriteJobIntegrationTest {
@@ -21,30 +21,48 @@ public class MyBQReadWriteJobIntegrationTest {
     @Test
     public void testE2E() throws IOException, InterruptedException {
         // given
+        Map<String, String> env = System.getenv();
+        LOGGER.info("Environment: {}", env);
+        String project = env.get("PROJECT");
+        Assert.assertNotNull(project);
+
         int initialPreLoadedRowCount = 4;
-        String query = "select * from bartek_dataset.mysubscription_view";
+        String query = "select * from " + project + ".bartek_dataset.mysubscription_view";
 
         // when
-        Process process = runTerraformInfrastructureSetupAsBashProcess();
-        logTerraform(process);
-        int status = process.waitFor();
-        Assert.assertEquals("Should exit terraform with 0 status code", 0, status);
+        Process bigQueryProcess = runTerraformInfrastructureSetupAsBashProcess("terraform apply -auto-approve -target=module.bigquery");
+        logTerraform(bigQueryProcess);
+        int bigQueryProcessStatus = bigQueryProcess.waitFor();
+        Assert.assertEquals("bigQueryProcess should exit terraform with 0 status code", 0, bigQueryProcessStatus);
 
         // then
-        BigQuery bigQuery = BigQueryOptions.getDefaultInstance().getService();
-        Assert.assertEquals("Should match initial row count for pre-loaded data",
-                initialPreLoadedRowCount, bigQuery.query(QueryJobConfiguration.of(query)).getTotalRows());
+        long totalRows = BigQueryOptions.getDefaultInstance().getService().query(QueryJobConfiguration.of(query)).getTotalRows();
+        Assert.assertEquals("Should match initial row count for pre-loaded data", initialPreLoadedRowCount, totalRows);
 
-        long expectedRowCount = waitUpTo10MinsForDataflowJobToPopulateBiqQuery(query, bigQuery);
-        Assert.assertEquals("Dataflow job should create 3 additional rows in BigQuery",
-                (initialPreLoadedRowCount + 3), expectedRowCount);
+        Process dataflowTemplateJobProcess = runTerraformInfrastructureSetupAsBashProcess("terraform apply -auto-approve -target=module.dataflow_classic_template_job");
+        logTerraform(dataflowTemplateJobProcess);
+        int dataflowTemplateJobStatus = dataflowTemplateJobProcess.waitFor();
+
+        Assert.assertEquals("dataflowTemplateJobProcess should exit terraform with 0 status code", 0, dataflowTemplateJobStatus);
+
+        long expectedRowCount = waitUpTo10MinsForDataflowJobToPopulateBiqQuery(query);
+        Assert.assertEquals("Dataflow job should create 3 additional rows in BigQuery", (initialPreLoadedRowCount + 3), expectedRowCount);
+
+        LOGGER.info("waiting 150s for job to finish");
+        Thread.sleep(150 * 1000);
+
+        Process destroyProcess = runTerraformInfrastructureSetupAsBashProcess("terraform destroy -auto-approve -target=module.bigquery -target=module.dataflow_classic_template_job");
+        logTerraform(destroyProcess);
+        int destroyStatus = destroyProcess.waitFor();
+        Assert.assertEquals("destroyProcess should exit terraform with 0 bigQueryProcessStatus code", 0, destroyStatus);
+
     }
 
-    private long waitUpTo10MinsForDataflowJobToPopulateBiqQuery(String q, BigQuery bigQuery) throws InterruptedException {
+    private long waitUpTo10MinsForDataflowJobToPopulateBiqQuery(String query) throws InterruptedException {
         long totalRows = 0;
-        QueryJobConfiguration queryJobConfiguration = QueryJobConfiguration.of(q);
+
         for (int i = 1; i <= 60; i++) {
-            totalRows = bigQuery.query(queryJobConfiguration).getTotalRows();
+            totalRows = BigQueryOptions.getDefaultInstance().getService().query(QueryJobConfiguration.of(query)).getTotalRows();
             LOGGER.info("Returned total rows count: {}", totalRows);
             if (totalRows > 4) {
                 break;
@@ -65,13 +83,14 @@ public class MyBQReadWriteJobIntegrationTest {
         }
     }
 
-    private Process runTerraformInfrastructureSetupAsBashProcess() throws IOException {
+    private Process runTerraformInfrastructureSetupAsBashProcess(String cmd) throws IOException {
         // Process process = Runtime.getRuntime().exec("./run-terraform.sh", null, new File("terraform/MyBQReadWriteJob"));
         ProcessBuilder processBuilder = new ProcessBuilder();
         processBuilder.inheritIO();
         processBuilder.directory(new File("terraform/MyBQReadWriteJob"));
-        processBuilder.command("./run-terraform.sh");
+//        processBuilder.command("./run-terraform.sh");
         //processBuilder.command("bash", "-c", "ls -la");
+        processBuilder.command("bash", "-c", cmd);
         return processBuilder.start();
     }
 
