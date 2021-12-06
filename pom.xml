@@ -43,30 +43,7 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>${maven-exec-plugin.version}</version>
-                <configuration>
-                    <cleanupDaemonThreads>false</cleanupDaemonThreads>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>convert-avro-schema-to-bigquery-table-schema</id>
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>java</goal>
-                        </goals>
-                        <configuration>
-                            <mainClass>com.bawi.beam.dataflow.schema.AvroToBigQuerySchemaConverter</mainClass>
-                            <arguments>
-                                <argument>src/main/resources/schema/MyBQReadWriteJob.avsc</argument>
-                                <argument>target/MyBQReadWriteJob.json</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven-surefire-plugin.version}</version>
@@ -77,6 +54,19 @@
                 </configuration>
             </plugin>
         </plugins>
+
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                    <version>${maven-exec-plugin.version}</version>
+                    <configuration>
+                        <cleanupDaemonThreads>false</cleanupDaemonThreads>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 
     <dependencies>
@@ -353,6 +343,38 @@
                                     <includes>
                                         <include>**/*IntegrationTest</include>
                                     </includes>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>generate-schema</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>${maven-exec-plugin.version}</version>
+                        <configuration>
+                            <cleanupDaemonThreads>false</cleanupDaemonThreads>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>convert-avro-schema-to-bigquery-table-schema</id>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                                <configuration>
+                                    <mainClass>com.bawi.beam.dataflow.schema.AvroToBigQuerySchemaConverter</mainClass>
+                                    <arguments>
+                                        <argument>src/main/resources/schema/MyBQReadWriteJob.avsc</argument>
+                                        <argument>target/MyBQReadWriteJob.json</argument>
+                                    </arguments>
                                 </configuration>
                             </execution>
                         </executions>
