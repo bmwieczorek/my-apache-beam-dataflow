@@ -36,11 +36,12 @@ mvn clean package -DskipTests -Pdataflow-runner exec:java \
 
     public static void main(String[] args) {
         Pipeline pipeline = Pipeline.create(PipelineOptionsFactory.fromArgs(args).create());
-        pipeline.apply(Create.of("a", "b", "c"))
+        pipeline.apply(Create.of("1", "2", "3"))
                 .apply(MapElements.into(TypeDescriptors.strings()).via(s -> {
                     LOGGER.info("[LOGGER] Processing: {}", s);
                     System.out.println("[Console] Processing: " + s);
-                    return s;
+                    int i = Integer.parseInt(s);
+                    return "i=" + i;
                 }));
         PipelineResult result = pipeline.run();
 
