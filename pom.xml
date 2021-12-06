@@ -53,7 +53,7 @@
                 <executions>
                     <execution>
                         <id>convert-avro-schema-to-bigquery-table-schema</id>
-                        <phase>prepare-package</phase>
+                        <phase>generate-test-resources</phase>
                         <goals>
                             <goal>java</goal>
                         </goals>
