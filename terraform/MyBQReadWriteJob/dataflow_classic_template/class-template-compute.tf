@@ -67,7 +67,7 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
 
   provisioner "local-exec" {
     command = <<EOT
-      max_retry=40; counter=1; until gsutil stat ${local.template_gcs_path} ; do sleep 5; if [ $counter -eq $max_retry ]; then echo "Failed" && break; else echo "Waiting for template to be generated: $counter attempt" ; counter=$(expr $counter + 1); fi; done
+      max_retry=40; counter=1; until gsutil stat ${local.template_gcs_path} ; do sleep 5; if [ $counter -eq $max_retry ]; then echo "Failed" && break; fi; echo "Waiting for template to be generated: $counter attempt" ; counter=$(expr $counter + 1); done
     EOT
   }
 }
