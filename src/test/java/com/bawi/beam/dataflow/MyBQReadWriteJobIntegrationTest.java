@@ -2,6 +2,7 @@ package com.bawi.beam.dataflow;
 
 import com.google.cloud.bigquery.BigQueryOptions;
 import com.google.cloud.bigquery.QueryJobConfiguration;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -55,12 +56,14 @@ public class MyBQReadWriteJobIntegrationTest {
 
         LOGGER.info("waiting 150s for job to finish");
         Thread.sleep(150 * 1000);
+    }
 
+    @After
+    public void cleanUp() throws IOException, InterruptedException {
         Process destroyProcess = runTerraformInfrastructureSetupAsBashProcess("terraform destroy -auto-approve");
         logTerraform(destroyProcess);
         int destroyStatus = destroyProcess.waitFor();
         Assert.assertEquals("destroyProcess should exit terraform with 0 bigQueryProcessStatus code", 0, destroyStatus);
-
     }
 
     private long waitUpTo10MinsForDataflowJobToPopulateBiqQuery(String query) throws InterruptedException {
