@@ -24,7 +24,12 @@ public class MyBQReadWriteJobIntegrationTest {
         Map<String, String> env = System.getenv();
         LOGGER.info("Environment: {}", env);
         String project = env.get("PROJECT");
-        Assert.assertNotNull(project);
+        Assert.assertNotNull("Missing project env variable", project);
+
+        Process terraformInitProcess = runTerraformInfrastructureSetupAsBashProcess("terraform init");
+        logTerraform(terraformInitProcess);
+        int terraformInitProcessStatus = terraformInitProcess.waitFor();
+        Assert.assertEquals("terraform init should exit terraform with 0 status code", 0, terraformInitProcessStatus);
 
         int initialPreLoadedRowCount = 4;
         String query = "select * from " + project + ".bartek_dataset.mysubscription_view";
@@ -51,7 +56,7 @@ public class MyBQReadWriteJobIntegrationTest {
         LOGGER.info("waiting 150s for job to finish");
         Thread.sleep(150 * 1000);
 
-        Process destroyProcess = runTerraformInfrastructureSetupAsBashProcess("terraform destroy -auto-approve -target=module.bigquery -target=module.dataflow_classic_template_job");
+        Process destroyProcess = runTerraformInfrastructureSetupAsBashProcess("terraform destroy -auto-approve");
         logTerraform(destroyProcess);
         int destroyStatus = destroyProcess.waitFor();
         Assert.assertEquals("destroyProcess should exit terraform with 0 bigQueryProcessStatus code", 0, destroyStatus);
