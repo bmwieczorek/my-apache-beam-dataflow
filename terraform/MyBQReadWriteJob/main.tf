@@ -1,6 +1,6 @@
 locals {
   job                 = "${var.owner}-mybqreadwritejob"
-  bucket              = "${var.project}-${var.owner}-${local.job}"
+  bucket              = "${var.project}-${local.job}"
 }
 
 data "google_compute_network" "network" {
