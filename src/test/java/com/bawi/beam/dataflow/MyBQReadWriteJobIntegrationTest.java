@@ -24,8 +24,8 @@ public class MyBQReadWriteJobIntegrationTest {
         // given
         Map<String, String> env = System.getenv();
         LOGGER.info("Environment: {}", env);
-        String project = env.get("PROJECT");
-        Assert.assertNotNull("Missing project env variable", project);
+        String project = env.get("GCP_PROJECT");
+        Assert.assertNotNull("Missing GCP_PROJECT env variable", project);
 
         Process terraformInitProcess = runTerraformInfrastructureSetupAsBashProcess("terraform init");
         logTerraform(terraformInitProcess);
@@ -54,8 +54,8 @@ public class MyBQReadWriteJobIntegrationTest {
         long expectedRowCount = waitUpTo10MinsForDataflowJobToPopulateBiqQuery(query);
         Assert.assertEquals("Dataflow job should create 3 additional rows in BigQuery", (initialPreLoadedRowCount + 3), expectedRowCount);
 
-        LOGGER.info("waiting 150s for job to finish");
-        Thread.sleep(150 * 1000);
+        LOGGER.info("waiting 3 mins for job to finish");
+        Thread.sleep(180 * 1000);
     }
 
     @After
