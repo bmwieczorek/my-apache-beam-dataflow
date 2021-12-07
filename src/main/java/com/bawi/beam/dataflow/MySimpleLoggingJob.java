@@ -20,17 +20,17 @@ public class MySimpleLoggingJob {
 #n1-standard-1	1	    3.75GB	$0.04749975	$0.01
 
 
-BUCKET=${PROJECT}-$OWNER-mysimpleloggingjob
-gsutil -q ls -d gs://${BUCKET} || if [ $? -ne 0 ]; then gsutil mb gs://${BUCKET}; fi
+GCP_BUCKET=${GCP_PROJECT}-$GCP_OWNER-mysimpleloggingjob
+gsutil -q ls -d gs://${GCP_BUCKET} || if [ $? -ne 0 ]; then gsutil mb gs://${GCP_BUCKET}; fi
 mvn compile -DskipTests -Pdataflow-runner exec:java \
 -Dexec.mainClass=com.bawi.beam.dataflow.MySimpleLoggingJob \
 -Dexec.args=" \
   --runner=DataflowRunner \
-  ${JAVA_DATAFLOW_RUN_OPTS} \
+  ${GCP_JAVA_DATAFLOW_RUN_OPTS} \
   --workerMachineType=e2-small \
-  --workerDiskType=compute.googleapis.com/projects/${PROJECT}/zones/${ZONE}/diskTypes/pd-standard \
+  --workerDiskType=compute.googleapis.com/projects/${GCP_PROJECT}/zones/${GCP_ZONE}/diskTypes/pd-standard \
   --diskSizeGb=30 \
-  --stagingLocation=gs://${BUCKET}/staging"
+  --stagingLocation=gs://${GCP_BUCKET}/staging"
 
 */
 
