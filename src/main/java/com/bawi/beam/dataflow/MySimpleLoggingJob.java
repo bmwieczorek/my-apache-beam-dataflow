@@ -20,7 +20,7 @@ public class MySimpleLoggingJob {
 #n1-standard-1	1	    3.75GB	$0.04749975	$0.01
 
 
-GCP_BUCKET=${GCP_PROJECT}-$GCP_OWNER-mysimpleloggingjob
+GCP_BUCKET=${GCP_PROJECT}-${GCP_OWNER}-mysimpleloggingjob
 gsutil -q ls -d gs://${GCP_BUCKET} || if [ $? -ne 0 ]; then gsutil mb gs://${GCP_BUCKET}; fi
 mvn compile -DskipTests -Pdataflow-runner exec:java \
 -Dexec.mainClass=com.bawi.beam.dataflow.MySimpleLoggingJob \
