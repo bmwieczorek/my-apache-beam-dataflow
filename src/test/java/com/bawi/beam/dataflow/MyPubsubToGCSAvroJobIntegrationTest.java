@@ -14,6 +14,7 @@ import org.apache.avro.file.DataFileReader;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumReader;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -49,6 +50,11 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         Assert.assertNotNull("Expected Google Project resource owner to be set as env variable", get("GCP_OWNER"));
         LOGGER.info("Read env variables: GCP_PROJECT={}, GCP_OWNER={}", get("GCP_PROJECT"), get("GCP_OWNER"));
 
+        Process terraformInitProcess = runTerraformInfrastructureSetupAsBashProcess("terraform init");
+        logTerraform(terraformInitProcess);
+        int terraformInitProcessStatus = terraformInitProcess.waitFor();
+        Assert.assertEquals("terraform init should exit terraform with 0 status code", 0, terraformInitProcessStatus);
+
         // given
         String topic = get("GCP_OWNER") + "-topic";
         String gcsBucket = get("GCP_OWNER") + "-" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase();
@@ -56,9 +62,9 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         int numMessages = 10 * 60 * 2;
 
         // when
-        Process process = runTerraformInfrastructureSetupAsBashProcess("terraform/" + MyPubsubToGCSJob.class.getSimpleName());
-        logTerraform(process);
-        int status = process.waitFor();
+        Process terraformApplyProcess = runTerraformInfrastructureSetupAsBashProcess("terraform apply -auto-approve");
+        logTerraform(terraformApplyProcess);
+        int status = terraformApplyProcess.waitFor();
         Assert.assertEquals("Should exit terraform with 0 status code", 0, status);
 
         Thread.sleep(10 * 1000);
@@ -77,7 +83,18 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         Pattern pattern = Pattern.compile(format);
         Assert.assertTrue(avroRecordsAsStrings.stream().anyMatch(s -> pattern.matcher(s).matches()));
 
+        LOGGER.info("waiting 3 mins for job to finish");
+        Thread.sleep(180 * 1000);
     }
+
+    @After
+    public void cleanUp() throws IOException, InterruptedException {
+        Process destroyProcess = runTerraformInfrastructureSetupAsBashProcess("terraform destroy -auto-approve");
+        logTerraform(destroyProcess);
+        int destroyStatus = destroyProcess.waitFor();
+        Assert.assertEquals("destroyProcess should exit terraform with 0 destroyStatus code", 0, destroyStatus);
+    }
+
 
     private String get(String variable) {
         return System.getProperty(variable, System.getenv(variable));
@@ -165,15 +182,26 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         }
     }
 
-    private Process runTerraformInfrastructureSetupAsBashProcess(String pathToTerraform) throws IOException {
+    private Process runTerraformInfrastructureSetupAsBashProcess(String cmd) throws IOException {
         // Process process = Runtime.getRuntime().exec("./run-terraform.sh", null, new File("terraform/MyBQReadWriteJob"));
         ProcessBuilder processBuilder = new ProcessBuilder();
         processBuilder.inheritIO();
-        processBuilder.directory(new File(pathToTerraform));
-        processBuilder.command("./run-terraform.sh");
+        processBuilder.directory(new File("terraform/MyPubsubToGCSJob"));
+//        processBuilder.command("./run-terraform.sh");
         //processBuilder.command("bash", "-c", "ls -la");
+        processBuilder.command("bash", "-c", cmd);
         return processBuilder.start();
     }
+
+//    private Process runTerraformInfrastructureSetupAsBashProcess(String pathToTerraform) throws IOException {
+//        // Process process = Runtime.getRuntime().exec("./run-terraform.sh", null, new File("terraform/MyBQReadWriteJob"));
+//        ProcessBuilder processBuilder = new ProcessBuilder();
+//        processBuilder.inheritIO();
+//        processBuilder.directory(new File(pathToTerraform));
+//        processBuilder.command("./run-terraform.sh");
+//        //processBuilder.command("bash", "-c", "ls -la");
+//        return processBuilder.start();
+//    }
 
     private String getOutput(Process process) throws IOException {
         try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
