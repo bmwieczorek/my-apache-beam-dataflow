@@ -57,7 +57,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
 
         // given
         String topic = get("GCP_OWNER") + "-topic";
-        String gcsBucket = get("GCP_OWNER") + "-" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase();
+        String gcsBucket = get("GCP_PROJECT") + "-" + get("GCP_OWNER") + "-" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase();
         LOGGER.info("topic={}, bucket={}", topic, gcsBucket);
         int numMessages = 10 * 60 * 2;
 
@@ -82,9 +82,6 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
                 BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID, MY_MSG_BODY + "1", MY_MSG_ATTR_NAME + "1", MY_MSG_ATTR_VALUE + "1", messageIds.get(0));
         Pattern pattern = Pattern.compile(format);
         Assert.assertTrue(avroRecordsAsStrings.stream().anyMatch(s -> pattern.matcher(s).matches()));
-
-        LOGGER.info("waiting 3 mins for job to finish");
-        Thread.sleep(180 * 1000);
     }
 
     @After
