@@ -7,13 +7,13 @@ resource "google_storage_bucket_object" "my_bucket_object" {
 resource "google_dataflow_flex_template_job" "my_dataflow_flex_job" {
   project               = var.project
   provider              = google-beta
-  name                  = var.job
+  name                  = local.job
   container_spec_gcs_path = "gs://${google_storage_bucket_object.my_bucket_object.bucket}/${google_storage_bucket_object.my_bucket_object.name}" // id bartek-mypubsubtogcsjob-templates/app-image-spec.json // output_name: templates/app-image-spec.json
   on_delete             = "cancel"
   region                = var.region
   parameters = {
     subscription = google_pubsub_subscription.my_subscription.id
-    output = var.output
+    output = "gs://${local.bucket}/output"
     workerMachineType = "n2-standard-2"
     workerDiskType = "compute.googleapis.com/projects/${var.project}/zones/${var.zone}/diskTypes/pd-standard"
     diskSizeGb = 200

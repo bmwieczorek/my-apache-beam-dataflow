@@ -4,19 +4,13 @@ resource "time_sleep" "wait_5_seconds" {
 
 resource "google_pubsub_topic" "my_topic" {
   depends_on = [time_sleep.wait_5_seconds]
-  project = var.project
-  name = var.topic
-
-  labels = {
-    owner = var.owner
-  }
+  project    = var.project
+  name       = local.topic
+  labels     = local.labels
 }
 resource "google_pubsub_subscription" "my_subscription" {
   project = var.project
-  name    = var.subscription
+  name    = local.subscription
   topic   = google_pubsub_topic.my_topic.name
-
-  labels = {
-    owner = var.owner
-  }
+  labels  = local.labels
 }
