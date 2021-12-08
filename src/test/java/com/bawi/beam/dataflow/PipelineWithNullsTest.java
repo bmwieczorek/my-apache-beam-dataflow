@@ -18,9 +18,9 @@ public class PipelineWithNullsTest {
         Pipeline pipeline = Pipeline.create();
 
         @SuppressWarnings("all")
-        PCollection<String> result = pipeline.apply(Create.of("a", null, "c")
-                                                .withCoder(NullableCoder.of(StringUtf8Coder.of())))
-                                             .apply(Filter.by(Objects::nonNull));
+        PCollection<String> result =
+                pipeline.apply(Create.of("a", null, "c").withCoder(NullableCoder.of(StringUtf8Coder.of())))
+                        .apply(Filter.by(Objects::nonNull));
         PAssert.that(result).containsInAnyOrder("a", "c");
         pipeline.run().waitUntilFinish();
     }
