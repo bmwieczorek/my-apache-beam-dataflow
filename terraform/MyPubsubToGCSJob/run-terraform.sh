@@ -9,28 +9,28 @@ function run_terraform {
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd ../..
-JAVA_HOME_OLD=${JAVA_HOME}
-export JAVA_HOME=${JAVA_11_HOME}
-mvn clean package -Pbuild-and-deploy-flex-template -Dgcp.project.id=${PROJECT} -DskipTests
+mvn clean package -Pbuild-and-deploy-flex-template -Dgcp.project.id=${GCP_PROJECT} -DskipTests
 cd $SCRIPT_DIR
 
-if [ -z "$OWNER" ]
+if [ -z "${GCP_OWNER}" ]
 then
-  OWNER=$USER
+  GCP_OWNER=$USER
+else
+  GCP_OWNER=${GCP_OWNER}
 fi
-echo "OWNER=$OWNER"
+echo "GCP_OWNER=$GCP_OWNER"
 
-JOB=$(echo "${OWNER}-$(basename $SCRIPT_DIR)" | tr '[:upper:]' '[:lower:]' )
+JOB=$(echo "${GCP_OWNER}-$(basename $SCRIPT_DIR)" | tr '[:upper:]' '[:lower:]' )
 echo "JOB=$JOB"
 BUCKET=${JOB}
 echo "BUCKET=$BUCKET"
-TOPIC=${OWNER}-topic
+TOPIC=${GCP_OWNER}-topic
 echo "TOPIC=$TOPIC"
 SUBSCRIPTION=${TOPIC}-sub
 echo "SUBSCRIPTION=$SUBSCRIPTION"
 
-echo "Deleting manually resources owned by $OWNER ..."
-gsutil rm -r gs://${OWNER}-terraform/${JOB}
+echo "Deleting manually resources owned by $GCP_OWNER ..."
+gsutil rm -r gs://${GCP_OWNER}-terraform/${JOB}
 gcloud pubsub subscriptions delete ${SUBSCRIPTION}
 gcloud pubsub topics delete ${TOPIC}
 gcloud monitoring dashboards list --filter="displayName='${JOB} job id'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
@@ -43,21 +43,21 @@ gcloud monitoring dashboards list --filter="displayName='${JOB} redesigned job n
 #gcloud monitoring dashboards list --filter="displayName='robotic-shopping redesigned job id 2021-05-27_05_53_24-8109596674050890303'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
 #gcloud monitoring dashboards list --filter="displayName='airshopping-data-ingestion redesigned job id 2021-05-26_09_34_30-17149002215298212728'" --format 'value(NAME)' | xargs gcloud monitoring dashboards delete --quiet
 
-gcloud dataflow jobs list --filter "NAME:${JOB} AND STATE=Running" --format 'value(JOB_ID)' --region "$REGION" | xargs gcloud dataflow jobs cancel --region "$REGION"
-max_retry=10; counter=1; sleep_secs=5; until [ -z "$(gcloud dataflow jobs list --filter "NAME:${JOB} AND (STATE=Cancelling OR STATE=Running)" --format 'value(JOB_ID)' --region $REGION)" ] ; do sleep $sleep_secs; [[ counter -eq $max_retry ]] && echo "Failed" && break; echo "waiting $sleep_secs secs for job to stop: attempt $counter" ; ((counter++)); done
-gsutil rm -r gs://${JOB}
+gcloud dataflow jobs list --filter "NAME:${JOB} AND STATE=Running" --format 'value(JOB_ID)' --region "$GCP_REGION" | xargs gcloud dataflow jobs cancel --region "${GCP_REGION}"
+max_retry=10; counter=1; sleep_secs=5; until [ -z "$(gcloud dataflow jobs list --filter "NAME:${JOB} AND (STATE=Cancelling OR STATE=Running)" --format 'value(JOB_ID)' --region ${GCP_REGION})" ] ; do sleep $sleep_secs; [[ counter -eq $max_retry ]] && echo "Failed" && break; echo "waiting $sleep_secs secs for job to stop: attempt $counter" ; ((counter++)); done
+gsutil rm -r gs://${BUCKET}
 
-export TF_VAR_project="$PROJECT"
-export TF_VAR_region="$REGION"
-export TF_VAR_owner="$OWNER"
+export TF_VAR_project="$GCP_PROJECT"
+export TF_VAR_region="$GCP_REGION"
+export TF_VAR_owner="$GCP_OWNER"
 export TF_VAR_bucket="$BUCKET"
 
-gsutil -q stat "gs://$OWNER-terraform/**" || gsutil mb "gs://$OWNER-terraform"
+gsutil -q stat "gs://${GCP_OWNER}-terraform/**" || gsutil mb "gs://${GCP_OWNER}-terraform"
 
 >$SCRIPT_DIR/backend.tf cat <<-EOF
 terraform {
   backend "gcs" {
-    bucket = "$OWNER-terraform"
+    bucket = "$GCP_OWNER-terraform"
     prefix = "$JOB/tfstate"
   }
   required_providers {
@@ -73,17 +73,15 @@ EOF
 >$SCRIPT_DIR/dev.tfvars cat <<-EOF
 topic="${TOPIC}"
 subscription="${SUBSCRIPTION}"
-zone="$ZONE"
+zone="$GCP_ZONE"
 job="${JOB}"
-service_account="$SERVICE_ACCOUNT"
-subnetwork="$SUBNETWORK"
+service_account="$GCP_SERVICE_ACCOUNT"
+subnetwork="$GCP_SUBNETWORK"
 output="gs://${BUCKET}/output"
 dashboard_file="dashboard.json"
 EOF
 
 run_terraform
-
-export JAVA_HOME=${JAVA_HOME_OLD}
 
 #java -jar ~/Downloads/avro-tools-1.8.1.jar tojson
 
