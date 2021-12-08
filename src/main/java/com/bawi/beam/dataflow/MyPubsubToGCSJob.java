@@ -28,6 +28,9 @@ import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.text.NumberFormat;
 import java.util.TreeMap;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
@@ -98,7 +101,9 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
     static final String BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID = "bodyWithAttributesMessageId";
     private static final Schema SCHEMA = SchemaBuilder.record("record").fields().requiredString(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID).endRecord();
-    private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("yyyy/MM/dd/HH/mm");
+    //    private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("yyyy/MM/dd/HH/mm");
+    private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("'year='yyyy/'month'=MM/'day'=dd/'hour'=HH/mm");
+
 
 
     static class ConcatBodyAttrAndMsgIdFn extends DoFn<PubsubMessage, GenericRecord> {
@@ -134,7 +139,8 @@ gcloud dataflow flex-template run $APP-$OWNER \
             String value = "body=" + body + ", attributes=" + new TreeMap<>(pubsubMessage.getAttributeMap()) + ", messageId=" + pubsubMessage.getMessageId()
                     + ", inputDataFreshnessMs=" + inputDataFreshnessMs + ", customInputDataFreshnessMs=" + customInputDataFreshnessMs;
             record.put(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID, value);
-            LOGGER.info("record {}", record);
+//            LOGGER.info("record {}", record);
+            LOGGER.info("record {}, {}", record, getMessage());
             return record;
         }
 
@@ -164,8 +170,10 @@ gcloud dataflow flex-template run $APP-$OWNER \
                                 String prefix = resource.isDirectory() ? "" : firstNonNull(resource.getFilename(), "");
                                 String suggestedFilenameSuffix = outputFileHints.getSuggestedFilenameSuffix();
                                 String suffix = suggestedFilenameSuffix != null && !suggestedFilenameSuffix.isEmpty() ? suggestedFilenameSuffix : ".avro";
-                                String filename = String.format("%s/%s-of-%s%s", String.format("%s/%s", prefix, FORMATTER.print(intervalWindow.start())), shardNumber, numShards, suffix);
-                                LOGGER.info("filename='{}'", filename);
+//                                String filename = String.format("%s/%s-of-%s%s", String.format("%s/%s", prefix, FORMATTER.print(intervalWindow.start())), shardNumber, numShards, suffix);
+//                                LOGGER.info("filename='{}'", filename);
+                                String filename = String.format("%s/%s-%s-of-%s%s", prefix, FORMATTER.print(intervalWindow.start()), shardNumber, numShards, suffix);
+                                LOGGER.info("filename='{}', {}", filename, getMessage());  //filename='output/2021/09/27/07/02-2-of-30.avro'
                                 return resource.getCurrentDirectory().resolve(filename, ResolveOptions.StandardResolveOptions.RESOLVE_FILE);
                             }
 
@@ -178,5 +186,31 @@ gcloud dataflow flex-template run $APP-$OWNER \
                         .withNumShards(4));
 
         readingPipeline.run();
+    }
+
+    private static String getMessage() {
+        InetAddress localHostAddress = getLocalHostAddress();
+        Thread thread = Thread.currentThread();
+        String total = format(Runtime.getRuntime().totalMemory());
+        String free = format(Runtime.getRuntime().freeMemory());
+        String used = format(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
+        String max = format(Runtime.getRuntime().maxMemory());
+        return String.format("%s|i:%s|n:%s|g:%s|c:%s|u:%s|f:%s|t:%s|m:%s",
+                localHostAddress, thread.getId(), thread.getName(), thread.getThreadGroup().getName(), Runtime.getRuntime().availableProcessors(), used, free, total, max);
+    }
+
+    private static InetAddress getLocalHostAddress() {
+        try {
+            return InetAddress.getLocalHost();
+        } catch (UnknownHostException e) {
+            LOGGER.error("Unable to get local host address", e);
+            return null;
+        }
+    }
+
+    private static String format(long value) {
+        NumberFormat numberFormat = NumberFormat.getInstance();
+        numberFormat.setGroupingUsed(true);
+        return numberFormat.format(value);
     }
 }
