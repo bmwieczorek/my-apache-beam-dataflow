@@ -1,4 +1,4 @@
-package com.bawi.beam.dataflow;
+package com.bawi.beam.my;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -38,7 +38,9 @@ public class MyBeamGenerics {
         }
     }
 
+    @SuppressWarnings("SameParameterValue")
     static class MyCreate {
+        @SafeVarargs
         static <T> MyPTransform<MyPCollection<Void>, MyPCollection<T>> of(T t, T... tt) {
 //            System.out.println("Creating " + t.getClass());
             List<T> list = new ArrayList<>();
@@ -47,8 +49,9 @@ public class MyBeamGenerics {
             return new MyPTransform<>() {
                 @Override
                 MyPCollection<T> transform(MyPCollection<Void> voidMyPCollection) {
-                    Class<T> aClass = (Class<T>) t.getClass();
-                    return new MyPCollection<>(list, aClass);
+                    //noinspection unchecked
+                    Class<T> outClass = (Class<T>) t.getClass();
+                    return new MyPCollection<>(list, outClass);
                 }
             };
         }
@@ -86,7 +89,9 @@ public class MyBeamGenerics {
                     }
             );
             Type actualTypeArgument = ((ParameterizedType) ((MyDoFn<In, Out>) myDoFn).getClass().getGenericSuperclass()).getActualTypeArguments()[1];
-            return new MyPCollection<>(myOutputReceiver.getElements(), (Class<Out>)actualTypeArgument);
+            //noinspection unchecked
+            Class<Out> actualTypeArgument1 = (Class<Out>) actualTypeArgument;
+            return new MyPCollection<>(myOutputReceiver.getElements(), actualTypeArgument1);
         }
 
         static <In, Out> MyParDo<In, Out> of(MyDoFn<In, Out> myDoFn){
@@ -102,6 +107,7 @@ public class MyBeamGenerics {
             elements.add(out);
         }
     }
+    @SuppressWarnings("unused")
     static abstract class MyDoFn<In, Out> {}
 
     static class MyStringToIntegerDoFn extends MyDoFn<String, Integer> {
@@ -111,6 +117,7 @@ public class MyBeamGenerics {
         }
     }
 
+    @SuppressWarnings("SameParameterValue")
     static class MyMapElements<In, Out> extends MyPTransform<MyPCollection<In>, MyPCollection<Out>> {
         private Class<Out> outClass;
 
@@ -142,13 +149,15 @@ public class MyBeamGenerics {
 //                    System.out.println("Converting " + actualTypeArguments[0] + " to " + actualTypeArguments[1]);
                     List<In> inElements = inMyPCollection.elements;
                     List<Out> outElements = inElements.stream().map(mapFn::map).collect(Collectors.toList());
-                    return new MyPCollection<>(outElements, (Class<Out>) actualTypeArguments[1]);
+                    //noinspection unchecked
+                    Class<Out> actualTypeArgument = (Class<Out>) actualTypeArguments[1];
+                    return new MyPCollection<>(outElements, actualTypeArgument);
                 }
             };
         }
 
-        static <Out> MyMapElements<?, Out> into(Class<Out> clazz) {
-            return new MyMapElements<>(clazz);
+        static <Out> MyMapElements<?, Out> into(Class<Out> outClass) {
+            return new MyMapElements<>(outClass);
         }
     }
 
