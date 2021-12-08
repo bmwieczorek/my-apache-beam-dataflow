@@ -1,0 +1,12 @@
+{
+  "jobName": "${jobName}",
+  "parameters": {
+    "expirationDate" : "${expirationDate}"
+  },
+  "environment": {
+    "tempLocation": "gs://${project}/temp",
+    "zone": "${zone}",
+    "serviceAccountEmail": "${serviceAccountEmail}",
+    "subnetwork": "${subnetwork}"
+  }
+}
