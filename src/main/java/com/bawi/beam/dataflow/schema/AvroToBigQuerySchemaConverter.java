@@ -16,12 +16,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class AvroToBigQuerySchemaConverter {
     private static final Logger LOGGER = LoggerFactory.getLogger(AvroToBigQuerySchemaConverter.class);
 
     public static void main(String[] args) throws IOException {
+        LOGGER.info("args=" + (args == null ? null : Arrays.asList(args)));
         if (args == null || args.length != 2) {
             throw new IllegalArgumentException("Expected file paths to input avro schema and output table schema");
         }
