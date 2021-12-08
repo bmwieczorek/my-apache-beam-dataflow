@@ -45,15 +45,15 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
 
     @Test
     public void testE2E() throws IOException, InterruptedException, ExecutionException {
-        Assert.assertNotNull("Expected Google Project ID to be set as env variable", get("PROJECT"));
-        Assert.assertNotNull("Expected Google Project resource owner to be set as env variable", get("OWNER"));
-        LOGGER.info("Read env variables: PROJECT={}, OWNER={}", get("PROJECT"), get("OWNER"));
+        Assert.assertNotNull("Expected Google Project ID to be set as env variable", get("GCP_PROJECT"));
+        Assert.assertNotNull("Expected Google Project resource owner to be set as env variable", get("GCP_OWNER"));
+        LOGGER.info("Read env variables: GCP_PROJECT={}, GCP_OWNER={}", get("GCP_PROJECT"), get("GCP_OWNER"));
 
         // given
-        String topic = get("OWNER") + "-topic";
-        String gcsBucket = get("OWNER") + "-" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase();
+        String topic = get("GCP_OWNER") + "-topic";
+        String gcsBucket = get("GCP_OWNER") + "-" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase();
         LOGGER.info("topic={}, bucket={}", topic, gcsBucket);
-        int numMessages = 5 * 60;
+        int numMessages = 10 * 60 * 2;
 
         // when
         Process process = runTerraformInfrastructureSetupAsBashProcess("terraform/" + MyPubsubToGCSJob.class.getSimpleName());
@@ -63,7 +63,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
 
         Thread.sleep(10 * 1000);
 
-        List<String> messageIds = sendNPubsubMessagesWithDelay(topic, numMessages, Duration.ofMillis(500));
+        List<String> messageIds = sendNPubsubMessagesWithDelay(topic, numMessages, Duration.ofMillis(250));
 
         // then
         List<String> avroRecordsAsStrings = waitUpTo5MinsForDataflowJobToWriteAvroFileToGCSBucket(gcsBucket, numMessages);
@@ -91,12 +91,15 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
             LOGGER.info("Sent pubsub message ({} of {}), messageId={}", i, numMessages, messageId);
             messageIds.add(messageId);
             Thread.sleep(sleepDuration.toMillis());
+            if (i % (120 * 2) == 0) {
+                Thread.sleep(2 * 60 * 1000);
+            }
         }
         return messageIds;
     }
 
     private String sendMessageToPubsub(String myMsgBody, String myMsgAttrName, String myMsgAttrValue, String topic) throws IOException, InterruptedException, ExecutionException {
-        Publisher publisher = Publisher.newBuilder(TopicName.of(get("PROJECT"), topic)).build();
+        Publisher publisher = Publisher.newBuilder(TopicName.of(get("GCP_PROJECT"), topic)).build();
         PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
                 .setData(ByteString.copyFromUtf8(myMsgBody))
                 .putAllAttributes(ImmutableMap.of(myMsgAttrName, myMsgAttrValue, CUSTOM_TIMESTAMP_ATTRIBUTE, String.valueOf(System.currentTimeMillis())))
@@ -111,8 +114,8 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
 
 
     private List<String> waitUpTo5MinsForDataflowJobToWriteAvroFileToGCSBucket(String bucketName, int expectedNumMessages) throws InterruptedException {
-        Storage storage = StorageOptions.newBuilder().setProjectId(get("PROJECT")).build().getService();
-        for (int i = 1; i <= 60; i++) {
+        Storage storage = StorageOptions.newBuilder().setProjectId(get("GCP_PROJECT")).build().getService();
+        for (int i = 1; i <= (120 * 2); i++) {
             Page<Blob> blobs = storage.list(bucketName);
             List<Blob> filteredBlobs = StreamSupport.stream(blobs.iterateAll().spliterator(), false)
                     .filter(blob -> blob.getName().endsWith(".avro"))
