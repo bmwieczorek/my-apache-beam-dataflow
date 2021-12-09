@@ -1,5 +1,5 @@
 locals {
-  instance          = "${var.owner}-${var.job}-vm"
+  instance          = "${var.job}-vm"
   template_gcs_path = "gs://${var.bucket}/templates/${var.job}-template"
   dataflow_jar     = basename(var.dataflow_jar_local_path)
   startup_script_local_path = "${path.module}/startup-script.sh"
@@ -53,8 +53,7 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
   network_interface {
     //network = "default" // sandbox: default network, no subnetwork; dev: network null, subnetwork vpc
     network    = var.network
-    //    subnetwork = var.subnetwork == "null" ? null : var.subnetwork
-    subnetwork = var.subnetwork
+    subnetwork = var.subnetwork == "default" ? null : var.subnetwork
   }
 
 //  metadata_startup_script = "echo hi > /tmp/test.txt"
