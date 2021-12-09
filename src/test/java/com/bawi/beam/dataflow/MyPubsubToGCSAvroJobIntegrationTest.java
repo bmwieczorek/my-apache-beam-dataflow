@@ -64,7 +64,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         String topic = get("GCP_OWNER") + "-topic";
         String gcsBucket = get("GCP_PROJECT") + "-" + get("GCP_OWNER") + "-" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase();
         LOGGER.info("topic={}, bucket={}", topic, gcsBucket);
-        int numMessages = 10 * 60 * 2;
+        int numMessages = 5 * 60;
 
         // when
         Process terraformApplyProcess = runTerraformInfrastructureSetupAsBashProcess("terraform apply -auto-approve");
@@ -72,9 +72,10 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         int status = terraformApplyProcess.waitFor();
         Assert.assertEquals("Should exit terraform with 0 status code", 0, status);
 
+        LOGGER.info("Waiting 10 secs for infra to start");
         Thread.sleep(10 * 1000);
 
-        List<String> messageIds = sendNPubsubMessagesWithDelay(topic, numMessages, Duration.ofMillis(250));
+        List<String> messageIds = sendNPubsubMessagesWithDelay(topic, numMessages, Duration.ofMillis(500));
 
         // then
         List<String> avroRecordsAsStrings = waitUpTo5MinsForDataflowJobToWriteAvroFileToGCSBucket(gcsBucket, numMessages);
@@ -110,7 +111,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
             LOGGER.info("Sent pubsub message ({} of {}), messageId={}", i, numMessages, messageId);
             messageIds.add(messageId);
             Thread.sleep(sleepDuration.toMillis());
-            if (i % (120 * 2) == 0) {
+            if (i % (120) == 0) {
                 Thread.sleep(2 * 60 * 1000);
             }
         }
@@ -134,7 +135,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
 
     private List<String> waitUpTo5MinsForDataflowJobToWriteAvroFileToGCSBucket(String bucketName, int expectedNumMessages) throws InterruptedException {
         Storage storage = StorageOptions.newBuilder().setProjectId(get("GCP_PROJECT")).build().getService();
-        for (int i = 1; i <= (120 * 2); i++) {
+        for (int i = 1; i <= 60; i++) {
             Page<Blob> blobs = storage.list(bucketName);
             List<Blob> filteredBlobs = StreamSupport.stream(blobs.iterateAll().spliterator(), false)
                     .filter(blob -> blob.getName().endsWith(".avro"))
@@ -164,12 +165,12 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
                 if (results.size() == expectedNumMessages) {
                     return results;
                 } else {
-                    LOGGER.info("Waiting for dataflow job to read all messages ({} of {}) from Pubsub, transform and write avro to GCS ... (attempt {}/100)", results.size(), expectedNumMessages, i);
-                    Thread.sleep(10 * 1000L);
+                    LOGGER.info("Waiting for dataflow job to read all messages ({} of {}) from Pubsub, transform and write avro to GCS ... (attempt {}/60)", results.size(), expectedNumMessages, i);
+                    Thread.sleep(5 * 1000L);
                 }
             } else {
-                LOGGER.info("Waiting for dataflow job to start reading {} message(s) from Pubsub, transform and write avro to GCS ... (attempt {}/100)", expectedNumMessages, i);
-                Thread.sleep(10 * 1000L);
+                LOGGER.info("Waiting for dataflow job to start reading {} message(s) from Pubsub, transform and write avro to GCS ... (attempt {}/60)", expectedNumMessages, i);
+                Thread.sleep(5 * 1000L);
             }
         }
         return new ArrayList<>();
