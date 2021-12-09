@@ -51,8 +51,6 @@ resource "google_compute_instance" "vm" {
 
   network_interface {
     network    = var.network
-//    network    = var.network == "default" ? null : var.network
-//    subnetwork = var.subnetwork
     subnetwork = var.subnetwork == "default" ? null : var.subnetwork
   }
 
