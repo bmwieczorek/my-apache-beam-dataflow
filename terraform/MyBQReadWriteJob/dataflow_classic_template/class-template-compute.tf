@@ -66,7 +66,7 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
 
   provisioner "local-exec" {
     command = <<EOT
-      max_retry=40; counter=1; until gsutil stat ${local.template_gcs_path} ; do sleep 5; if [ $counter -eq $max_retry ]; then echo "Failed" && break; fi; echo "Waiting for template to be generated: $counter attempt" ; counter=$(expr $counter + 1); done
+      max_retry=40; counter=1; until gsutil stat ${local.template_gcs_path} ; do sleep 5; if [ $counter -eq $max_retry ]; then echo "Failed" && break; fi; if gcloud compute instances get-serial-port-output ${local.instance} --zone ${var.zone} --project ${var.project} | grep startup | grep script | grep Caused |grep Error ; then echo "java failed" && break; fi; echo "Waiting for template to be generated: $counter attempt" ; counter=$(expr $counter + 1); done
     EOT
   }
 }
