@@ -138,7 +138,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
             Page<Blob> blobs = storage.list(bucketName);
             List<Blob> filteredBlobs = StreamSupport.stream(blobs.iterateAll().spliterator(), false)
                     .filter(blob -> blob.getName().endsWith(".avro"))
-                    .peek(b -> LOGGER.info("filtered blob: {}", b))
+//                    .peek(b -> LOGGER.info("filtered blob: {}", b))
                     .collect(Collectors.toList());
 
             LOGGER.info("filtered blob size: {}", filteredBlobs.size());
