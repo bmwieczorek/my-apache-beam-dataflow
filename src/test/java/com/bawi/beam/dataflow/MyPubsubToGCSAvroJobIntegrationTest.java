@@ -50,10 +50,15 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         Assert.assertNotNull("Expected Google Project resource owner to be set as env variable", get("GCP_OWNER"));
         LOGGER.info("Read env variables: GCP_PROJECT={}, GCP_OWNER={}", get("GCP_PROJECT"), get("GCP_OWNER"));
 
+        Process mvnProcess = runMvnAsBashProcess("mvn clean package -Pbuild-and-deploy-flex-template -Dgcp.project.id=${GCP_PROJECT} -DskipTests");
+        logProcess(mvnProcess);
+        int mvnProcessStatus = mvnProcess.waitFor();
+        Assert.assertEquals("mvn build should exit with 0 status code", 0, mvnProcessStatus);
+
         Process terraformInitProcess = runTerraformInfrastructureSetupAsBashProcess("terraform init");
-        logTerraform(terraformInitProcess);
+        logProcess(terraformInitProcess);
         int terraformInitProcessStatus = terraformInitProcess.waitFor();
-        Assert.assertEquals("terraform init should exit terraform with 0 status code", 0, terraformInitProcessStatus);
+        Assert.assertEquals("terraform init should exit with 0 status code", 0, terraformInitProcessStatus);
 
         // given
         String topic = get("GCP_OWNER") + "-topic";
@@ -63,7 +68,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
 
         // when
         Process terraformApplyProcess = runTerraformInfrastructureSetupAsBashProcess("terraform apply -auto-approve");
-        logTerraform(terraformApplyProcess);
+        logProcess(terraformApplyProcess);
         int status = terraformApplyProcess.waitFor();
         Assert.assertEquals("Should exit terraform with 0 status code", 0, status);
 
@@ -87,7 +92,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
     @After
     public void cleanUp() throws IOException, InterruptedException {
         Process destroyProcess = runTerraformInfrastructureSetupAsBashProcess("terraform destroy -auto-approve");
-        logTerraform(destroyProcess);
+        logProcess(destroyProcess);
         int destroyStatus = destroyProcess.waitFor();
         Assert.assertEquals("destroyProcess should exit terraform with 0 destroyStatus code", 0, destroyStatus);
     }
@@ -170,13 +175,20 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         return new ArrayList<>();
     }
 
-    private void logTerraform(Process process) throws IOException {
+    private void logProcess(Process process) throws IOException {
         try (BufferedReader rdr = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
             while ((line = rdr.readLine()) != null) {
                 LOGGER.info(line);
             }
         }
+    }
+
+    private Process runMvnAsBashProcess(String cmd) throws IOException {
+        ProcessBuilder processBuilder = new ProcessBuilder();
+        processBuilder.inheritIO();
+        processBuilder.command("bash", "-c", cmd);
+        return processBuilder.start();
     }
 
     private Process runTerraformInfrastructureSetupAsBashProcess(String cmd) throws IOException {

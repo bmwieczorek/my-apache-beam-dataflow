@@ -1,8 +1,8 @@
 terraform {
-  backend "gcs" {
-    bucket = "bartek-terraform"
-    prefix = "bartek-mypubsubtogcsjob/tfstate"
-  }
+//  backend "gcs" {
+//    bucket = "bartek-terraform"
+//    prefix = "bartek-mypubsubtogcsjob/tfstate"
+//  }
   required_providers {
     google = {
       version = "~> 3.58.0"
