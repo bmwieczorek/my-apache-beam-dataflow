@@ -27,8 +27,13 @@ public class MyBQReadWriteJobIntegrationTest {
         String project = env.get("GCP_PROJECT");
         Assert.assertNotNull("Missing GCP_PROJECT env variable", project);
 
+        Process mvnProcess = runMvnAsBashProcess("mvn clean package -Pdist -DskipTests");
+        logProcess(mvnProcess);
+        int mvnProcessStatus = mvnProcess.waitFor();
+        Assert.assertEquals("mvn build should exit with 0 status code", 0, mvnProcessStatus);
+
         Process terraformInitProcess = runTerraformInfrastructureSetupAsBashProcess("terraform init");
-        logTerraform(terraformInitProcess);
+        logProcess(terraformInitProcess);
         int terraformInitProcessStatus = terraformInitProcess.waitFor();
         Assert.assertEquals("terraform init should exit terraform with 0 status code", 0, terraformInitProcessStatus);
 
@@ -37,7 +42,7 @@ public class MyBQReadWriteJobIntegrationTest {
 
         // when
         Process bigQueryProcess = runTerraformInfrastructureSetupAsBashProcess("terraform apply -auto-approve -target=module.bigquery");
-        logTerraform(bigQueryProcess);
+        logProcess(bigQueryProcess);
         int bigQueryProcessStatus = bigQueryProcess.waitFor();
         Assert.assertEquals("bigQueryProcess should exit terraform with 0 status code", 0, bigQueryProcessStatus);
 
@@ -46,7 +51,7 @@ public class MyBQReadWriteJobIntegrationTest {
         Assert.assertEquals("Should match initial row count for pre-loaded data", initialPreLoadedRowCount, totalRows);
 
         Process dataflowTemplateJobProcess = runTerraformInfrastructureSetupAsBashProcess("terraform apply -auto-approve -target=module.dataflow_classic_template_job");
-        logTerraform(dataflowTemplateJobProcess);
+        logProcess(dataflowTemplateJobProcess);
         int dataflowTemplateJobStatus = dataflowTemplateJobProcess.waitFor();
 
         Assert.assertEquals("dataflowTemplateJobProcess should exit terraform with 0 status code", 0, dataflowTemplateJobStatus);
@@ -61,9 +66,16 @@ public class MyBQReadWriteJobIntegrationTest {
     @After
     public void cleanUp() throws IOException, InterruptedException {
         Process destroyProcess = runTerraformInfrastructureSetupAsBashProcess("terraform destroy -auto-approve");
-        logTerraform(destroyProcess);
+        logProcess(destroyProcess);
         int destroyStatus = destroyProcess.waitFor();
         Assert.assertEquals("destroyProcess should exit terraform with 0 bigQueryProcessStatus code", 0, destroyStatus);
+    }
+
+    private Process runMvnAsBashProcess(String cmd) throws IOException {
+        ProcessBuilder processBuilder = new ProcessBuilder();
+        processBuilder.inheritIO();
+        processBuilder.command("bash", "-c", cmd);
+        return processBuilder.start();
     }
 
     private long waitUpTo10MinsForDataflowJobToPopulateBiqQuery(String query) throws InterruptedException {
@@ -82,7 +94,7 @@ public class MyBQReadWriteJobIntegrationTest {
         return totalRows;
     }
 
-    private void logTerraform(Process process) throws IOException {
+    private void logProcess(Process process) throws IOException {
         try (BufferedReader rdr = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
             while ((line = rdr.readLine()) != null) {
