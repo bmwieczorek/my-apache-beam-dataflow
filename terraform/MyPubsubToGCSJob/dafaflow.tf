@@ -12,16 +12,17 @@ resource "google_dataflow_flex_template_job" "my_dataflow_flex_job" {
   on_delete             = "cancel"
   region                = var.region
   parameters = {
-    subscription = google_pubsub_subscription.my_subscription.id
-    output = "gs://${local.bucket}/output"
+    subscription      = google_pubsub_subscription.my_subscription.id
+    output            = "gs://${local.bucket}/output"
     workerMachineType = "n2-standard-2"
-    workerDiskType = "compute.googleapis.com/projects/${var.project}/zones/${var.zone}/diskTypes/pd-standard"
-    diskSizeGb = 200
-    serviceAccount = var.service_account
-//    subnetwork = var.subnetwork
-    usePublicIps = false
-    experiments = "enable_stackdriver_agent_metrics"
-    labels = "{\"owner\":\"bartek\",\"dataflow-template\":\"flex\"}"
+    workerDiskType    = "compute.googleapis.com/projects/${var.project}/zones/${var.zone}/diskTypes/pd-standard"
+    diskSizeGb        = 200
+    serviceAccount    = var.service_account
+    network           = var.network
+    subnetwork        = var.subnetwork == "default" ? null : var.subnetwork
+    usePublicIps      = false
+    experiments       = "enable_stackdriver_agent_metrics"
+    labels            = "{\"owner\":\"bartek\",\"dataflow-template\":\"flex\"}"
   }
 
   provisioner "local-exec" {
