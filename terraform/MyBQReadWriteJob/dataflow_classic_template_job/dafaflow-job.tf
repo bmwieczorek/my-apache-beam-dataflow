@@ -9,7 +9,7 @@ resource "google_dataflow_job" "job" {
   template_gcs_path     = var.template_gcs_path
   service_account_email = var.service_account
   network               = var.network
-  subnetwork            = var.subnetwork
+  subnetwork            = var.subnetwork == "default" ? null : var.subnetwork
   max_workers           = 3
   on_delete             = "cancel"
   ip_configuration      = "WORKER_IP_PRIVATE"
