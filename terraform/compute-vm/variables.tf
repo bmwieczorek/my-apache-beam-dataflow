@@ -41,5 +41,5 @@ variable "owner" {
 
 variable "amt_idm_hostprofile" {
   description = "AMT IDM hostprofile"
-  type        = "string"
+  type        = string
 }
