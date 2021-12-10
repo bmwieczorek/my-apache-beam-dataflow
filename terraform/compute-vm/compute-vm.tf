@@ -12,8 +12,8 @@ resource "google_storage_bucket" "bucket" {
 resource "google_storage_bucket_object" "startup_script" {
   name   = local.startup-script-name
   content = <<-EOF
+    # No supported authentication methods available (server sent: publickey,gssapi-keyex,gssapi-with-mic)
     gcloud compute instances add-metadata --zone ${var.zone} ${var.owner}-vm --metadata=startup-state="(1/3) Updating PasswordAuthentication ..."
-
     sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
     systemctl restart sshd
 
