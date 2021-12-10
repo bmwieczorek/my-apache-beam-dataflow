@@ -38,3 +38,8 @@ variable "owner" {
   description = "Google resource owner"
   type        = string
 }
+
+variable "amt_idm_hostprofile" {
+  description = "AMT IDM hostprofile"
+  type        = "string"
+}

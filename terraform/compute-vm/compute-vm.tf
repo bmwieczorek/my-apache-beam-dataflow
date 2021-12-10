@@ -12,13 +12,18 @@ resource "google_storage_bucket" "bucket" {
 resource "google_storage_bucket_object" "startup_script" {
   name   = local.startup-script-name
   content = <<-EOF
-    gcloud compute instances add-metadata --zone ${var.zone} ${var.owner}-vm --metadata=startup-state="(1/2) Checking Java ..."
+    gcloud compute instances add-metadata --zone ${var.zone} ${var.owner}-vm --metadata=startup-state="(1/3) Updating PasswordAuthentication ..."
+
+    sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+    systemctl restart sshd
+
+    gcloud compute instances add-metadata --zone ${var.zone} ${var.owner}-vm --metadata=startup-state="(2/3) Checking Java ..."
 
     max_retry=10
     counter=1
     until which java
     do sleep $((counter*10))
-      [[ counter -eq $max_retry ]] && echo "Java OpenJDK installation status: failed" &&  gcloud compute instances add-metadata --zone ${var.zone} ${var.owner}-vm --metadata=startup-state="(2/2) Java OpenJDK installation status: failed" && exit 1
+      [[ counter -eq $max_retry ]] && echo "Java OpenJDK installation status: failed" &&  gcloud compute instances add-metadata --zone ${var.zone} ${var.owner}-vm --metadata=startup-state="(3/3) Java OpenJDK installation status: failed" && exit 1
       echo "Trying to install java-11-openjdk-devel: $counter attempt"
       sudo yum install java-11-openjdk-devel -y 2>&1
       ((counter++))
@@ -27,7 +32,7 @@ resource "google_storage_bucket_object" "startup_script" {
     which java
     java -version
     echo "Java OpenJDK installation status: completed"
-    gcloud compute instances add-metadata --zone ${var.zone} ${var.owner}-vm --metadata=startup-state="(2/2) Java OpenJDK installation status: completed"
+    gcloud compute instances add-metadata --zone ${var.zone} ${var.owner}-vm --metadata=startup-state="(3/3) Java OpenJDK installation status: completed"
   EOF
   bucket = google_storage_bucket.bucket.name
 }
@@ -39,6 +44,7 @@ resource "google_compute_instance" "vm" {
   machine_type = "e2-medium"
   metadata = {
     enable-oslogin      = "TRUE"
+    amt-idm-hostprofile = var.amt_idm_hostprofile
     startup-script-url  = "gs://${google_storage_bucket.bucket.name}/${google_storage_bucket_object.startup_script.name}"
   }
 
