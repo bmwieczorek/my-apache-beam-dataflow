@@ -32,6 +32,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.NumberFormat;
 import java.util.TreeMap;
+import java.util.UUID;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 
@@ -101,8 +102,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
     static final String BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID = "bodyWithAttributesMessageId";
     private static final Schema SCHEMA = SchemaBuilder.record("record").fields().requiredString(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID).endRecord();
-    //    private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("yyyy/MM/dd/HH/mm");
-    private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("'year='yyyy/'month'=MM/'day'=dd/'hour'=HH/mm");
+    private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("'year='yyyy/'month'=MM/'day'=dd/'hour'=HH/'minute'=mm");
 
 
 
@@ -111,39 +111,44 @@ gcloud dataflow flex-template run $APP-$OWNER \
         private static final Distribution PUBSUB_MESSAGE_SIZE_BYTES = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_pubsubMessageSizeBytes");
         private static final Distribution PROCESSING_TIME_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_processingTimeMs");
         private static final Distribution INPUT_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_inputDataFreshnessMs");
-        private static final Distribution CUSTOM_INPUT_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_customInputDataFreshnessMs");
-        static final String CUSTOM_TIMESTAMP_ATTRIBUTE = "customTimestampAttribute";
+        private static final Distribution CUSTOM_PUBLISH_TIME_INPUT_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_customPtInputDataFreshnessMs");
+        private static final Distribution CUSTOM_EVENT_TIME_INPUT_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_customEtInputDataFreshnessMs");
+        static final String PUBLISH_TIME_ATTRIBUTE = "pt";
+        static final String EVENT_TIME_ATTRIBUTE = "et";
 
         @ProcessElement
-        public void process(@Element PubsubMessage pubsubMessage, @Timestamp Instant timestamp, OutputReceiver<GenericRecord> outputReceiver) {
+        public void process(@Element PubsubMessage pubsubMessage, @Timestamp Instant timestamp, OutputReceiver<GenericRecord> outputReceiver, BoundedWindow window) {
             long startMs = System.currentTimeMillis();
             PUBSUB_MESSAGE_SIZE_BYTES.update(pubsubMessage.getPayload() != null ? pubsubMessage.getPayload().length : 0);
 
             long inputDataFreshnessMs = startMs - timestamp.getMillis();
-            String customTimestamp = pubsubMessage.getAttribute(CUSTOM_TIMESTAMP_ATTRIBUTE);
-            long customInputDataFreshnessMs = customTimestamp != null ? (startMs - Long.parseLong(customTimestamp)) : -1;
+            String publishTimeAttribute = pubsubMessage.getAttribute(PUBLISH_TIME_ATTRIBUTE);
+            String eventTimeAttribute = pubsubMessage.getAttribute(EVENT_TIME_ATTRIBUTE);
+            long customPublishTimeInputDataFreshnessMs = publishTimeAttribute != null ? (startMs - Instant.parse(publishTimeAttribute).getMillis()) : -1;
+            long customEventTimeInputDataFreshnessMs = eventTimeAttribute != null ? (startMs - Instant.parse(eventTimeAttribute).getMillis()) : -1;
 
-            GenericData.Record record = doProcess(pubsubMessage, inputDataFreshnessMs, customInputDataFreshnessMs);
+            GenericData.Record record = doProcess(pubsubMessage, inputDataFreshnessMs, customPublishTimeInputDataFreshnessMs, customEventTimeInputDataFreshnessMs);
+            String windowString = window instanceof GlobalWindow ? "GlobalWindow " + window.maxTimestamp() : window.toString();
+            LOGGER.info("record {} window {} {}", record, windowString, getMessage());
             outputReceiver.output(record);
 
             if (inputDataFreshnessMs > 0) INPUT_DATA_FRESHNESS_MS.update(inputDataFreshnessMs);
-            if (customInputDataFreshnessMs > 0) CUSTOM_INPUT_DATA_FRESHNESS_MS.update(customInputDataFreshnessMs);
+            if (customPublishTimeInputDataFreshnessMs > 0) CUSTOM_PUBLISH_TIME_INPUT_DATA_FRESHNESS_MS.update(customPublishTimeInputDataFreshnessMs);
+            if (customEventTimeInputDataFreshnessMs > 0) CUSTOM_EVENT_TIME_INPUT_DATA_FRESHNESS_MS.update(customEventTimeInputDataFreshnessMs);
 
             long endTimeMs = System.currentTimeMillis();
             PROCESSING_TIME_MS.update(endTimeMs - startMs);
         }
 
-        private GenericData.Record doProcess(PubsubMessage pubsubMessage, long inputDataFreshnessMs, long customInputDataFreshnessMs) {
+        private GenericData.Record doProcess(PubsubMessage pubsubMessage, long inputDataFreshnessMs, long customPublishTimeInputDataFreshnessMs, long customEventTimeInputDataFreshnessMs) {
             String body = new String(pubsubMessage.getPayload());
             GenericData.Record record = new GenericData.Record(SCHEMA);
             String value = "body=" + body + ", attributes=" + new TreeMap<>(pubsubMessage.getAttributeMap()) + ", messageId=" + pubsubMessage.getMessageId()
-                    + ", inputDataFreshnessMs=" + inputDataFreshnessMs + ", customInputDataFreshnessMs=" + customInputDataFreshnessMs;
+                    + ", inputDataFreshnessMs=" + inputDataFreshnessMs + ", customInputDataFreshnessMs=" + customPublishTimeInputDataFreshnessMs
+                    + ", customEventTimeInputDataFreshnessMs=" + customEventTimeInputDataFreshnessMs;
             record.put(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID, value);
-//            LOGGER.info("record {}", record);
-            LOGGER.info("record {}, {}", record, getMessage());
             return record;
         }
-
     }
 
     public static void main(String[] args) {
@@ -154,11 +159,10 @@ gcloud dataflow flex-template run $APP-$OWNER \
         String output = options.getOutput();
         readingPipeline
 //                .apply(PubsubIO.readMessagesWithAttributesAndMessageId().fromSubscription(options.getSubscription()).withIdAttribute("myMsgAttrName")) // deduplicated based on myMsgAttrName
-                .apply(PubsubIO.readMessagesWithAttributesAndMessageId().fromSubscription(options.getSubscription()))
+                .apply(PubsubIO.readMessagesWithAttributesAndMessageId().fromSubscription(options.getSubscription()).withTimestampAttribute(ConcatBodyAttrAndMsgIdFn.EVENT_TIME_ATTRIBUTE))
+                .apply(Window.<PubsubMessage>into(FixedWindows.of(Duration.standardSeconds(60))).withAllowedLateness(Duration.standardMinutes(10)).discardingFiredPanes()) // if Window.into is after DoFn then DoFn logs Global Window otherwise IntervalWindow
                 .apply(ConcatBodyAttrAndMsgIdFn.CLASS_NAME, ParDo.of(new ConcatBodyAttrAndMsgIdFn()))
                 .setCoder(AvroGenericCoder.of(SCHEMA)) // required to explicitly set coder for GenericRecord
-//                .apply(MyConsoleIO.write());
-                .apply(Window.into(FixedWindows.of(Duration.standardSeconds(60))))
                 .apply(AvroIO.writeGenericRecords(SCHEMA).withWindowedWrites()
                         //.to(options.getOutput())
                         .to(new FileBasedSink.FilenamePolicy() {
@@ -167,13 +171,13 @@ gcloud dataflow flex-template run $APP-$OWNER \
                             public ResourceId windowedFilename(int shardNumber, int numShards, BoundedWindow window, PaneInfo paneInfo, FileBasedSink.OutputFileHints outputFileHints) {
                                 ResourceId resource = FileBasedSink.convertToFileResourceIfPossible(output);
                                 IntervalWindow intervalWindow = (IntervalWindow) window;
-                                String prefix = resource.isDirectory() ? "" : firstNonNull(resource.getFilename(), "");
+                                String parentDirectoryPath = resource.isDirectory() ? "" : firstNonNull(resource.getFilename(), "");
                                 String suggestedFilenameSuffix = outputFileHints.getSuggestedFilenameSuffix();
                                 String suffix = suggestedFilenameSuffix != null && !suggestedFilenameSuffix.isEmpty() ? suggestedFilenameSuffix : ".avro";
-//                                String filename = String.format("%s/%s-of-%s%s", String.format("%s/%s", prefix, FORMATTER.print(intervalWindow.start())), shardNumber, numShards, suffix);
-//                                LOGGER.info("filename='{}'", filename);
-                                String filename = String.format("%s/%s-%s-of-%s%s", prefix, FORMATTER.print(intervalWindow.start()), shardNumber, numShards, suffix);
-                                LOGGER.info("filename='{}', {}", filename, getMessage());  //filename='output/2021/09/27/07/02-2-of-30.avro'
+                                PaneInfo.Timing pathTiming = paneInfo.getTiming();
+                                String yyyyMMddHHmm = FORMATTER.print(intervalWindow.start());
+                                String filename = String.format("%s/%s/%s-%s-%s-%s-%s-of-%s%s", parentDirectoryPath, yyyyMMddHHmm, System.currentTimeMillis(), UUID.randomUUID(), window.maxTimestamp().toString().replace(":","_").replace(" ","_"), pathTiming, shardNumber, numShards, suffix);
+//                                LOGGER.info("filename='{}', {}", filename, getMessage());  // output/year=2021/month=12/day=23/hour=07/minute=52/1640246141797-d52a2109-f8f9-459b-b055-365be2558833-2021-12-23T07_52_59.999Z-ON_TIME-1-of-4.avro
                                 return resource.getCurrentDirectory().resolve(filename, ResolveOptions.StandardResolveOptions.RESOLVE_FILE);
                             }
 
