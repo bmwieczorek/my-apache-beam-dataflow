@@ -1,12 +1,18 @@
+locals {
+  job_id = var.dataflow_classic_template_enabled ? module.dataflow_classic_template_job.job_id : module.dataflow_flex_template.job_id
+}
+
 resource "google_monitoring_dashboard" "dashboard_job_id" {
   project = var.project
   dashboard_json = templatefile(var.dashboard_file, {
     job = local.job
     //metric.label."job_id"="2021-05-21_08_48_27-16638284577175562727"
-    dataflow_job_filter = "metric.label.\\\"job_id\\\"=\\\"${google_dataflow_flex_template_job.my_dataflow_flex_job.id}\\\""
+//    dataflow_job_filter = "metric.label.\\\"job_id\\\"=\\\"${google_dataflow_flex_template_job.my_dataflow_flex_job.id}\\\""
+    dataflow_job_filter = "metric.label.\\\"job_id\\\"=\\\"${local.job_id}\\\""
 
     //metadata.user_labels."dataflow_job_id"="2021-05-21_08_48_27-16638284577175562727"
-    instance_dataflow_job_filter = "metadata.user_labels.\\\"dataflow_job_id\\\"=\\\"${google_dataflow_flex_template_job.my_dataflow_flex_job.id}\\\""
+//    instance_dataflow_job_filter = "metadata.user_labels.\\\"dataflow_job_id\\\"=\\\"${google_dataflow_flex_template_job.my_dataflow_flex_job.id}\\\""
+    instance_dataflow_job_filter = "metadata.user_labels.\\\"dataflow_job_id\\\"=\\\"${local.job_id}\\\""
     dashboard_name = "${local.job} job id"
 
     //transform_step_name = "MapElements/Map.out0"
@@ -47,10 +53,12 @@ resource "google_monitoring_dashboard" "dashboard_redesigned_job_id" {
   dashboard_json = templatefile("dashboard_streaming_redesigned.json", {
     job = local.job
     //metric.label."job_id"="2021-05-21_08_48_27-16638284577175562727"
-    dataflow_job_filter = "metric.label.\\\"job_id\\\"=\\\"${google_dataflow_flex_template_job.my_dataflow_flex_job.id}\\\""
+//    dataflow_job_filter = "metric.label.\\\"job_id\\\"=\\\"${google_dataflow_flex_template_job.my_dataflow_flex_job.id}\\\""
+    dataflow_job_filter = "metric.label.\\\"job_id\\\"=\\\"${local.job_id}\\\""
 
     //metadata.user_labels."dataflow_job_id"="2021-05-21_08_48_27-16638284577175562727"
-    instance_dataflow_job_filter = "metadata.user_labels.\\\"dataflow_job_id\\\"=\\\"${google_dataflow_flex_template_job.my_dataflow_flex_job.id}\\\""
+//    instance_dataflow_job_filter = "metadata.user_labels.\\\"dataflow_job_id\\\"=\\\"${google_dataflow_flex_template_job.my_dataflow_flex_job.id}\\\""
+    instance_dataflow_job_filter = "metadata.user_labels.\\\"dataflow_job_id\\\"=\\\"${local.job_id}\\\""
     dashboard_name = "${local.job} redesigned job id"
 
     //transform_step_name = "MapElements/Map.out0"
