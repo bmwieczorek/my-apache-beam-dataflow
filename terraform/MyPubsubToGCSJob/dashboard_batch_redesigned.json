@@ -702,7 +702,7 @@
                     "crossSeriesReducer": "REDUCE_MEAN",
                     "perSeriesAligner": "ALIGN_MEAN"
                   },
-                  "filter": "metric.type=\"dataflow.googleapis.com/job/is_failed\" resource.type=\"dataflow_job\" ${dataflow_job_filter}"
+                  "filter": "metric.type=\"dataflow.googleapis.com/job/is_failed\" resource.type=\"dataflow_job\" resource.label.\"job_name\"=\"${job}\""
                 }
               }
             },
