@@ -24,6 +24,8 @@ resource "google_monitoring_dashboard" "dashboard_job_id" {
 
     write_step_name = "AvroIO.Write"
     write_step_pcollection = "AvroIO.Write/AvroIO.TypedWrite/Write/WriteShardedBundlesToTempFiles/ApplyShardingKey.out0"
+//    write_step_name = "FileIO.Write"
+//    write_step_pcollection = "FileIO.Write/WriteFiles/WriteShardedBundlesToTempFiles/ApplyShardingKey.out0"
 
     topic = local.topic
     subscription = local.subscription
@@ -43,6 +45,8 @@ resource "google_monitoring_dashboard" "dashboard_job_name" {
     transform_step_pcollection = "ConcatBodyAttrAndMsgIdFn.out0"
     write_step_name = "AvroIO.Write"
     write_step_pcollection = "AvroIO.Write/AvroIO.TypedWrite/Write/WriteShardedBundlesToTempFiles/ApplyShardingKey.out0"
+//    write_step_name = "FileIO.Write"
+//    write_step_pcollection = "FileIO.Write/WriteFiles/WriteShardedBundlesToTempFiles/ApplyShardingKey.out0"
     topic = local.topic
     subscription = local.subscription
   })
@@ -70,6 +74,8 @@ resource "google_monitoring_dashboard" "dashboard_redesigned_job_id" {
 
     write_step_name = "AvroIO.Write"
     write_step_pcollection = "AvroIO.Write/AvroIO.TypedWrite/Write/WriteShardedBundlesToTempFiles/ApplyShardingKey.out0"
+//    write_step_name = "FileIO.Write"
+//    write_step_pcollection = "FileIO.Write/WriteFiles/WriteShardedBundlesToTempFiles/ApplyShardingKey.out0"
 
     topic = local.topic
     subscription = local.subscription
@@ -90,6 +96,8 @@ resource "google_monitoring_dashboard" "dashboard_redesigned_job_name" {
     transform_step_pcollection = "ConcatBodyAttrAndMsgIdFn.out0"
     write_step_name = "AvroIO.Write"
     write_step_pcollection = "AvroIO.Write/AvroIO.TypedWrite/Write/WriteShardedBundlesToTempFiles/ApplyShardingKey.out0"
+//    write_step_name = "FileIO.Write"
+//    write_step_pcollection = "FileIO.Write/WriteFiles/WriteShardedBundlesToTempFiles/ApplyShardingKey.out0"
     topic = local.topic
     subscription = local.subscription
   })
