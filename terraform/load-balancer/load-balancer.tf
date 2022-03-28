@@ -1,22 +1,23 @@
 locals {
-  name                       = var.owner
-  bucket                     = "${local.name}-spring-boot"
-  worker-vm-startup-script   = "worker-vm-startup-script.sh"
-  curl-vm-startup-script     = "curl-vm-startup-script.sh"
-  machine_type               = "e2-micro"
+  name                        = var.owner
+  bucket                      = "${local.name}-spring-boot"
+  worker-vm-startup-script    = "worker-vm-startup-script.sh"
+  curl-vm-startup-script      = "curl-vm-startup-script.sh"
+  machine_type                = "e2-micro"
 
-  worker_vm_service_port     = "8080"
-  lb_service_port            = "80"
-  regional_mig_zones         = ["${var.region}-a","${var.region}-f"]
+  worker_vm_service_port      = "8080"
+  lb_service_port             = "80"
+  regional_mig_zones          = ["${var.region}-a","${var.region}-b"]
+  regional_failover_mig_zones = ["${var.region}-c","${var.region}-f"]
 
-  subnet1_ip_cidr_range      = "10.0.0.0/24"
-  subnet2_ip_cidr_range      = "10.0.1.0/24"
-  proxy_subnet_ip_cidr_range = "10.0.2.0/24"
-  lb_ip                      = "10.0.1.11"
+  worker_vm_subnet_ip_cidr_range = "10.0.0.0/24"
+  curl_vm_subnet_ip_cidr_range   = "10.0.1.0/24"
+  proxy_subnet_ip_cidr_range  = "10.0.2.0/24"
+  lb_ip                       = "10.0.1.11"
 
-  dns_vm_instance_name       = "${local.name}-lb"
-  dns_domain                 = "${local.name}-gcp.com"
-  dns_full_name              = "${local.dns_vm_instance_name}.${local.dns_domain}"
+  dns_vm_instance_name        = "${local.name}-lb"
+  dns_domain                  = "${local.name}-gcp.com"
+  dns_full_name               = "${local.dns_vm_instance_name}.${local.dns_domain}"
 
   http_proxy_load_balancer_multiple_backends_autoscaled_mig = 0
   internal_tcp_load_balancer_static_mig = local.http_proxy_load_balancer_multiple_backends_autoscaled_mig == 1 ? 0 : 1
@@ -37,16 +38,16 @@ resource "google_compute_network" "network" {
 resource "google_compute_subnetwork" "workers_network" {
   project       = var.project
   name          = "${local.name}-workers-network"
-  ip_cidr_range = local.subnet1_ip_cidr_range
+  ip_cidr_range = local.worker_vm_subnet_ip_cidr_range
   region        = var.region
   network       = google_compute_network.network.name
-  private_ip_google_access = true
+  private_ip_google_access = true // keep vm IP internal but allow access public IP for Google services/API e.g. GCS bucket
 }
 
 resource "google_compute_subnetwork" "lb-network" {
   project       = var.project
   name          = "${local.name}-lb-network"
-  ip_cidr_range = local.subnet2_ip_cidr_range
+  ip_cidr_range = local.curl_vm_subnet_ip_cidr_range
   region        = var.region
   network       = google_compute_network.network.name
   private_ip_google_access = true
@@ -102,7 +103,7 @@ resource "google_compute_firewall" "internal-traffic-firewall" {
     ports    = [local.lb_service_port,local.worker_vm_service_port]
   }
 
-  source_ranges = [local.subnet1_ip_cidr_range,local.subnet2_ip_cidr_range,local.proxy_subnet_ip_cidr_range]
+  source_ranges = [local.worker_vm_subnet_ip_cidr_range,local.curl_vm_subnet_ip_cidr_range,local.proxy_subnet_ip_cidr_range]
 }
 
 resource "google_storage_bucket_object" "worker-vm-startup-scripts-object" {
@@ -169,6 +170,29 @@ resource "google_compute_region_instance_group_manager" "static-mig" {
   }
 
   target_size  = 4 // number of running instances for this mig, do not set if using autoscaler
+
+  // named_port cannot be used when backend service has INTERNAL load balancing
+
+  auto_healing_policies {
+    health_check = google_compute_health_check.health-check.id
+    initial_delay_sec = 1800
+  }
+}
+
+resource "google_compute_region_instance_group_manager" "static-failover-mig" {
+  count                     = local.internal_tcp_load_balancer_static_mig
+  project                   = var.project
+  name                      = "${local.name}-static-failover-mig"
+  region                    = var.region
+
+  base_instance_name        = "${local.name}-region-worker-vm"
+  distribution_policy_zones = local.regional_failover_mig_zones
+
+  version {
+    instance_template = google_compute_instance_template.template.self_link
+  }
+
+  target_size  = 2 // number of running instances for this mig, do not set if using autoscaler
 
   // named_port cannot be used when backend service has INTERNAL load balancing
 
@@ -263,6 +287,10 @@ resource "google_compute_region_backend_service" "tcp_backend_service" {
     group = google_compute_region_instance_group_manager.static-mig[0].instance_group
     balancing_mode = "CONNECTION"
   }
+  backend {
+    group = google_compute_region_instance_group_manager.static-failover-mig[0].instance_group
+    balancing_mode = "CONNECTION"
+  }
   health_checks = [google_compute_region_health_check.health-check.id]
 }
 
@@ -355,7 +383,7 @@ resource "google_storage_bucket_object" "curl_vm_startup_script_object" {
 }
 
 resource "google_compute_instance" "curl_vm" {
-  depends_on = [google_dns_record_set.dns_record, google_compute_forwarding_rule]
+  depends_on = [google_dns_record_set.dns_record, google_compute_instance_template.template]
   project      = var.project
   name         = "${local.name}-curl-vm"
   machine_type = local.machine_type
