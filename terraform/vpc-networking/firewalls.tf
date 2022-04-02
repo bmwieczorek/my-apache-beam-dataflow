@@ -13,7 +13,10 @@ resource "google_compute_firewall" "worker_vm_peer_network_firewall" {
   }
 
   source_ranges = [local.curl_vm_peer_subnetwork_ip_cidr_range,local.load_balancer_ip_cidr_range]
-  enable_logging = true
+//  enable_logging = true
+  log_config {
+    metadata = "INCLUDE_ALL_METADATA"
+  }
 }
 
 resource "google_compute_firewall" "curl_vm_peer_network_firewall" {

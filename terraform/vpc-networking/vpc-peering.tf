@@ -29,7 +29,7 @@ resource "google_compute_subnetwork" "curl_vm_peer_subnetwork" {
 }
 
 resource "google_compute_network_peering" "network_peering1" {
-  name         = "${local.curl_vm}-network-peering1 "
+  name         = "${local.curl_vm}-network-peering1"
   network      = google_compute_network.worker_vm_peer_network.self_link
   peer_network = google_compute_network.curl_vm_peer_network.self_link
 }
