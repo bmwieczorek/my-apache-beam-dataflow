@@ -16,7 +16,7 @@ variable "zone" {
 variable "network" {
   description = "Google Cloud subnetwork"
   type        = string
-  default     = null
+//  default     = null
 }
 
 variable "subnetwork" {
@@ -29,10 +29,10 @@ variable "image" {
   type        = string
 }
 
-variable "service_account" {
-  description = "Google Cloud service account email"
-  type        = string
-}
+//variable "service_account" {
+//  description = "Google Cloud service account email"
+//  type        = string
+//}
 
 variable "owner" {
   description = "Google resource owner"
