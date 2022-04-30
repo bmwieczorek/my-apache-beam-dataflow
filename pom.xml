@@ -9,13 +9,16 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <beam.version>2.34.0</beam.version>
-        <slf4j.version>1.7.31</slf4j.version>
-        <junit.version>4.13.2</junit.version>
+        <beam.version>2.38.0</beam.version> <!-- profiling since 2.33 with service account with roles/cloudprofiler.agent -->
+        <slf4j.version>1.7.36</slf4j.version>
         <kafka.version>1.1.1</kafka.version>
         <auto-service-annotations.version>1.0</auto-service-annotations.version>
 
-        <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
+        <!-- testing -->
+        <junit.version>4.13.2</junit.version>
+        <google-cloud-bigquery.version>2.8.0</google-cloud-bigquery.version>
+
+        <maven-compiler-plugin.version>3.9.0</maven-compiler-plugin.version>
         <maven-exec-plugin.version>3.0.0</maven-exec-plugin.version>
         <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
         <maven-surefire-plugin.version>3.0.0-M5</maven-surefire-plugin.version>
@@ -174,6 +177,12 @@
         <dependency>
             <groupId>com.google.cloud</groupId>
             <artifactId>google-cloud-storage</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-bigquery</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -410,6 +419,13 @@
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
                 <version>${junit.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.cloud</groupId>
+                <artifactId>google-cloud-bigquery</artifactId>
+                <version>${google-cloud-bigquery.version}</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>
