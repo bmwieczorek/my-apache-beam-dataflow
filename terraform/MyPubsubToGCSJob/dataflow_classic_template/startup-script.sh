@@ -57,7 +57,10 @@ gcloud compute instances add-metadata --zone ${ZONE} ${INSTANCE} --metadata=star
 gsutil cp "${DATAFLOW_JAR_GCS_PATH}" . 2>&1 | tee -a ${LOG}
 JAVA_DATAFLOW_RUN_OPTS="--project=$PROJECT --region=$REGION --serviceAccount=$SERVICE_ACCOUNT --usePublicIps=false"
 echo "Creating template $DATAFLOW_TEMPLATE_GCS_PATH" | tee -a ${LOG}
-java -Dorg.xerial.snappy.tempdir=$(pwd) -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAIN_CLASS} \
+
+echo "Executing: java -DcreateTemplate=true -Dorg.xerial.snappy.tempdir=$(pwd) -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAIN_CLASS} ${JAVA_DATAFLOW_RUN_OPTS} --runner=DataflowRunner --stagingLocation=gs://${BUCKET}/staging --dumpHeapOnOOM=${DUMP_HEAP_ON_OOM} --saveHeapDumpsToGcsPath=gs://${BUCKET}/oom --numberOfWorkerHarnessThreads=${NUMBER_OF_WORKER_HARNESS_THREADS} --numWorkers=2 --diskSizeGb=200 --autoscalingAlgorithm=THROUGHPUT_BASED --enableStreamingEngine=${ENABLE_STREAMING_ENGINE} --templateLocation=${DATAFLOW_TEMPLATE_GCS_PATH}" | tee -a ${LOG}
+
+java -DcreateTemplate=true -Dorg.xerial.snappy.tempdir=$(pwd) -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAIN_CLASS} \
   ${JAVA_DATAFLOW_RUN_OPTS} \
   --runner=DataflowRunner \
   --stagingLocation="gs://${BUCKET}/staging" \
@@ -73,6 +76,10 @@ java -Dorg.xerial.snappy.tempdir=$(pwd) -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAIN_
 #  --workerDiskType="pd-standard" \
 #  --streaming=true \
 #  --profilingAgentConfiguration="{ \"APICurated\" : true }" \
+
+
+# add maxNumWorkers here to determine number of comsumers for KafkaIO read
+#  --maxNumWorkers=2 \
 
 echo "Done" | tee -a ${LOG}
 echo "Uploading log file and deleting instance in $WAIT_SECS_BEFORE_VM_DELETE secs: gcloud compute instances delete $INSTANCE --zone=$ZONE --quiet" | tee -a ${LOG}
