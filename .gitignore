@@ -13,7 +13,7 @@ target
 
 # terraform
 .terraform
-.terraform.tfstate.lock.info
+.terraform.*
 terraform.tfstate*
 *.tfbackend
 /terraform/MyPubsubToGCSJob/dev.tfvars
