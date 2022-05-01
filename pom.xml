@@ -22,8 +22,8 @@
         <maven-exec-plugin.version>3.0.0</maven-exec-plugin.version>
         <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
         <maven-surefire-plugin.version>3.0.0-M5</maven-surefire-plugin.version>
-        <jib-maven-plugin.version>3.1.4</jib-maven-plugin.version>
-        <maven-enforcer-plugin.version>3.0.0-M3</maven-enforcer-plugin.version>
+        <jib-maven-plugin.version>3.2.0</jib-maven-plugin.version>
+        <maven-enforcer-plugin.version>3.0.0</maven-enforcer-plugin.version>
     </properties>
 
     <build>
@@ -96,6 +96,10 @@
     </build>
 
     <dependencies>
+        <dependency>
+            <groupId>org.apache.beam</groupId>
+            <artifactId>beam-runners-google-cloud-dataflow-java</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.apache.beam</groupId>
@@ -138,34 +142,39 @@
         </dependency>
 
         <!-- ParquetIO -->
-<!--        <dependency>
+        <dependency>
             <groupId>org.apache.beam</groupId>
             <artifactId>beam-sdks-java-io-parquet</artifactId>
             <version>${beam.version}</version>
-        </dependency>-->
+        </dependency>
 
         <!-- required for ParquetIO.sink requiring runtime org.apache.hadoop.io.Writable -->
-<!--        <dependency>
+        <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
             <version>${hadoop.version}</version>
             <scope>runtime</scope>
-        </dependency>-->
+        </dependency>
 
         <!-- required for ParquetIO.read requiring runtime org.apache.hadoop.mapreduce.lib.input.FileInputFormat -->
-<!--        <dependency>
+        <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-mapreduce-client-core</artifactId>
             <version>${hadoop.version}</version>
             <scope>runtime</scope>
-        </dependency>-->
-
+        </dependency>
 
 
         <!-- Used for @AutoService(JvmInitializer.class) -->
         <dependency>
             <groupId>com.google.auto.service</groupId>
             <artifactId>auto-service-annotations</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.flume</groupId>
+            <artifactId>flume-ng-core</artifactId>
+            <version>${flume.version}</version>
         </dependency>
 
         <dependency>
@@ -200,7 +209,7 @@
                 <dependency>
                     <groupId>org.apache.beam</groupId>
                     <artifactId>beam-runners-google-cloud-dataflow-java</artifactId>
-                    <scope>runtime</scope>
+                    <scope>compile</scope>
                 </dependency>
             </dependencies>
         </profile>
@@ -415,6 +424,12 @@
                 <artifactId>auto-service-annotations</artifactId>
                 <version>${auto-service-annotations.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-api</artifactId>
+                <version>${log4j-api.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
