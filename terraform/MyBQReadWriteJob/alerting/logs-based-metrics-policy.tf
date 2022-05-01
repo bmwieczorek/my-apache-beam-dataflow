@@ -1,11 +1,6 @@
-locals {
-  logs_based_metric_name = replace("${var.job}/log_message_counter/${var.logs_based_metrics_message_pattern}"," ", "_")
-  logs_based_metric_type = "logging.googleapis.com/user/${google_logging_metric.logs_based_metric.name}"
-}
-
 resource "google_logging_metric" "logs_based_metric" {
   project = var.project
-  name    = local.logs_based_metric_name
+  name    = replace("${var.job}/log_message_counter/${var.logs_based_metrics_message_pattern}"," ", "_")
   filter  = "resource.type=dataflow_step resource.labels.job_name=~\"${var.job}.*\" logName=\"projects/${var.project}/logs/dataflow.googleapis.com%2Fworker\" severity>=DEBUG \"${var.logs_based_metrics_message_pattern}\""
   metric_descriptor {
     metric_kind = "DELTA"
@@ -29,7 +24,7 @@ resource "google_monitoring_alert_policy" "logs_based_metric_policy" {
   conditions {
     display_name      = "${var.job} did not created 3 log entries in last 15 min for '${var.logs_based_metrics_message_pattern}' pattern condition"
     condition_threshold {
-      filter          = "metric.type=\"${local.logs_based_metric_type}\" resource.type=\"dataflow_job\""
+      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.logs_based_metric.name}\" resource.type=\"dataflow_job\""
       duration        = "900s"  // 15 min time that a time series must violate the threshold to be considered failing
       comparison      = "COMPARISON_LT"
       threshold_value = 3
