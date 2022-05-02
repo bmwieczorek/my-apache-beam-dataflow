@@ -108,12 +108,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.beam</groupId>
-            <artifactId>beam-runners-direct-java</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
@@ -173,9 +167,17 @@
             <artifactId>auto-service-annotations</artifactId>
         </dependency>
 
+        <!-- testing -->
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.beam</groupId>
+            <artifactId>beam-runners-direct-java</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -224,6 +226,7 @@
         <profile>
             <id>dist</id>
             <activation>
+                <activeByDefault>true</activeByDefault>
                 <property>
                     <name>dist</name>
                 </property>
