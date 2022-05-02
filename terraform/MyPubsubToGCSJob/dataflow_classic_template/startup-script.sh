@@ -73,7 +73,7 @@ echo "Creating template $DATAFLOW_TEMPLATE_GCS_PATH" | tee -a ${LOG}
 
 echo "Executing: java -DcreateTemplate=true -Dorg.xerial.snappy.tempdir=$(pwd) -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAIN_CLASS} ${JAVA_DATAFLOW_RUN_OPTS} --runner=DataflowRunner --stagingLocation=gs://${BUCKET}/staging --dumpHeapOnOOM=${DUMP_HEAP_ON_OOM} --saveHeapDumpsToGcsPath=gs://${BUCKET}/oom --numberOfWorkerHarnessThreads=${NUMBER_OF_WORKER_HARNESS_THREADS} --numWorkers=2 --diskSizeGb=200 --autoscalingAlgorithm=THROUGHPUT_BASED --enableStreamingEngine=${ENABLE_STREAMING_ENGINE} --templateLocation=${DATAFLOW_TEMPLATE_GCS_PATH}" | tee -a ${LOG}
 
-java -DcreateTemplate=true -Dorg.xerial.snappy.tempdir=$(pwd) -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAIN_CLASS} \
+java -DcreateTemplate=true -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAIN_CLASS} \
   ${JAVA_DATAFLOW_RUN_OPTS} \
   --runner=DataflowRunner \
   --stagingLocation="gs://${BUCKET}/staging" \
