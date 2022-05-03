@@ -1,20 +1,20 @@
 locals {
-  bucket = "bartek-spring-boot"
+  bucket = "${var.owner}-spring-boot"
   startup-script = "startup-script.sh"
   labels = {
     owner = var.owner
   }
 }
 
-resource "google_storage_bucket_object" "bartek-startup-scripts-bucket-object" {
+resource "google_storage_bucket_object" "startup-scripts-bucket-object" {
   name   = local.startup-script
   source = "./${local.startup-script}"
   bucket = local.bucket
 }
 
 // use google_compute_address if 1 instance
-resource "google_compute_address" "bartek-compute-address" {
-  name         = "bartek-compute-address"
+resource "google_compute_address" "compute-address" {
+  name         = "${var.owner}-compute-address"
   project      = var.project
   region       = var.region
   address_type = "INTERNAL"
@@ -22,8 +22,8 @@ resource "google_compute_address" "bartek-compute-address" {
 }
 
 
-resource "google_compute_disk" "bartek-compute-disk" {
-  name    =  "bartek-compute-disk"
+resource "google_compute_disk" "compute-disk" {
+  name    = "${var.owner}-compute-disk"
   project = var.project
   type    = "pd-ssd"
   zone    = var.zone
@@ -32,9 +32,9 @@ resource "google_compute_disk" "bartek-compute-disk" {
   physical_block_size_bytes = 4096
 }
 
-resource "google_compute_instance_template" "bartek-compute-instance-template" {
-  name        = "bartek-compute-instance-template"
-  description = "bartek-compute-instance-template is used to create compute instances."
+resource "google_compute_instance_template" "compute-instance-template" {
+  name        = "${var.owner}-compute-instance-template"
+  description = "${var.owner}-compute-instance-template is used to create compute instances."
   project     = var.project
   tags        = ["default-uscentral1"]
 
@@ -44,7 +44,9 @@ resource "google_compute_instance_template" "bartek-compute-instance-template" {
   labels       = local.labels
   metadata = {
     "enable-oslogin" = "TRUE"
-    "startup-script-url" = "gs://${google_storage_bucket_object.bartek-startup-scripts-bucket-object.bucket}/${google_storage_bucket_object.bartek-startup-scripts-bucket-object.name}"
+    "startup-script-url" = "gs://${google_storage_bucket_object.startup-scripts-bucket-object.bucket}/${google_storage_bucket_object.startup-scripts-bucket-object.name}"
+    "project" = var.project
+    "owner" = var.owner
   }
 
   scheduling {
@@ -59,20 +61,25 @@ resource "google_compute_instance_template" "bartek-compute-instance-template" {
 //    auto_delete       = false
     boot              = true
 //    mode =            "READ_ONLY"
+    disk_size_gb      = 30
   }
 
   // Use an existing disk resource
   disk {
     // Instance Templates reference disks by name, not self link
-    source      = google_compute_disk.bartek-compute-disk.name
+    source      = google_compute_disk.compute-disk.name
     auto_delete = false
     boot        = false
   }
 
+  lifecycle {
+    create_before_destroy = true
+  }
+
   network_interface {
-    network_ip = google_compute_address.bartek-compute-address.address // use google_compute_address if 1 instance
+    network_ip = google_compute_address.compute-address.address // use google_compute_address if 1 instance
     network    = var.network
-    subnetwork = var.subnetwork
+    subnetwork = var.subnetwork == "default" ? null : var.subnetwork
   }
 
   service_account {
@@ -82,9 +89,9 @@ resource "google_compute_instance_template" "bartek-compute-instance-template" {
   }
 }
 
-resource "google_compute_health_check" "bartek-tcp-8080-compute-health-check" {
+resource "google_compute_health_check" "tcp-8080-compute-health-check" {
   project             = var.project
-  name                = "bartek-tcp-8080-compute-health-check"
+  name                = "${var.owner}-tcp-8080-compute-health-check"
   timeout_sec         = 5
   check_interval_sec  = 10
   healthy_threshold   = 3 # 10 seconds
@@ -95,19 +102,19 @@ resource "google_compute_health_check" "bartek-tcp-8080-compute-health-check" {
   }
 }
 
-resource "google_compute_instance_group_manager" "bartek-compute-instance-group-manager" {
+resource "google_compute_instance_group_manager" "compute-instance-group-manager" {
   project            = var.project
-  name               = "bartek-compute-instance-group-manager"
+  name               = "${var.owner}-compute-instance-group-manager"
   wait_for_instances = true
   //  wait_for_instances_status = local.instance_autoheal.wait_for_instances_status
-  base_instance_name = "bartek-mig-compute-vm"
+  base_instance_name = "${var.owner}-mig-compute-vm"
   zone = var.zone
   version {
-    instance_template = google_compute_instance_template.bartek-compute-instance-template.id
+    instance_template = google_compute_instance_template.compute-instance-template.id
   }
   target_size = 1
   auto_healing_policies {
-    health_check = google_compute_health_check.bartek-tcp-8080-compute-health-check.id
+    health_check = google_compute_health_check.tcp-8080-compute-health-check.id
     initial_delay_sec = 1800
   }
 }
