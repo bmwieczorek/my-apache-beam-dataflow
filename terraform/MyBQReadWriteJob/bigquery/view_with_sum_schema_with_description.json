@@ -1,0 +1,74 @@
+[
+  {
+    "mode": "NULLABLE",
+    "name": "id",
+    "type": "STRING",
+    "description" : "The id"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "creation_timestamp",
+    "type": "TIMESTAMP",
+    "description" : "The creation timestamp"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "expiration_date",
+    "type": "DATE",
+    "description" : "The expiration date"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "my_numeric",
+    "type": "NUMERIC"
+  },
+  {
+    "mode": "REPEATED",
+    "name": "numbers",
+    "type": "INTEGER"
+  },
+  {
+    "fields": [
+      {
+        "mode": "NULLABLE",
+        "name": "myRequiredInt",
+        "type": "INTEGER"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "myNullableLong",
+        "type": "INTEGER"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "myRequiredBoolean",
+        "type": "BOOLEAN"
+      }
+    ],
+    "mode": "NULLABLE",
+    "name": "myRequiredSubRecord",
+    "type": "RECORD"
+  },
+  {
+    "fields": [
+      {
+        "mode": "NULLABLE",
+        "name": "myRequiredDouble",
+        "type": "FLOAT"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "myOptionalFloat",
+        "type": "FLOAT"
+      }
+    ],
+    "mode": "REPEATED",
+    "name": "myOptionalArraySubRecords",
+    "type": "RECORD"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "sum",
+    "type": "INTEGER"
+  }
+]

@@ -17,6 +17,8 @@ resource "google_dataflow_job" "job" {
   machine_type          = "n1-standard-1"
   parameters = {
     expirationDate = var.expiration_date
+//    outputPath         = "gs://${var.bucket}/output"
+//    tempPath           = "gs://${var.bucket}/temp"
   }
   additional_experiments = ["enable_stackdriver_agent_metrics"]
   labels = {

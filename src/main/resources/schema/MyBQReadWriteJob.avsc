@@ -23,10 +23,23 @@
       "doc": "Expiration date field"
     },
     {
+      "name": "my_numeric",
+      "type": [
+        {
+          "type": "bytes",
+          "logicalType": "decimal",
+          "precision": 38,
+          "scale": 9
+        },
+        "null"
+      ],
+      "doc": "My numeric field"
+    },
+    {
       "name": "numbers",
       "type": {
         "type": "array",
-        "items": "long"
+        "items": ["null","long"]
       }
     },
     {

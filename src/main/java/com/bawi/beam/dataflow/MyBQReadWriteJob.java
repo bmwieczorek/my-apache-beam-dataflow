@@ -1,6 +1,7 @@
 package com.bawi.beam.dataflow;
 
 import com.bawi.beam.dataflow.schema.AvroToBigQuerySchemaConverter;
+import org.apache.avro.LogicalTypes;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -16,21 +17,30 @@ import org.apache.beam.sdk.options.*;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.values.TypeDescriptor;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.RoundingMode;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 
 
 public class MyBQReadWriteJob {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyBQReadWriteJob.class);
+    private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("'year='yyyy/'month'=MM/'day'=dd/'hour'=HH/mm");
 
     public interface MyBQOptions extends PipelineOptions {
+//    public interface MyBQOptions extends DataflowPipelineOptions {
         @Validation.Required
         ValueProvider<String> getExpirationDate();
         void setExpirationDate(ValueProvider<String> value);
@@ -39,6 +49,15 @@ public class MyBQReadWriteJob {
         @Default.String("bartek_dataset.mysubscription_table")
         String getTable();
         void setTable(String value);
+
+//        @Validation.Required
+//        ValueProvider<String> getOutputPath();
+//        void setOutputPath(ValueProvider<String>  value);
+
+//        @Validation.Required
+//        ValueProvider<String> getTempPath();
+//        void setTempPath(ValueProvider<String>  value);
+
     }
     
     public static void main(String[] args) {
@@ -46,6 +65,9 @@ public class MyBQReadWriteJob {
 //        System.setProperty("java.util.logging.config.file", "src/main/resources/logging.properties");
 
         MyBQOptions pipelineOptions = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyBQOptions.class);
+//        DataflowPipelineOptions pipelineOptions =
+//              DataflowRunnerUtils.createDataflowRunnerOptions(PipelineOptionsFactory.fromArgs(args).withValidation().as(MyBQOptions.class), MyBQOptions.class.getSimpleName());
+
         Pipeline pipeline = Pipeline.create(pipelineOptions);
 
         // requires org.apache.beam:beam-sdks-java-io-google-cloud-platform
@@ -89,8 +111,57 @@ public class MyBQReadWriteJob {
                         .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
                         .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED));
 
+//                .apply(MapElements
+//                        .into(TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(GenericRecord.class)))
+//                        .via(genericRecord ->
+//                                {
+//                                    LOGGER.info("genericRecord = {}", genericRecord);
+//                                    Long creationTimestampMicros = (Long) genericRecord.get("creation_timestamp");
+//                                    LOGGER.info("creationTimestampMicros = {}", creationTimestampMicros);
+//                                    long creationTimestampMillis = creationTimestampMicros / 1000;
+//                                    LOGGER.info("creationTimestampMillis = {}", creationTimestampMillis);
+//                                    String path = FORMATTER.print(creationTimestampMillis);
+//                                    LOGGER.info("path = {}", path);
+//                                    return KV.of(path, genericRecord);
+//                                }
+//                        )
+//                )
+//                .setCoder(KvCoder.of(StringUtf8Coder.of(), AvroCoder.of(GenericRecord.class, MySubscription.SCHEMA)))
+//
+//                .apply(Window.into(FixedWindows.of(Duration.standardSeconds(60))))
+//                .apply(FileIO.<String, KV<String, GenericRecord>>writeDynamic()
+//                        .by(KV::getKey)
+//                        .via(Contextful.fn(KV::getValue), ParquetIO.<GenericRecord>sink(MySubscription.SCHEMA).withCompressionCodec(CompressionCodecName.SNAPPY))
+////                        .via(Contextful.fn(KV::getValue), AvroIO.<GenericRecord>sink(MySubscription.SCHEMA).withCodec(CodecFactory.fromString("snappy")))
+//                        .withDestinationCoder(StringUtf8Coder.of())
+//                        .withNaming(path -> new MyFileNaming(path, "snappy", ".parquet"))
+//                        .to(pipelineOptions.getOutputPath())
+//                        .withTempDirectory(pipelineOptions.getTempPath())
+//                        .withNumShards(1000));
+
+
         pipeline.run();
     }
+
+//    static class MyFileNaming implements FileIO.Write.FileNaming {
+//        private String path;
+//        private String compression;
+//        private String extension;
+//
+//        public MyFileNaming(String path, String compression, String extension) {
+//            this.path = path;
+//            this.compression = compression;
+//            this.extension = extension;
+//        }
+//
+//        @Override
+//        public String getFilename(BoundedWindow window, PaneInfo pane, int numShards, int shardIndex, Compression compression) {
+//            String filename = String.format("%s-currTs-%s-winMaxTs-%s-paneTiming-%s-shard-%s-of-%s-%s%s",
+//                    path, System.currentTimeMillis(), window.maxTimestamp().toString().replace(":","_").replace(" ","_"), pane.getTiming(), shardIndex, numShards, this.compression, this.extension);
+//            LOGGER.info("Writing data to path='{}'", filename);
+//            return filename;
+//        }
+//    }
 
     private static String getQuery(String table, String expirationDate) {
         String query = "SELECT * FROM " + table + " WHERE expiration_date = '" + expirationDate + "'";
@@ -234,6 +305,8 @@ public class MyBQReadWriteJob {
         //@AvroSchema("{\"type\":{\"type\":\"int\",\"logicalType\":\"date\"}")
         public int expirationDate;
 
+        public BigDecimal myNumeric;
+
         public List<Long> numbers;
 
         public MyRequiredSubRecord myRequiredSubRecord;
@@ -245,7 +318,25 @@ public class MyBQReadWriteJob {
             record.put("id", id);
             record.put("creation_timestamp", creationTimestamp);
             record.put("expiration_date", expirationDate);
-            record.put("numbers", numbers);
+
+            double value = 1.234d;
+            BigDecimal bigDecimal = BigDecimal.valueOf(value).setScale(getDecimalScale(record, "my_numeric"), RoundingMode.UNNECESSARY);
+
+//            record.put("my_numeric", null);
+            record.put("my_numeric", new Random().nextBoolean() ?
+                    ByteBuffer.wrap(myNumeric.unscaledValue().toByteArray()) :
+                    ByteBuffer.wrap(bigDecimal.unscaledValue().toByteArray()));
+
+            ArrayList<Long> listOnlyWithNull = new ArrayList<>();
+            listOnlyWithNull.add(null);
+
+            ArrayList<Long> listWithANull = new ArrayList<>();
+            listWithANull.add(123L);
+            listWithANull.add(null);
+            listWithANull.add(567L);
+
+            record.put("numbers", new Random().nextBoolean() ? listOnlyWithNull : listWithANull);
+
             record.put("myRequiredSubRecord", myRequiredSubRecord.toGenericRecord());
 
             List<GenericRecord> genericRecords = new ArrayList<>();
@@ -257,17 +348,28 @@ public class MyBQReadWriteJob {
             GenericData.Array<GenericRecord> myOptionalArraySubRecords = new GenericData.Array<>(myOptionalArraySubRecordsSchema, genericRecords);
 
             record.put("myOptionalArraySubRecords", myOptionalArraySubRecords);
+
             LOGGER.info("Created {}", record);
             return record;
         }
+
+        private int getDecimalScale(GenericData.Record record, String fieldName) {
+            Schema myNumericSchemaUnion = record.getSchema().getField(fieldName).schema();
+            Schema myNumericSchema = unwrapUnion(myNumericSchemaUnion);
+            LogicalTypes.Decimal myNumericSchemaLogicalType = (LogicalTypes.Decimal) myNumericSchema.getLogicalType();
+            return myNumericSchemaLogicalType.getScale();
+        }
+
         public static MySubscription fromGenericRecord(GenericRecord genericRecord) {
             MySubscription mySubscription = new MySubscription();
             mySubscription.id = asString(genericRecord.get("id"));
             mySubscription.creationTimestamp = (Long) genericRecord.get("creation_timestamp");
             mySubscription.expirationDate = (Integer) genericRecord.get("expiration_date");
+            mySubscription.myNumeric = getBigDecimal(genericRecord, "my_numeric");
             @SuppressWarnings("unchecked")
             List<Long> numbers = (List<Long>) genericRecord.get("numbers");
             mySubscription.numbers = numbers == null ? null : new ArrayList<>(numbers);
+
             GenericData.Record myRequiredSubRecord = (GenericData.Record) genericRecord.get("myRequiredSubRecord");
             mySubscription.myRequiredSubRecord = MyRequiredSubRecord.fromGenericRecord(myRequiredSubRecord);
             List<MyOptionalArraySubRecord> myOptionalArraySubRecords = new ArrayList<>();
@@ -277,8 +379,25 @@ public class MyBQReadWriteJob {
                 myOptionalArraySubRecords.add(MyOptionalArraySubRecord.fromGenericRecord(myOptionalArraySubGenericRecord));
             }
             mySubscription.myOptionalArraySubRecords = myOptionalArraySubRecords;
+
             LOGGER.info("Created {}", mySubscription);
             return mySubscription;
+        }
+
+        private static BigDecimal getBigDecimal(GenericRecord genericRecord, String fieldName) {
+            Schema myNumericSchema = genericRecord.getSchema().getField(fieldName).schema();
+            LogicalTypes.Decimal myNumericSchemaLogicalType = (LogicalTypes.Decimal) unwrapUnion(myNumericSchema).getLogicalType();
+            int scale = myNumericSchemaLogicalType.getScale();
+            ByteBuffer byteBuffer = (ByteBuffer) genericRecord.get(fieldName);
+            byte[] bytes = new byte[byteBuffer.remaining()];
+            byteBuffer.get(bytes);
+            BigInteger bigInteger = new BigInteger(bytes);
+            BigDecimal bigDecimal = new BigDecimal(bigInteger, scale);
+            return bigDecimal;
+        }
+
+        private static String asString(Object value) {
+            return value instanceof Utf8 ? value.toString() : (String) value;
         }
 
         @Override
@@ -289,13 +408,15 @@ public class MyBQReadWriteJob {
             return creationTimestamp == that.creationTimestamp &&
                     expirationDate == that.expirationDate &&
                     Objects.equals(id, that.id) &&
+                    Objects.equals(myNumeric, that.myNumeric) &&
                     Objects.equals(numbers, that.numbers) &&
-                    Objects.equals(myRequiredSubRecord, that.myRequiredSubRecord);
+                    Objects.equals(myRequiredSubRecord, that.myRequiredSubRecord) &&
+                    Objects.equals(myOptionalArraySubRecords, that.myOptionalArraySubRecords);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(id, creationTimestamp, expirationDate, numbers, myRequiredSubRecord);
+            return Objects.hash(id, creationTimestamp, expirationDate, myNumeric, numbers, myRequiredSubRecord, myOptionalArraySubRecords);
         }
 
         @Override
@@ -304,13 +425,11 @@ public class MyBQReadWriteJob {
                     "id='" + id + '\'' +
                     ", creationTimestamp=" + creationTimestamp +
                     ", expirationDate=" + expirationDate +
+                    ", myNumeric=" + myNumeric +
                     ", numbers=" + numbers +
                     ", myRequiredSubRecord=" + myRequiredSubRecord +
+                    ", myOptionalArraySubRecords=" + myOptionalArraySubRecords +
                     '}';
-        }
-
-        private static String asString(Object value) {
-            return value instanceof Utf8 ? value.toString() : (String) value;
         }
     }
 }
