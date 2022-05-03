@@ -32,14 +32,14 @@ public class AvroToBigQuerySchemaConverter {
         }
         Schema avroSchema = new Schema.Parser().parse(inputFile);
         TableSchema tableSchema = convert(avroSchema);
-        //tableSchema.setFactory(new JacksonFactory());
+        //tableSchema.setFactory(new JacksonFactory()); // older beam version
         tableSchema.setFactory(new GsonFactory());
         Path outputPath = Paths.get(args[1]);
         String tableSchemaString = tableSchema.toPrettyString();
         int start = tableSchemaString.indexOf("[");
         int end = tableSchemaString.lastIndexOf("]") + 1;
 //        Files.write(outputPath, tableSchemaString.substring(start, end).getBytes(StandardCharsets.UTF_8));
-        Files.writeString(outputPath, tableSchemaString.substring(start, end));
+        Files.writeString(outputPath, tableSchemaString.substring(start, end)); // since java 11
         LOGGER.info("Converted avro schema from {} and written table schema to {}", inputFile, outputPath);
     }
 
@@ -114,6 +114,23 @@ public class AvroToBigQuerySchemaConverter {
                 return getTableFieldType(getUnionNotNullType(fieldSchema.getTypes()));
             default:
                 throw new IllegalArgumentException("Unknown fieldSchema type: " + type);
+
+            // java 17
+//            return switch (type) {
+//                case RECORD -> "RECORD";
+//                case INT -> LogicalTypes.date().equals(logicalType)
+//                        ? "DATE" : "INTEGER";
+//                case LONG -> LogicalTypes.timestampMillis().equals(logicalType) || LogicalTypes.timestampMicros()
+//                        .equals(logicalType)
+//                        ? "TIMESTAMP" : "INTEGER";
+//                case BOOLEAN -> "BOOLEAN";
+//                case FLOAT, DOUBLE -> "FLOAT";
+//                case BYTES -> logicalType instanceof LogicalTypes.Decimal ? "NUMERIC" : "BYTES";
+//                case STRING -> "STRING";
+//                case ARRAY -> getTableFieldType(fieldSchema.getElementType());
+//                case UNION -> getTableFieldType(getUnionNotNullType(fieldSchema.getTypes()));
+//                default -> throw new IllegalArgumentException("Unknown fieldSchema type: " + type);
+//            };
         }
     }
 
