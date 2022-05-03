@@ -104,7 +104,7 @@ public class AvroToBigQuerySchemaConverter {
             case DOUBLE:
                 return "FLOAT";
             case BYTES:
-                return "BYTES";
+                return logicalType instanceof LogicalTypes.Decimal ? "NUMERIC" : "BYTES";
             case STRING:
                 return "STRING";
             case ARRAY:
