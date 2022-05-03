@@ -106,16 +106,16 @@ resource "google_compute_instance" "ping_vm" {
   metadata_startup_script = <<-EOF
       max_retry=30
       counter=1
-      url="http://${google_compute_instance.container-vm.network_interface[0].network_ip}:8080"
+      url=http://${google_compute_instance.container-vm.network_interface[0].network_ip}:8080
       until
-         curl ${url}| grep Greetings
+         curl $url | grep Greetings
       do sleep 10
       if [ $counter -eq $max_retry ]
       then
-        echo "Failed to connect/get response from ${url}"
+        echo "Failed to connect/get response from $url"
         break
       else
-        echo "Waiting to get reponse from ${url} (attempt: $counter)"
+        echo "Waiting to get reponse from $url (attempt: $counter)"
         counter=$(expr $counter + 1);
       fi
       done
