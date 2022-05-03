@@ -30,6 +30,7 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
     "zone" = var.zone,
     "region" = var.region,
     "service_account" = var.service_account,
+    "owner" = var.owner,
     "bucket" = var.bucket,
     "instance" = local.instance,
     "dataflow_jar" = local.dataflow_jar
