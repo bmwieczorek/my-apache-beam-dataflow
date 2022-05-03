@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class MyBeamGenerics {
+    // record MyPCollection<T>(List<T> elements, Class<T> coderClass) { // java 17, fields access: myPCollection.elements or myPCollection.elements()
     static class MyPCollection<T> {
         private final List<T> elements;
         private final Class<T> coderClass;
