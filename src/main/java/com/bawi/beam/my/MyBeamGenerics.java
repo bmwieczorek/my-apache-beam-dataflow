@@ -12,8 +12,8 @@ import java.util.stream.Stream;
 
 public class MyBeamGenerics {
     static class MyPCollection<T> {
-        private List<T> elements;
-        private Class<T> coderClass;
+        private final List<T> elements;
+        private final Class<T> coderClass;
 
         public MyPCollection(List<T> elements, Class<T> coderClass) {
             this.elements = elements;
@@ -70,8 +70,8 @@ public class MyBeamGenerics {
 
 
     static class MyParDo<In, Out> extends MyPTransform<MyPCollection<In>, MyPCollection<Out>> {
-        private MyOutputReceiver<Out> myOutputReceiver = new MyOutputReceiver<>();
-        private MyDoFn<In, Out> myDoFn;
+        private final MyOutputReceiver<Out> myOutputReceiver = new MyOutputReceiver<>();
+        private final MyDoFn<In, Out> myDoFn;
         private MyParDo(MyDoFn<In, Out> myDoFn) {
             this.myDoFn = myDoFn;
         }
@@ -88,7 +88,7 @@ public class MyBeamGenerics {
                         }
                     }
             );
-            Type actualTypeArgument = ((ParameterizedType) ((MyDoFn<In, Out>) myDoFn).getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+            Type actualTypeArgument = ((ParameterizedType) myDoFn.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
             //noinspection unchecked
             Class<Out> actualTypeArgument1 = (Class<Out>) actualTypeArgument;
             return new MyPCollection<>(myOutputReceiver.getElements(), actualTypeArgument1);
@@ -99,7 +99,7 @@ public class MyBeamGenerics {
         }
     }
     static class MyOutputReceiver<Out> {
-        private List<Out> elements = new ArrayList<>();
+        private final List<Out> elements = new ArrayList<>();
         public List<Out> getElements() {
             return elements;
         }
@@ -107,10 +107,13 @@ public class MyBeamGenerics {
             elements.add(out);
         }
     }
+
     @SuppressWarnings("unused")
     static abstract class MyDoFn<In, Out> {}
 
     static class MyStringToIntegerDoFn extends MyDoFn<String, Integer> {
+
+        @SuppressWarnings("unused")
         public void process(String element, MyOutputReceiver<Integer> myOutputReceiver) {
             int i = Integer.parseInt(element);
             myOutputReceiver.output(i);
@@ -119,7 +122,7 @@ public class MyBeamGenerics {
 
     @SuppressWarnings("SameParameterValue")
     static class MyMapElements<In, Out> extends MyPTransform<MyPCollection<In>, MyPCollection<Out>> {
-        private Class<Out> outClass;
+        private final Class<Out> outClass;
 
         public MyMapElements(Class<Out> outClass) {
             this.outClass = outClass;
@@ -145,7 +148,7 @@ public class MyBeamGenerics {
 
                 @Override
                 MyPCollection<Out> transform(MyPCollection<In> inMyPCollection) {
-                    Type[] actualTypeArguments = ((ParameterizedType) (((MapFn<In, Out>) mapFn).getClass()).getGenericSuperclass()).getActualTypeArguments();
+                    Type[] actualTypeArguments = ((ParameterizedType) (mapFn.getClass()).getGenericSuperclass()).getActualTypeArguments();
 //                    System.out.println("Converting " + actualTypeArguments[0] + " to " + actualTypeArguments[1]);
                     List<In> inElements = inMyPCollection.elements;
                     List<Out> outElements = inElements.stream().map(mapFn::map).collect(Collectors.toList());
@@ -175,11 +178,11 @@ public class MyBeamGenerics {
         MyPCollection<Integer> pIntegers = pStrings.apply(MyParDo.of(new MyStringToIntegerDoFn()));
         System.out.println(pIntegers);
 
-        MyPCollection<Double> pDoubles = pIntegers.apply(MyMapElements.map(new MapFn<Integer, Double>() {
-                    @Override
-                    Double map(Integer i) {
-                        return (double) i / 2;
-                    }
+        MyPCollection<Double> pDoubles = pIntegers.apply(MyMapElements.map(new MapFn<>() {
+            @Override
+            Double map(Integer i) {
+                return (double) i / 2;
+            }
         }));
         System.out.println(pDoubles);
 
