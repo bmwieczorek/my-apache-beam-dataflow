@@ -10,6 +10,7 @@ resource "google_monitoring_alert_policy" "job_name_policy" {
   enabled = true
   combiner = "OR"
 
+//  notification_channels = toset([for k in google_monitoring_notification_channel.email: k.name])
   notification_channels = [google_monitoring_notification_channel.email.name]
 
   documentation {
@@ -42,6 +43,7 @@ resource "google_monitoring_alert_policy" "my_alert_job_id" {
   enabled = true
   combiner = "OR"
 
+//  notification_channels = toset([for k in google_monitoring_notification_channel.email: k.name])
   notification_channels = [google_monitoring_notification_channel.email.name]
 
   documentation {
@@ -64,3 +66,12 @@ resource "google_monitoring_alert_policy" "my_alert_job_id" {
     }
   }
 }*/
+
+//gcloud beta monitoring channels list --filter='type="email" AND displayName="Notification channel a@example.com"' --format 'value(NAME)'
+//gcloud beta monitoring channels delete $(gcloud beta monitoring channels list --filter='type="email" AND displayName="Notification channel a@example.com"' --format 'value(NAME)')
+
+//gcloud alpha monitoring policies list --filter='displayName="my-job did not run for last 15 minutes alert policy"' --format=json
+//gcloud alpha monitoring policies list --filter='displayName="my-job did not run for last 15 minutes alert policy"' --format 'value(NAME)'
+
+//gcloud alpha monitoring policies update "projects/${GCP_PROJECT}/alertPolicies/8823035245391683282" --remove-notification-channels "projects/${GCP_PROJECT}/notificationChannels/1224431537736163531"
+//gcloud alpha monitoring policies update $(gcloud alpha monitoring policies list --filter='displayName="my-job did not run for last 15 minutes alert policy"' --format 'value(NAME)') --remove-notification-channels $(gcloud beta monitoring channels list --filter='type="email" AND displayName="Notification channel a@example.com"' --format 'value(NAME)')

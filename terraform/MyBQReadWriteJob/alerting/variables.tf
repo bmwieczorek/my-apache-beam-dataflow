@@ -23,6 +23,12 @@ variable "notification_email" {
   type        = string
 }
 
+//variable "notification_emails" {
+//  description = "Notification email"
+//  type        = list(string)
+//  default = ["a@example.com", "b@example.com"]
+//}
+
 // workaround to wait for job to be created
 
 variable "module_depends_on" {

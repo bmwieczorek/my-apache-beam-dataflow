@@ -14,6 +14,7 @@ resource "google_monitoring_alert_policy" "logs_based_metric_policy" {
   enabled      = true
   combiner     = "OR"
 
+//  notification_channels = toset([for k in google_monitoring_notification_channel.email: k.name])
   notification_channels = [google_monitoring_notification_channel.email.name]
 
   documentation {
