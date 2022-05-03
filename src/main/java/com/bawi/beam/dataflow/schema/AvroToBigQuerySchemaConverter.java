@@ -1,6 +1,6 @@
 package com.bawi.beam.dataflow.schema;
 
-import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.bigquery.model.TableFieldSchema;
 import com.google.api.services.bigquery.model.TableSchema;
 import org.apache.avro.LogicalType;
@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -33,12 +32,14 @@ public class AvroToBigQuerySchemaConverter {
         }
         Schema avroSchema = new Schema.Parser().parse(inputFile);
         TableSchema tableSchema = convert(avroSchema);
-        tableSchema.setFactory(new JacksonFactory());
+        //tableSchema.setFactory(new JacksonFactory());
+        tableSchema.setFactory(new GsonFactory());
         Path outputPath = Paths.get(args[1]);
         String tableSchemaString = tableSchema.toPrettyString();
         int start = tableSchemaString.indexOf("[");
         int end = tableSchemaString.lastIndexOf("]") + 1;
-        Files.write(outputPath, tableSchemaString.substring(start, end).getBytes(StandardCharsets.UTF_8));
+//        Files.write(outputPath, tableSchemaString.substring(start, end).getBytes(StandardCharsets.UTF_8));
+        Files.writeString(outputPath, tableSchemaString.substring(start, end));
         LOGGER.info("Converted avro schema from {} and written table schema to {}", inputFile, outputPath);
     }
 
