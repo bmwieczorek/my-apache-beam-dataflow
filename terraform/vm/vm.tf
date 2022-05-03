@@ -31,6 +31,7 @@ resource "google_compute_instance" "vm" {
   }
 
   metadata_startup_script = <<-EOF
+        sudo apt-get update -y
         echo "Hello from startup script"
   EOF
 

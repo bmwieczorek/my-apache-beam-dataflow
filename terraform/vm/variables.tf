@@ -13,21 +13,21 @@ variable "zone" {
   type        = string
 }
 
-variable "network" {
-  description = "Google Cloud subnetwork"
-  type        = string
-//  default     = null
-}
+//variable "network" {
+//  description = "Google Cloud subnetwork"
+//  type        = string
+////  default     = null
+//}
 
-variable "subnetwork" {
-  description = "Google Cloud subnetwork"
-  type        = string
-}
+//variable "subnetwork" {
+//  description = "Google Cloud subnetwork"
+//  type        = string
+//}
 
-variable "image" {
-  description = "Google Cloud compute image"
-  type        = string
-}
+//variable "image" {
+//  description = "Google Cloud compute image"
+//  type        = string
+//}
 
 //variable "service_account" {
 //  description = "Google Cloud service account email"
