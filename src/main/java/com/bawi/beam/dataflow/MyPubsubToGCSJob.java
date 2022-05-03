@@ -19,7 +19,6 @@ import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.windowing.*;
-import org.apache.beam.sdk.values.KV;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
@@ -53,20 +52,20 @@ public class MyPubsubToGCSJob {
 //
 //        void setOutput(String value);
 
-        @Validation.Required
-        ValueProvider<String> getOutput();
-
-        void setOutput(ValueProvider<String> value);
+//        @Validation.Required
+//        ValueProvider<String> getOutput();
+//
+//        void setOutput(ValueProvider<String> value);
 
 //        @Validation.Required
 //        String getTemp();
 //
 //        void setTemp(String value);
 
-        @Validation.Required
-        ValueProvider<String> getTemp();
-
-        void setTemp(ValueProvider<String> value);
+//        @Validation.Required
+//        ValueProvider<String> getTemp();
+//
+//        void setTemp(ValueProvider<String> value);
 
         // DataflowPipelineOptions
 //        String getTemplateLocation();
@@ -336,31 +335,31 @@ gcloud dataflow flex-template run $APP-$OWNER \
 //        }
 //    }
 
-    static class ToTimestampedPathKV extends DoFn<GenericRecord, KV<String, GenericRecord>>{
-
-        private static final Logger LOGGER = LoggerFactory.getLogger(ToTimestampedPathKV.class);
-        private static final DateTimeFormatter FORMATTER_PATH = DateTimeFormat.forPattern("'/year='yyyy/'month'=MM/'day'=dd/'hour'=HH/'minute'=mm");
-
-//        private final String outputDir;
-        private final ValueProvider<String> outputDir;
-
-        @SuppressWarnings("deprecation")
-        @Override
-        public Duration getAllowedTimestampSkew() {
-            return Duration.millis(Long.MAX_VALUE);
-        }
-
-//        public ToTimestampedPathKV(String outputDir) {
-        public ToTimestampedPathKV(ValueProvider<String> outputDir) {
-            this.outputDir = outputDir;
-        }
-
-        @DoFn.ProcessElement
-        public void process(@DoFn.Element GenericRecord record, @Timestamp Instant timestamp, OutputReceiver<KV<String, GenericRecord>> outputReceiver) {
-//            String timestampedPath = outputDir + FORMATTER_PATH.print(timestamp);
-            String timestampedPath = outputDir.get() + FORMATTER_PATH.print(timestamp);
-            LOGGER.info("timestampedPath={}", timestampedPath);
-            outputReceiver.output(KV.of(timestampedPath, record));
-        }
-    }
+//    private static class ToTimestampedPathKV extends DoFn<GenericRecord, KV<String, GenericRecord>>{
+//
+//        private static final Logger LOGGER = LoggerFactory.getLogger(ToTimestampedPathKV.class);
+//        private static final DateTimeFormatter FORMATTER_PATH = DateTimeFormat.forPattern("'/year='yyyy/'month'=MM/'day'=dd/'hour'=HH/'minute'=mm");
+//
+////        private final String outputDir;
+//        private final ValueProvider<String> outputDir;
+//
+//        @SuppressWarnings("deprecation")
+//        @Override
+//        public Duration getAllowedTimestampSkew() {
+//            return Duration.millis(Long.MAX_VALUE);
+//        }
+//
+////        public ToTimestampedPathKV(String outputDir) {
+//        public ToTimestampedPathKV(ValueProvider<String> outputDir) {
+//            this.outputDir = outputDir;
+//        }
+//
+//        @DoFn.ProcessElement
+//        public void process(@DoFn.Element GenericRecord record, @Timestamp Instant timestamp, OutputReceiver<KV<String, GenericRecord>> outputReceiver) {
+////            String timestampedPath = outputDir + FORMATTER_PATH.print(timestamp);
+//            String timestampedPath = outputDir.get() + FORMATTER_PATH.print(timestamp);
+//            LOGGER.info("timestampedPath={}", timestampedPath);
+//            outputReceiver.output(KV.of(timestampedPath, record));
+//        }
+//    }
 }
