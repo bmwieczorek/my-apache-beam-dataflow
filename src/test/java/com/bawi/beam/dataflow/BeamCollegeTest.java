@@ -8,11 +8,14 @@ import org.apache.beam.sdk.values.KV;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
 public class BeamCollegeTest {
     private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+    private static final Logger LOGGER = LoggerFactory.getLogger(BeamCollegeTest.class);
 
     static class ConcatValueAndTimestampFn extends DoFn<KV<String, Double>, KV<String, String>> {
 
@@ -35,7 +38,8 @@ public class BeamCollegeTest {
                 .apply("MyConsoleIO", MapElements.via(new SimpleFunction<List<KV<String, String>>, Void>() {
                     @Override
                     public Void apply(List<KV<String, String>> input) {
-                        input.forEach(System.out::println);
+                        System.out.println(input.toString());
+                        input.forEach(kv -> LOGGER.info(kv.toString()));
                         return null;
                     }
                 }));
