@@ -39,13 +39,13 @@ public class GroupCombineWindowedTimestampedEvents {
     public void shouldCountPerKey() {
         // given
         Pipeline pipeline = Pipeline.create();
-        PCollection<String> pCollection = pipeline.apply(timestampedKVEvents)
 
         // when
-        // group per 5 secs window and count how many elements per key in each window
-        .apply(Window.<KV<String, Integer>>into(FixedWindows.of(Duration.standardSeconds(5))).withTimestampCombiner(TimestampCombiner.LATEST)) // timestamp combiner impacts what will be the grouped event timestamp in relation to ts of grouped events
-        .apply(Count.perKey())
-        .apply(ParDo.of(new MyStringFormatFn<>()));
+        PCollection<String> pCollection = pipeline.apply(timestampedKVEvents)
+            // group per 5 secs window and count how many elements per key in each window
+            .apply(Window.<KV<String, Integer>>into(FixedWindows.of(Duration.standardSeconds(5))).withTimestampCombiner(TimestampCombiner.LATEST)) // timestamp combiner impacts what will be the grouped event timestamp in relation to ts of grouped events
+            .apply(Count.perKey())
+            .apply(ParDo.of(new MyStringFormatFn<>()));
 
         // then
         PAssert.that(pCollection).containsInAnyOrder(
@@ -64,9 +64,9 @@ public class GroupCombineWindowedTimestampedEvents {
     public void shouldSumPerKey() {
         // given
         Pipeline pipeline = Pipeline.create();
-        PCollection<String> pCollection = pipeline.apply(timestampedKVEvents)
 
-                // when
+        // when
+        PCollection<String> pCollection = pipeline.apply(timestampedKVEvents)
                 // group per 5 secs window and sum elements value per key in each window
                 .apply(Window.<KV<String, Integer>>into(FixedWindows.of(Duration.standardSeconds(5))).withTimestampCombiner(TimestampCombiner.LATEST)) // timestamp combiner impacts what will be the grouped event timestamp in relation to ts of grouped events
                 .apply(Sum.integersPerKey())
@@ -100,9 +100,9 @@ public class GroupCombineWindowedTimestampedEvents {
     public void shouldGroupCombineGlobally() {
         // given
         Pipeline pipeline = Pipeline.create();
-        PCollection<String> pCollection = pipeline.apply(timestampedEvents)
 
-                // when
+        // when
+        PCollection<String> pCollection = pipeline.apply(timestampedEvents)
                 // group per 5 secs window and sum elements value per key in each window
                 .apply(Window.<String>into(FixedWindows.of(Duration.standardSeconds(5))).withTimestampCombiner(TimestampCombiner.LATEST)) // timestamp combiner impacts what will be the grouped event timestamp in relation to ts of grouped events
 //                .apply(Group.globally()) // same as below but random order of sub-elements in result element of type iterable
