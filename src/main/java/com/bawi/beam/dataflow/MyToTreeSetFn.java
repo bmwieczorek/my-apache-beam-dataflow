@@ -3,14 +3,13 @@ package com.bawi.beam.dataflow;
 import org.apache.beam.sdk.transforms.Combine;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
+import java.util.TreeSet;
 
-public class MyToListFn<T> extends Combine.CombineFn<T, MyToListFn.Accum<T>, List<T>> {
+public class MyToTreeSetFn<T extends Comparable<T>> extends Combine.CombineFn<T, MyToTreeSetFn.Accum<T>, TreeSet<T>> {
 
-    public static class Accum<T> implements Serializable {
-        List<T> objects = new ArrayList<>();
+    public static class Accum<T extends Comparable<T>> implements Serializable {
+        private TreeSet<T> objects = new TreeSet<>();
 
         @Override
         public boolean equals(Object o) {
@@ -48,7 +47,7 @@ public class MyToListFn<T> extends Combine.CombineFn<T, MyToListFn.Accum<T>, Lis
     }
 
     @Override
-    public List<T> extractOutput(Accum<T> accum) {
+    public TreeSet<T> extractOutput(Accum<T> accum) {
         return accum.objects;
     }
 }
