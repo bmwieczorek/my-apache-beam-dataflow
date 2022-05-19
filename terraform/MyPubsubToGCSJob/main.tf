@@ -36,7 +36,7 @@ module "dataflow_classic_template" {
 //  bucket              = module.storage.bucket_name
   bucket                            = google_storage_bucket.my_bucket.name
   main_class                        = "com.bawi.beam.dataflow.MyPubsubToGCSJob"
-  job                               = local.job
+  job_name                          = local.job_name_base
   network                           = var.network
 //  network             = data.google_compute_network.network.self_link
   subnetwork                        = var.subnetwork == "default" ? null : var.subnetwork
