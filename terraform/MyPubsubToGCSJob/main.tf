@@ -61,9 +61,9 @@ module "dataflow_classic_template_job" {
   subnetwork                        = var.subnetwork == "default" ? null : var.subnetwork
   service_account                   = var.service_account
   template_gcs_path                 = module.dataflow_classic_template.template_gcs_path
-//  template_gcs_path                 = "gs://${local.bucket}/templates/${local.job}-template"
-  job_name                          = local.job
-//  job_name                          = "${local.job}-v3"
+//  template_gcs_path                 = "gs://${local.bucket}/templates/${local.job_name_base}-template"
+  job_name                          = local.job_name_base
+//  job_name                          = "${local.job_name_base}-v3"
   subscription                      = google_pubsub_subscription.my_subscription.id
   max_workers                       = local.max_workers
   experiments                       = local.experiments
