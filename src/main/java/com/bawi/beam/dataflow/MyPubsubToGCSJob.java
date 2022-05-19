@@ -8,6 +8,8 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.coders.AvroGenericCoder;
+import org.apache.beam.sdk.io.Compression;
+import org.apache.beam.sdk.io.FileIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubMessage;
@@ -19,6 +21,7 @@ import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.windowing.*;
+import org.apache.beam.sdk.values.KV;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
@@ -31,6 +34,7 @@ import java.net.UnknownHostException;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.TreeMap;
+import java.util.UUID;
 
 
 public class MyPubsubToGCSJob {
@@ -52,20 +56,20 @@ public class MyPubsubToGCSJob {
 //
 //        void setOutput(String value);
 
-//        @Validation.Required
-//        ValueProvider<String> getOutput();
-//
-//        void setOutput(ValueProvider<String> value);
+        @Validation.Required
+        ValueProvider<String> getOutput();
+
+        void setOutput(ValueProvider<String> value);
 
 //        @Validation.Required
 //        String getTemp();
 //
 //        void setTemp(String value);
 
-//        @Validation.Required
-//        ValueProvider<String> getTemp();
-//
-//        void setTemp(ValueProvider<String> value);
+        @Validation.Required
+        ValueProvider<String> getTemp();
+
+        void setTemp(ValueProvider<String> value);
 
         // DataflowPipelineOptions
 //        String getTemplateLocation();
@@ -118,7 +122,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
     static final String BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID = "bodyWithAttributesMessageId";
     private static final Schema SCHEMA = SchemaBuilder.record("record").fields().requiredString(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID).endRecord();
-//    private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("'year='yyyy/'month'=MM/'day'=dd/'hour'=HH/'minute'=mm");
+    private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("'year='yyyy/'month'=MM/'day'=dd/'hour'=HH/'minute'=mm");
 
 
     static class ConcatBodyAttrAndMsgIdFn extends DoFn<PubsubMessage, GenericRecord> {
@@ -175,14 +179,11 @@ gcloud dataflow flex-template run $APP-$OWNER \
 //        options.setAutoscalingAlgorithm(DataflowPipelineWorkerPoolOptions.AutoscalingAlgorithmType.THROUGHPUT_BASED);
         Pipeline readingPipeline = Pipeline.create(options);
 
-        LOGGER.info("Pipeline options: {}", readingPipeline.getOptions());
-        LOGGER.info("createTemplate: {}", System.getProperty("createTemplate"));
-
         // requires org.apache.beam:beam-sdks-java-io-google-cloud-platform
 //        String output = options.getOutput();
-//        ValueProvider<String> output = options.getOutput();
+        ValueProvider<String> output = options.getOutput();
 //        String temp = options.getTemp();
-//        ValueProvider<String> temp = options.getTemp();
+        ValueProvider<String> temp = options.getTemp();
         readingPipeline
 //                .apply(PubsubIO.readMessagesWithAttributesAndMessageId().fromSubscription(options.getSubscription()).withIdAttribute("myMsgAttrName")) // deduplicated based on myMsgAttrName
                 .apply(PubsubIO.readMessagesWithAttributesAndMessageId().fromSubscription(options.getSubscription()).withTimestampAttribute(ConcatBodyAttrAndMsgIdFn.EVENT_TIME_ATTRIBUTE))
@@ -193,10 +194,10 @@ gcloud dataflow flex-template run $APP-$OWNER \
                                         AfterPane.elementCountAtLeast(2),
                                         AfterProcessingTime.pastFirstElementInPane().plusDelayOf(Duration.standardSeconds(120))
                                 )
-                            )
+                                )
                         )
                         .withAllowedLateness(Duration.standardMinutes(10))
-                        .discardingFiredPanes())
+                        .discardingFiredPanes()) // if Window.into is after DoFn then DoFn logs Global Window otherwise IntervalWindow
                 .apply(ParDo.of(new MyBundleSizeInterceptor<>("AfterPubsub")))
                 .apply(ConcatBodyAttrAndMsgIdFn.CLASS_NAME, ParDo.of(new ConcatBodyAttrAndMsgIdFn()))
                 .setCoder(AvroGenericCoder.of(SCHEMA)) // required to explicitly set coder for GenericRecord
@@ -293,73 +294,69 @@ gcloud dataflow flex-template run $APP-$OWNER \
         return numberFormat.format(value);
     }
 
-//    static class CustomWriteFileNaming implements FileIO.Write.FileNaming {
-//        private static final DateTimeFormatter FORMATTER_MIN_SECS = DateTimeFormat.forPattern("mm-ss.SSS");
-//        private static final Logger LOGGER = LoggerFactory.getLogger(CustomWriteFileNaming.class);
-//
-//        private String parentAndFormattedDateTimePath;
-//        private String compression;
-//        private String format;
-//
-//        public CustomWriteFileNaming(String parentAndFormattedDateTimePath, String compression, String format) {
-//            this.parentAndFormattedDateTimePath = parentAndFormattedDateTimePath;
-//            this.compression = compression;
-//            this.format = format;
-//        }
-//
-//        @Override
-//        public String getFilename(BoundedWindow window, PaneInfo pane, int numShards, int shardIndex, Compression compression) {
-//            InetAddress localHostAddress = getLocalHostAddress();
-//            if (localHostAddress != null) {
-//                String hostAddress = localHostAddress.getHostAddress();
-//                Instant now = Instant.now();
-//                String path = String.format("%s/%s_%s-%s_%s-%s-%s-of-%s_%s-%s-%s_%s.%s",
-//                        parentAndFormattedDateTimePath,
-//                        FORMATTER_MIN_SECS.print(now), hostAddress.substring(hostAddress.lastIndexOf(".") + 1), Thread.currentThread().getId(),
-//                        pane.getIndex(), pane.getTiming(), shardIndex, numShards,
-//                        now, hostAddress, UUID.randomUUID(),
-//                        this.compression, this.format);
-//                LOGGER.info("Writing data to path='{}'", path);
-//                return path;
-//            }
-//            return null;
-//        }
-//
-//        private static InetAddress getLocalHostAddress() {
-//            try {
-//                return InetAddress.getLocalHost();
-//            } catch (UnknownHostException e) {
-//                LOGGER.error("Unable to get local host address", e);
-//                return null;
-//            }
-//        }
-//    }
+    static class CustomWriteFileNaming implements FileIO.Write.FileNaming {
+        private static final DateTimeFormatter FORMATTER_MIN_SECS = DateTimeFormat.forPattern("mm-ss.SSS");
+        private static final Logger LOGGER = LoggerFactory.getLogger(CustomWriteFileNaming.class);
 
-//    private static class ToTimestampedPathKV extends DoFn<GenericRecord, KV<String, GenericRecord>>{
-//
-//        private static final Logger LOGGER = LoggerFactory.getLogger(ToTimestampedPathKV.class);
-//        private static final DateTimeFormatter FORMATTER_PATH = DateTimeFormat.forPattern("'/year='yyyy/'month'=MM/'day'=dd/'hour'=HH/'minute'=mm");
-//
-////        private final String outputDir;
-//        private final ValueProvider<String> outputDir;
-//
-//        @SuppressWarnings("deprecation")
-//        @Override
-//        public Duration getAllowedTimestampSkew() {
-//            return Duration.millis(Long.MAX_VALUE);
-//        }
-//
-////        public ToTimestampedPathKV(String outputDir) {
-//        public ToTimestampedPathKV(ValueProvider<String> outputDir) {
-//            this.outputDir = outputDir;
-//        }
-//
-//        @DoFn.ProcessElement
-//        public void process(@DoFn.Element GenericRecord record, @Timestamp Instant timestamp, OutputReceiver<KV<String, GenericRecord>> outputReceiver) {
-////            String timestampedPath = outputDir + FORMATTER_PATH.print(timestamp);
-//            String timestampedPath = outputDir.get() + FORMATTER_PATH.print(timestamp);
-//            LOGGER.info("timestampedPath={}", timestampedPath);
-//            outputReceiver.output(KV.of(timestampedPath, record));
-//        }
-//    }
+        private String parentAndFormattedDateTimePath;
+        private String compression;
+        private String format;
+
+        public CustomWriteFileNaming(String parentAndFormattedDateTimePath, String compression, String format) {
+            this.parentAndFormattedDateTimePath = parentAndFormattedDateTimePath;
+            this.compression = compression;
+            this.format = format;
+        }
+
+        @Override
+        public String getFilename(BoundedWindow window, PaneInfo pane, int numShards, int shardIndex, Compression compression) {
+            String hostAddress = getLocalHostAddress().getHostAddress();
+            Instant now = Instant.now();
+            String path = String.format("%s/%s_%s-%s_%s-%s-%s-of-%s_%s-%s-%s_%s.%s",
+                    parentAndFormattedDateTimePath,
+                    FORMATTER_MIN_SECS.print(now), hostAddress.substring(hostAddress.lastIndexOf(".") + 1), Thread.currentThread().getId(),
+                    pane.getIndex(), pane.getTiming(), shardIndex, numShards,
+                    now, hostAddress, UUID.randomUUID(),
+                    this.compression, this.format);
+            LOGGER.info("Writing data to path='{}'", path);
+            return path;
+        }
+
+        private static InetAddress getLocalHostAddress() {
+            try {
+                return InetAddress.getLocalHost();
+            } catch (UnknownHostException e) {
+                LOGGER.error("Unable to get local host address", e);
+                return null;
+            }
+        }
+    }
+
+    static class ToTimestampedPathKV extends DoFn<GenericRecord, KV<String, GenericRecord>>{
+
+        private static final Logger LOGGER = LoggerFactory.getLogger(ToTimestampedPathKV.class);
+        private static final DateTimeFormatter FORMATTER_PATH = DateTimeFormat.forPattern("'/year='yyyy/'month'=MM/'day'=dd/'hour'=HH/'minute'=mm");
+
+        //        private final String outputDir;
+        private final ValueProvider<String> outputDir;
+
+        @SuppressWarnings("deprecation")
+        @Override
+        public Duration getAllowedTimestampSkew() {
+            return Duration.millis(Long.MAX_VALUE);
+        }
+
+        //        public ToTimestampedPathKV(String outputDir) {
+        public ToTimestampedPathKV(ValueProvider<String> outputDir) {
+            this.outputDir = outputDir;
+        }
+
+        @DoFn.ProcessElement
+        public void process(@DoFn.Element GenericRecord record, @Timestamp Instant timestamp, OutputReceiver<KV<String, GenericRecord>> outputReceiver) {
+//            String timestampedPath = outputDir + FORMATTER_PATH.print(timestamp);
+            String timestampedPath = outputDir.get() + FORMATTER_PATH.print(timestamp);
+            LOGGER.info("timestampedPath={}", timestampedPath);
+            outputReceiver.output(KV.of(timestampedPath, record));
+        }
+    }
 }
