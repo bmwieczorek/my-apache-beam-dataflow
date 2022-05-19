@@ -10,6 +10,8 @@ ZONE=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attribut
 echo "ZONE=$ZONE" | tee -a ${LOG}
 SERVICE_ACCOUNT=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/service_account -H "Metadata-Flavor: Google")
 echo "SERVICE_ACCOUNT=$SERVICE_ACCOUNT" | tee -a ${LOG}
+OWNER=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/owner -H "Metadata-Flavor: Google")
+echo "OWNER=$OWNER" | tee -a ${LOG}
 INSTANCE=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/instance -H "Metadata-Flavor: Google")
 echo "INSTANCE=$INSTANCE" | tee -a ${LOG}
 BUCKET=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/bucket -H "Metadata-Flavor: Google")
@@ -37,19 +39,20 @@ echo "DUMP_HEAP_ON_OOM=$DUMP_HEAP_ON_OOM" | tee -a ${LOG}
 
 gcloud compute instances add-metadata --zone ${ZONE} ${INSTANCE} --metadata=startup-state="(1/3) Checking Java ..."
 
-echo "Removing existing openjdk installation:" | tee -a ${LOG}
-rpm -qa | grep openjdk | xargs sudo yum -y remove
-
-echo "Installing openjdk 17:" | tee -a ${LOG}
+#echo "Removing existing openjdk installation:" | tee -a ${LOG}
+#rpm -qa | grep openjdk | xargs sudo yum -y remove
+#
+#openjdkVersion=17.0.2
+#echo "Installing openjdk ${openjdkVersion}:" | tee -a ${LOG}
 
 #sudo yum-config-manager --enable rhui-rhel*
 #sudo yum update -y
 
-gsutil cp gs://bartek-spring-boot/openjdk-17.0.2_linux-x64_bin.tar.gz .
-tar xzf openjdk-17.0.2_linux-x64_bin.tar.gz
-sudo mv jdk-17.0.2 /opt/jdk-17/
-export JAVA_HOME=/opt/jdk-17
-export PATH=$JAVA_HOME/bin:$PATH
+#gsutil cp gs://${PROJECT}-${OWNER}/openjdk-${openjdkVersion}_linux-x64_bin.tar.gz .
+#tar xzf openjdk-${openjdkVersion}_linux-x64_bin.tar.gz
+#sudo mv jdk-${openjdkVersion} /opt/
+#export JAVA_HOME=/opt/jdk-${openjdkVersion}
+#export PATH=$JAVA_HOME/bin:$PATH
 
 max_retry=10
 counter=1

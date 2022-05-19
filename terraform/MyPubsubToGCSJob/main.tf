@@ -1,6 +1,6 @@
 locals {
-  job                             = "${var.owner}-mypubsubtogcsjob"
-  bucket                          = "${var.project}-${local.job}"
+  job_name_base                   = "${var.owner}-mypubsubtogcsjob"
+  bucket                          = "${var.project}-${local.job_name_base}"
   topic                           = "${var.owner}-topic"
   subscription                    = "${local.topic}-sub"
   dataset                         = "bartek_dataset"
@@ -61,7 +61,9 @@ module "dataflow_classic_template_job" {
   subnetwork                        = var.subnetwork == "default" ? null : var.subnetwork
   service_account                   = var.service_account
   template_gcs_path                 = module.dataflow_classic_template.template_gcs_path
-  job                               = local.job
+//  template_gcs_path                 = "gs://${local.bucket}/templates/${local.job}-template"
+  job_name                          = local.job
+//  job_name                          = "${local.job}-v3"
   subscription                      = google_pubsub_subscription.my_subscription.id
   max_workers                       = local.max_workers
   experiments                       = local.experiments
@@ -81,11 +83,34 @@ module "dataflow_flex_template" {
   network                           = var.network
   subnetwork                        = var.subnetwork == "default" ? null : var.subnetwork
   service_account                   = var.service_account
-  job                               = local.job
+  job                               = local.job_name_base
   subscription                      = google_pubsub_subscription.my_subscription.id
   max_workers                       = local.max_workers
   experiments                       = local.experiments
   number_of_worker_harness_threads  = local.number_of_worker_harness_threads
   enable_streaming_engine           = local.enable_streaming_engine
   dump_heap_on_oom                  = local.dump_heap_on_oom
+}
+
+module "dashboards" {
+  source        = "./dashboards"
+  project       = var.project
+  job_name_base = local.job_name_base
+  job_name      = var.dataflow_classic_template_enabled ? module.dataflow_classic_template_job.job_name : module.dataflow_flex_template.job_name
+  job_id        = var.dataflow_classic_template_enabled ? module.dataflow_classic_template_job.job_id : module.dataflow_flex_template.job_id
+  topic         = local.topic
+  subscription  = local.subscription
+}
+
+module "alerting" {
+  source             = "./alerting"
+  project            = var.project
+  owner              = var.owner
+  notification_email = var.notification_email
+  job_name_base      = local.job_name_base
+  job_name           = var.dataflow_classic_template_enabled ? module.dataflow_classic_template_job.job_name : module.dataflow_flex_template.job_name
+  job_id             = var.dataflow_classic_template_enabled ? module.dataflow_classic_template_job.job_id : module.dataflow_flex_template.job_id
+
+  // workaround to wait for job to be created
+  module_depends_on  = [module.dataflow_classic_template_job]
 }

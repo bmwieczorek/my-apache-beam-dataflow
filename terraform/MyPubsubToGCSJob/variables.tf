@@ -48,3 +48,8 @@ variable "dataflow_classic_template_enabled" {
   description = "If dataflow classic template enabled, otherwise flex template enabled"
   type        = bool
 }
+
+variable "notification_email" {
+  description = "Notification email"
+  type        = string
+}

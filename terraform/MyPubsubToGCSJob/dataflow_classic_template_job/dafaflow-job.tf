@@ -14,7 +14,7 @@ locals {
 resource "google_dataflow_job" "job" {
   count                 = var.dataflow_classic_template_enabled ? 1 : 0
   project               = var.project
-  name                  = var.job
+  name                  = var.job_name
   temp_gcs_location     = "gs://${var.bucket}/temp"
   template_gcs_path     = var.template_gcs_path
   service_account_email = var.service_account
@@ -55,4 +55,6 @@ resource "google_dataflow_job" "job" {
       max_retry=40; counter=1; until ! [ -z "$(gcloud dataflow jobs list --filter "NAME:${self.name} AND (STATE=Cancelling OR STATE=Running)" --format 'value(JOB_ID)' --region "${self.region}")" ] ; do sleep 5; if [ $counter -eq $max_retry ]; then echo "Failed" && break; fi; echo "Wating for job to be cancelled: $counter attempt"; counter=$(expr $counter + 1); done
     EOT
   }
+
+//  skip_wait_on_job_termination = true
 }
