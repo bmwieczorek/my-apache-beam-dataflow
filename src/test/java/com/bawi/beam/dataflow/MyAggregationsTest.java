@@ -3,10 +3,13 @@ package com.bawi.beam.dataflow;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.transforms.*;
+import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
+import org.apache.beam.sdk.transforms.windowing.PaneInfo;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
+import org.joda.time.Instant;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,15 +20,24 @@ public class MyAggregationsTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(Log.class);
 
     static class Log<T> extends PTransform<PCollection<T>, PCollection<T>> {
+        static class LogFn<E> extends DoFn<E, E> {
+            @ProcessElement
+            public void process(@Element E element, OutputReceiver<E> receiver, @Timestamp Instant timestamp, BoundedWindow window, PaneInfo paneInfo) {
+                LOGGER.info("Processing: {} ", String.format("%s (%s %s)", element, window.getClass().getSimpleName(), window.maxTimestamp()));
+                receiver.output(element);
+            }
+        }
+
         @Override
         public PCollection<T> expand(PCollection<T> input) {
-            input.apply(MapElements.via(new SimpleFunction<T, T>() {
-                @Override
-                public T apply(T element) {
-                    LOGGER.info("Processing: {}", element);
-                    return element;
-                }
-            }));
+//            input.apply(MapElements.via(new SimpleFunction<T, T>() {
+//                @Override
+//                public T apply(T element) {
+//                    LOGGER.info("Processing: {}", element);
+//                    return element;
+//                }
+//            }));
+            input.apply(ParDo.of(new LogFn<>()));
             return input;
         }
     }
