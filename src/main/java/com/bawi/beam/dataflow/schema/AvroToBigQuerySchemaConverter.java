@@ -34,10 +34,10 @@ public class AvroToBigQuerySchemaConverter {
         TableSchema tableSchema = convert(avroSchema);
         //tableSchema.setFactory(new JacksonFactory()); // older beam version
         tableSchema.setFactory(new GsonFactory());
-        Path outputPath = Paths.get(args[1]);
         String tableSchemaString = tableSchema.toPrettyString();
         int start = tableSchemaString.indexOf("[");
         int end = tableSchemaString.lastIndexOf("]") + 1;
+        Path outputPath = Paths.get(args[1]);
 //        Files.write(outputPath, tableSchemaString.substring(start, end).getBytes(StandardCharsets.UTF_8));
         Files.writeString(outputPath, tableSchemaString.substring(start, end)); // since java 11
         LOGGER.info("Converted avro schema from {} and written table schema to {}", inputFile, outputPath);
@@ -97,8 +97,11 @@ public class AvroToBigQuerySchemaConverter {
                 return LogicalTypes.date().equals(logicalType)
                         ? "DATE" : "INTEGER";
             case LONG:
-                return LogicalTypes.timestampMillis().equals(logicalType) || LogicalTypes.timestampMicros().equals(logicalType)
-                        ? "TIMESTAMP" : "INTEGER";
+                return LogicalTypes.timestampMillis().equals(logicalType) || LogicalTypes.timestampMicros().equals(logicalType) ?
+                        "TIMESTAMP" :
+                        LogicalTypes.timeMicros().equals(logicalType) || LogicalTypes.timeMillis().equals(logicalType) ?
+                                "TIME" :
+                                "INTEGER";
             case BOOLEAN:
                 return "BOOLEAN";
             case FLOAT:

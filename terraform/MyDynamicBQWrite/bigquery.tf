@@ -6,7 +6,7 @@ locals {
 
 resource "google_bigquery_dataset" "dataset" {
   project                     = var.project
-  dataset_id                  = "${var.owner}_mydynamicbqwrite"
+  dataset_id                  = "${var.owner}_mydynamicbqwritejob"
 
   labels = local.labels
 }
@@ -43,6 +43,36 @@ resource "google_bigquery_table" "optional_record" {
       "mode": "NULLABLE",
       "name": "myOptionalBoolean",
       "type": "BOOLEAN"
+    },
+    {
+      "mode": "NULLABLE",
+      "name": "myOptionalNumeric",
+      "type": "NUMERIC"
+    },
+    {
+      "mode": "NULLABLE",
+      "name": "myOptionalDouble",
+      "type": "FLOAT"
+    },
+    {
+      "mode": "NULLABLE",
+      "name": "myOptionalTime",
+      "type": "TIME"
+    },
+    {
+      "mode": "NULLABLE",
+      "name": "myOptionalBytes",
+      "type": "BYTES"
+    },
+    {
+      "mode": "NULLABLE",
+      "name": "myOptionalFloat",
+      "type": "FLOAT"
+    },
+    {
+      "mode": "NULLABLE",
+      "name": "myOptionalLong",
+      "type": "INTEGER"
     }
   ]
   EOF
@@ -79,14 +109,39 @@ resource "google_bigquery_table" "required_record" {
       "type": "TIMESTAMP"
     },
     {
-      "mode": "NULLABLE",
-      "name": "myOptionalBoolean",
+      "mode": "REQUIRED",
+      "name": "myRequiredBoolean",
       "type": "BOOLEAN"
     },
     {
       "mode": "REQUIRED",
-      "name": "myRequiredBoolean",
-      "type": "BOOLEAN"
+      "name": "myRequiredNumeric",
+      "type": "NUMERIC"
+    },
+    {
+      "mode": "REQUIRED",
+      "name": "myRequiredDouble",
+      "type": "FLOAT"
+    },
+    {
+      "mode": "REQUIRED",
+      "name": "myRequiredTime",
+      "type": "TIME"
+    },
+    {
+      "mode": "REQUIRED",
+      "name": "myRequiredBytes",
+      "type": "BYTES"
+    },
+    {
+      "mode": "REQUIRED",
+      "name": "myRequiredFloat",
+      "type": "FLOAT"
+    },
+    {
+      "mode": "REQUIRED",
+      "name": "myRequiredLong",
+      "type": "INTEGER"
     }
   ]
   EOF

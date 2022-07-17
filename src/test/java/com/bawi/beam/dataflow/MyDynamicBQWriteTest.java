@@ -26,8 +26,23 @@ public class MyDynamicBQWriteTest implements Serializable {
         PCollection<TableRowWithSchema> pCollection = pipeline.apply(new MyDynamicBQWriteJob.MyDynamicBQWritePTransform());
 
         PAssert.that(pCollection).satisfies(new MatchesFunction(
-                Map.of("optional_record", Set.of("{\"myOptionalString\":\"abc\"}"),
-                        "required_record", Set.of("{\"myRequiredString\":\"abc\",\"myRequiredInt\":\"123\",\"myRequiredDate\":\"2017-01-01\",\"myRequiredTimestamp\":\"2022-03-20 03:41:42.123000 UTC\",\"myRequiredBoolean\":true}"))));
+                Map.of("optional_record",
+                        Set.of("{\"myOptionalString\":\"abc\"}"),
+                        "required_record",
+                        Set.of("{" +
+                                "\"myRequiredString\":\"abc\"," +
+                                "\"myRequiredInt\":\"123\"," +
+                                "\"myRequiredDate\":\"2017-01-01\"," +
+                                "\"myRequiredTimestamp\":\"2022-03-20 03:41:42.123000 UTC\"," +
+                                "\"myRequiredBoolean\":true," +
+                                "\"myRequiredNumeric\":\"1.230000000\"," +
+                                "\"myRequiredDouble\":4.56," +
+                                "\"myRequiredTime\":\"12:34:56.789\"," +
+                                "\"myRequiredBytes\":\"YWJjMTIz\"," +
+                                "\"myRequiredFloat\":7.89," +
+                                "\"myRequiredLong\":\"567\"" +
+                                "}"
+                        ))));
 
         pipeline.run().waitUntilFinish();
     }

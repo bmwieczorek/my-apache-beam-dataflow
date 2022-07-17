@@ -35,10 +35,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.RoundingMode;
+import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
 public class MyDynamicBQWriteJob {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyDynamicBQWriteJob.class);
@@ -52,21 +58,48 @@ public class MyDynamicBQWriteJob {
             Schema optionalAvroSchema = SchemaBuilder.record("optional_record")
                     .fields()
                     .optionalString("myOptionalString")
-//                .requiredInt("myOptionalInt")
+
+                    // int type needs to saved as avro long to be mapped to INTEGER/INT64 in BQ
                     .optionalLong("myOptionalInt")
+
+                    // date stored as string needs to saved as avro int with date logical type to be mapped to DATE in BQ
                     .name("myOptionalDate").type().unionOf().nullType().and().type(LogicalTypes.date().addToSchema(Schema.create(Schema.Type.INT))).endUnion().noDefault()
+
+                    // timestamp stored as string needs to saved as avro long with timestampMicros logic type to be mapped to TIMESTAMP in BQ
                     .name("myOptionalTimestamp").type().unionOf().nullType().and().type(LogicalTypes.timestampMicros().addToSchema(Schema.create(Schema.Type.LONG))).endUnion().noDefault()
                     .optionalBoolean("myOptionalBoolean")
+
+                    // double type needs to saved to as avro bytes with decimal logical type to be mapped to NUMERIC in BQ
+                    .name("myOptionalNumeric").type().unionOf().nullType().and().type(LogicalTypes.decimal(38, 9).addToSchema(Schema.create(Schema.Type.BYTES))).endUnion().noDefault()
+
+                    // double type will be mapped to FLOAT/FLOAT64 in BQ
+                    .optionalDouble("myOptionalDouble")
+
+                    // time stored as string needs to saved as avro long with timeMicros logic type to be mapped to TIME in BQ
+                    .name("myOptionalTime").type().unionOf().nullType().and().type(LogicalTypes.timeMicros().addToSchema(Schema.create(Schema.Type.LONG))).endUnion().noDefault()
+
+                    // bytes are converted to ByteBuffer and then to base64 encoded string stores as BYTES in BQ, queried as SELECT SAFE_CONVERT_BYTES_TO_STRING(myRequiredBytes)
+                    .optionalBytes("myOptionalBytes")
+
+                    // float needs to be saved as avro double to be mapped to FLOAT/FLOAT64 in BQ
+                    .optionalDouble("myOptionalFloat")
+
+                    .optionalLong("myOptionalLong")
                     .endRecord();
 
             Schema requiredAvroSchema = SchemaBuilder.record("required_record")
                     .fields()
                     .requiredString("myRequiredString")
-//                .requiredInt("myRequiredInt")
                     .requiredLong("myRequiredInt")
                     .name("myRequiredDate").type(LogicalTypes.date().addToSchema(Schema.create(Schema.Type.INT))).noDefault()
-                    .name("myRequiredTimestamp").type(LogicalTypes.timestampMillis().addToSchema(Schema.create(Schema.Type.LONG))).noDefault()
+                    .name("myRequiredTimestamp").type(LogicalTypes.timestampMicros().addToSchema(Schema.create(Schema.Type.LONG))).noDefault()
                     .requiredBoolean("myRequiredBoolean")
+                    .name("myRequiredNumeric").type(LogicalTypes.decimal(38, 9).addToSchema(Schema.create(Schema.Type.BYTES))).noDefault()
+                    .requiredDouble("myRequiredDouble")
+                    .name("myRequiredTime").type(LogicalTypes.timeMicros().addToSchema(Schema.create(Schema.Type.LONG))).noDefault()
+                    .requiredBytes("myRequiredBytes")
+                    .requiredDouble("myRequiredFloat")
+                    .requiredLong("myRequiredLong")
                     .endRecord();
 
             LOGGER.info("optionalAvroSchema={}", optionalAvroSchema.toString(true));
@@ -84,20 +117,9 @@ public class MyDynamicBQWriteJob {
             Schema avroSchema = avroSchemaMapping.get(key);
             GenericRecord record = new GenericData.Record(avroSchema);
 
-            new ObjectMapper().<Map<String, Object>>readValue(json, new TypeReference<>(){}).forEach((k, v) -> {
-                Schema.Field field = avroSchema.getField(k);
-                Schema fieldSchema = field.schema();
-                Schema.Type type = fieldSchema.getType();
-                LogicalType logicalType = fieldSchema.getLogicalType();
-                switch (type) {
-                    case INT:
-                        v = LogicalTypes.date().equals(logicalType) ? (int) LocalDate.parse((String) v).toEpochDay() : v;
-                        break;
-                    case LONG:
-                        v = LogicalTypes.timestampMillis().equals(logicalType) || LogicalTypes.timestampMicros().equals(logicalType)
-                                ? Instant.parse((String) v).toEpochMilli() * 1000 : (long) (int) v;
-                }
-                record.put(k, v);
+            new ObjectMapper().<Map<String, Object>>readValue(json, new TypeReference<>(){}).forEach((String fieldName, Object value) -> {
+                value = convertValue(value, avroSchema.getField(fieldName));
+                record.put(fieldName, value);
             });
 
             TableSchema tableSchema = AvroToBigQuerySchemaConverter.convert(record.getSchema());
@@ -112,41 +134,55 @@ public class MyDynamicBQWriteJob {
             LOGGER.info("tableRowWithSchema={}", tableRowWithSchema);
             outputReceiver.output(tableRowWithSchema);
         }
+
+        private Object convertValue(Object value, Schema.Field field) {
+            Schema fieldSchema = field.schema();
+            Schema.Type type = fieldSchema.getType();
+            LogicalType logicalType = fieldSchema.getLogicalType();
+            switch (type) {
+                case INT:
+                    value = LogicalTypes.date().equals(logicalType) ? (int) LocalDate.parse((String) value).toEpochDay() : value;
+                    break;
+                case LONG:
+                    value = LogicalTypes.timestampMicros().equals(logicalType) || LogicalTypes.timestampMillis().equals(logicalType) ?
+                            Instant.parse((String) value).toEpochMilli() * 1000 :
+                            LogicalTypes.timeMicros().equals(logicalType) || LogicalTypes.timeMillis().equals(logicalType) ?
+                                    LocalTime.parse((String) value).toNanoOfDay() / 1000 :
+                                    ((Number) value).longValue();
+                    break;
+                case BYTES:
+                    value = LogicalTypes.decimal(38, 9).equals(logicalType) ? parseNumeric((double) value) : ByteBuffer.wrap(((String) value).getBytes());
+            }
+            return value;
+        }
+
+        private ByteBuffer parseNumeric(double d) {
+            BigDecimal bigDecimal = BigDecimal.valueOf(d).setScale(9, RoundingMode.UNNECESSARY);
+            BigInteger bigInteger = bigDecimal.unscaledValue();
+            return ByteBuffer.wrap(bigInteger.toByteArray());
+        }
     }
 
     static class MyDynamicBQWritePTransform extends PTransform<PBegin, PCollection<TableRowWithSchema>> {
 
         @Override
         public PCollection<TableRowWithSchema> expand(PBegin input) {
-/*
-            GenericRecord optionalRecord = new GenericData.Record(optionalAvroSchema);
-            optionalRecord.put("myOptionalString", "abc");
-
-            LOGGER.info("optionalRecord={}", optionalRecord);
-
-
-            Schema requiredAvroSchema = SchemaBuilder.record("required_record")
-                    .fields()
-                    .optionalString("myRequiredString")
-//                .requiredInt("myRequiredInt")
-                    .requiredLong("myRequiredInt")
-                    .name("myRequiredDate").type(LogicalTypes.date().addToSchema(Schema.create(Schema.Type.INT))).noDefault()
-                    .name("myRequiredTimestamp").type(LogicalTypes.timestampMillis().addToSchema(Schema.create(Schema.Type.LONG))).noDefault()
-                    .endRecord();
-
-
-            GenericRecord requiredRecord = new GenericData.Record(requiredAvroSchema);
-            requiredRecord.put("myRequiredString", "abc");
-//        requiredRecord.put("myRequiredInt", 123);
-            requiredRecord.put("myRequiredInt", 123L);
-            requiredRecord.put("myRequiredDate", (int) LocalDate.parse("2017-01-01").toEpochDay());
-            requiredRecord.put("myRequiredTimestamp", Instant.parse("2022-03-20T03:41:42.123Z").toEpochMilli() * 1000);
-
-            LOGGER.info("requiredRecord={}", requiredRecord);*/
 
             return input.apply(Create.of(
                             KV.of("optional_record", "{\"myOptionalString\": \"abc\"}"),
-                            KV.of("required_record", "{\"myRequiredString\": \"abc\", \"myRequiredInt\": 123, \"myRequiredDate\": \"2017-01-01\", \"myRequiredTimestamp\": \"2022-03-20T03:41:42.123Z\", \"myRequiredBoolean\": true}")
+                            KV.of("required_record", "{" +
+                                    "\"myRequiredString\": \"abc\", " +
+                                    "\"myRequiredInt\": 123, " +
+                                    "\"myRequiredDate\": \"2017-01-01\", " +
+                                    "\"myRequiredTimestamp\": \"2022-03-20T03:41:42.123Z\", " +
+                                    "\"myRequiredBoolean\": true, " +
+                                    "\"myRequiredNumeric\": 1.23, " +
+                                    "\"myRequiredDouble\": 4.56, " +
+                                    "\"myRequiredTime\": \"12:34:56.789\", " +
+                                    "\"myRequiredBytes\": \"abc123\", " +
+                                    "\"myRequiredFloat\": 7.89, " +
+                                    "\"myRequiredLong\": 567" +
+                                    "}")
                         )
                     )
                     .apply(ParDo.of(new MyDoFn())).setCoder(TableRowWithSchemaCoder.of());
@@ -165,6 +201,15 @@ public class MyDynamicBQWriteJob {
     }
 
     public static void main(String[] args) {
+        String[] mainArgs = System.getenv("GCP_JAVA_DATAFLOW_RUN_OPTS").split(" +");
+        String[] additionalArgs = {
+                "--runner=DataflowRunner",
+                "--stagingLocation=gs://" + System.getenv("GCP_PROJECT") + "-" + System.getenv("GCP_OWNER") + "/staging",
+                "--bqLoadProjectId=" + System.getenv("GCP_PROJECT"),
+                "--dataset=" + System.getenv("GCP_OWNER") + "_" + MyDynamicBQWriteJob.class.getSimpleName().toLowerCase()
+        };
+        args = Stream.of(mainArgs, additionalArgs).flatMap(Stream::of).toArray(String[]::new);
+
         MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).as(MyPipelineOptions.class);
         Pipeline pipeline = Pipeline.create(options);
 
