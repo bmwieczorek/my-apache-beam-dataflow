@@ -44,7 +44,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Stream;
 
 public class MyDynamicBQWriteJob {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyDynamicBQWriteJob.class);
@@ -201,14 +200,8 @@ public class MyDynamicBQWriteJob {
     }
 
     public static void main(String[] args) {
-        String[] mainArgs = System.getenv("GCP_JAVA_DATAFLOW_RUN_OPTS").split(" +");
-        String[] additionalArgs = {
-                "--runner=DataflowRunner",
-                "--stagingLocation=gs://" + System.getenv("GCP_PROJECT") + "-" + System.getenv("GCP_OWNER") + "/staging",
-                "--bqLoadProjectId=" + System.getenv("GCP_PROJECT"),
-                "--dataset=" + System.getenv("GCP_OWNER") + "_" + MyDynamicBQWriteJob.class.getSimpleName().toLowerCase()
-        };
-        args = Stream.of(mainArgs, additionalArgs).flatMap(Stream::of).toArray(String[]::new);
+        args = DataflowUtils.updateDataflowArgs(args, "--bqLoadProjectId=" + System.getenv("GCP_PROJECT"),
+                "--dataset=" + System.getenv("GCP_OWNER") + "_" + MyDynamicBQWriteJob.class.getSimpleName().toLowerCase());
 
         MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).as(MyPipelineOptions.class);
         Pipeline pipeline = Pipeline.create(options);

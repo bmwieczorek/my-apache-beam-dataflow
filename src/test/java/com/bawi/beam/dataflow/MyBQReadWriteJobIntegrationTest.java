@@ -4,6 +4,7 @@ import com.google.cloud.bigquery.BigQueryOptions;
 import com.google.cloud.bigquery.QueryJobConfiguration;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,23 +47,28 @@ public class MyBQReadWriteJobIntegrationTest {
         int bigQueryProcessStatus = bigQueryProcess.waitFor();
         Assert.assertEquals("bigQueryProcess should exit terraform with 0 status code", 0, bigQueryProcessStatus);
 
+        LOGGER.info("waiting 1 mins for terraform bq apply to finish");
+        Thread.sleep(60 * 1000);
+
         // then
         long totalRows = BigQueryOptions.getDefaultInstance().getService().query(QueryJobConfiguration.of(query)).getTotalRows();
         Assert.assertEquals("Should match initial row count for pre-loaded data", initialPreLoadedRowCount, totalRows);
 
-        Process dataflowTemplateJobProcess = runTerraformInfrastructureSetupAsBashProcess("terraform apply -auto-approve -target=module.dataflow_classic_template_job");
+//        Process dataflowTemplateJobProcess = runTerraformInfrastructureSetupAsBashProcess("terraform apply -auto-approve -target=module.dataflow_classic_template_job");
+        Process dataflowTemplateJobProcess = runTerraformInfrastructureSetupAsBashProcess("terraform apply -auto-approve -target=module.dataflow_classic_template_job -target=module.dashboards -target=module.alerting");
         logProcess(dataflowTemplateJobProcess);
         int dataflowTemplateJobStatus = dataflowTemplateJobProcess.waitFor();
 
         Assert.assertEquals("dataflowTemplateJobProcess should exit terraform with 0 status code", 0, dataflowTemplateJobStatus);
 
-        long expectedRowCount = waitUpTo10MinsForDataflowJobToPopulateBiqQuery(query);
+        long expectedRowCount = waitUpTo5MinsForDataflowJobToPopulateBiqQuery(query);
         Assert.assertEquals("Dataflow job should create 3 additional rows in BigQuery", (initialPreLoadedRowCount + 3), expectedRowCount);
 
         LOGGER.info("waiting 3 mins for job to finish");
         Thread.sleep(180 * 1000);
     }
 
+    @Before
     @After
     public void cleanUp() throws IOException, InterruptedException {
         Process destroyProcess = runTerraformInfrastructureSetupAsBashProcess("terraform destroy -auto-approve");
@@ -78,10 +84,10 @@ public class MyBQReadWriteJobIntegrationTest {
         return processBuilder.start();
     }
 
-    private long waitUpTo10MinsForDataflowJobToPopulateBiqQuery(String query) throws InterruptedException {
+    private long waitUpTo5MinsForDataflowJobToPopulateBiqQuery(String query) throws InterruptedException {
         long totalRows = 0;
 
-        for (int i = 1; i <= 60; i++) {
+        for (int i = 1; i <= 30; i++) {
             totalRows = BigQueryOptions.getDefaultInstance().getService().query(QueryJobConfiguration.of(query)).getTotalRows();
             LOGGER.info("Returned total rows count: {}", totalRows);
             if (totalRows > 4) {
