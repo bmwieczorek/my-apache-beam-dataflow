@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 
-public class AvroReadTest implements Serializable {
+public class ReadAvroFileTest implements Serializable {
 
     @Rule
     public final transient TestPipeline pipeline = TestPipeline.create();
