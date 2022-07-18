@@ -14,10 +14,8 @@ import org.apache.beam.sdk.io.gcp.bigquery.AvroWriteRequest;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.options.*;
 import org.apache.beam.sdk.transforms.Create;
-import org.apache.beam.sdk.transforms.FlatMapElements;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.values.TypeDescriptor;
-import org.apache.beam.sdk.values.TypeDescriptors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,25 +87,42 @@ gcloud compute ssh --project=$PROJECT --zone=$WORKER_ZONE $WORKER_NAME --ssh-fla
  */
 
     public static void main(String[] args) {
-        MyPipelineOptions pipelineOptions = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
+        args = DataflowUtils.updateDataflowArgs(args,
+                "--profilingAgentConfiguration={\"APICurated\":true}",
+                "--dumpHeapOnOOM=true",
+                "--diskSizeGb=200",
+                "--saveHeapDumpsToGcsPath=gs://" + System.getenv("GCP_PROJECT") + "-" + System.getenv("GCP_OWNER") + "/oom",
+                "--maxNumWorkers=1",
+                "--workerMachineType=n1-standard-1"
+//                "--dataflowServiceOptions=enable_google_cloud_profiler"
+        );
+        MyPipelineOptions myPipelineOptions = PipelineOptionsFactory.fromArgs(args).as(MyPipelineOptions.class);
+//        DataflowPipelineOptions pipelineOptions = DataflowRunnerUtils.createDataflowRunnerOptions(myPipelineOptions,MyOOMJob.class.getSimpleName() + 283);
 //        DataflowProfilingOptions.DataflowProfilingAgentConfiguration profilingConf = new DataflowProfilingOptions.DataflowProfilingAgentConfiguration();
 //        profilingConf.put("APICurated", true);
 //        pipelineOptions.setProfilingAgentConfiguration(profilingConf);
-        Pipeline pipeline = Pipeline.create(pipelineOptions);
+//        pipelineOptions.setDumpHeapOnOOM(true);
+//        pipelineOptions.setDiskSizeGb(200);
+//        pipelineOptions.setSaveHeapDumpsToGcsPath("gs://mybucket-bartek/oom");
+//        pipelineOptions.setMaxNumWorkers(1);
+//        pipelineOptions.setWorkerMachineType("n1-standard-1");
+//        pipelineOptions.setDataflowServiceOptions(List.of("enable_google_cloud_profiler"));
+//        Pipeline pipeline = Pipeline.create(pipelineOptions);
+        Pipeline pipeline = Pipeline.create(myPipelineOptions);
 
-        ValueProvider.NestedValueProvider<List<Integer>, String> nestedValueProvider = ValueProvider.NestedValueProvider.of(pipelineOptions.getSequenceStartCommaEnd(), startCommaStop -> {
-            int start = Integer.parseInt(startCommaStop.substring(0, startCommaStop.indexOf(",")));
-            int end = Integer.parseInt(startCommaStop.substring(startCommaStop.indexOf(",") + 1));
-            LOGGER.debug("DEBUG: Sequence start={}, end={}", start, end);
-            LOGGER.info("INFO: Sequence start={}, end={}", start, end);
-            return IntStream.rangeClosed(start, end).boxed().collect(Collectors.toList());
-        });
+//        ValueProvider.NestedValueProvider<List<Integer>, String> nestedValueProvider = ValueProvider.NestedValueProvider.of(pipelineOptions.getSequenceStartCommaEnd(), startCommaStop -> {
+//            int start = Integer.parseInt(startCommaStop.substring(0, startCommaStop.indexOf(",")));
+//            int end = Integer.parseInt(startCommaStop.substring(startCommaStop.indexOf(",") + 1));
+//            LOGGER.debug("DEBUG: Sequence start={}, end={}", start, end);
+//            LOGGER.info("INFO: Sequence start={}, end={}", start, end);
+//            return IntStream.rangeClosed(start, end).boxed().collect(Collectors.toList());
+//        });
 
         ListCoder<Integer> integerListCoder = ListCoder.of(SerializableCoder.of(Integer.class));
 
-        //pipeline.apply(Create.of(IntStream.rangeClosed(10000, 25000).boxed().collect(Collectors.toList())))
-        pipeline.apply(Create.ofProvider(nestedValueProvider, integerListCoder))
-                .apply(FlatMapElements.into(TypeDescriptors.integers()).via(iter -> iter))
+        pipeline.apply(Create.of(IntStream.rangeClosed(100, 250000).boxed().collect(Collectors.toList())))
+//        pipeline.apply(Create.ofProvider(nestedValueProvider, integerListCoder))
+//                .apply(FlatMapElements.into(TypeDescriptors.integers()).via(iter -> iter))
 
                 .apply(MapElements.into(TypeDescriptor.of(GenericRecord.class)).via(i -> {
                     GenericData.Record record = new GenericData.Record(SCHEMA);
@@ -140,7 +155,8 @@ gcloud compute ssh --project=$PROJECT --zone=$WORKER_ZONE $WORKER_NAME --ssh-fla
                 .apply(BigQueryIO.<GenericRecord>write()
                         .withAvroFormatFunction(AvroWriteRequest::getElement)
                         .withAvroSchemaFactory(qTableSchema -> SCHEMA)
-                        .to(pipelineOptions.getTable())
+//                        .to(pipelineOptions.getTable())
+                        .to("bartek_dataset.myoomtest_table")
                         .useAvroLogicalTypes()
                         .withSchema(AvroToBigQuerySchemaConverter.convert(SCHEMA))
                         .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
