@@ -82,6 +82,17 @@
                     <excludes>
                         <exclude>**/*IntegrationTest</exclude>
                     </excludes>
+
+                    <!-- get rid of WARNING using add-opens -->
+<!--                    WARNING: An illegal reflective access operation has occurred-->
+<!--                    WARNING: Illegal reflective access by org.apache.hadoop.security.authentication.util.KerberosUtil (file: ... /.m2/repository/org/apache/hadoop/hadoop-auth/2.10.1/hadoop-auth-2.10.1.jar) to method sun.security.krb5.Config.getInstance()-->
+<!--                    WARNING: Please consider reporting this to the maintainers of org.apache.hadoop.security.authentication.util.KerberosUtil-->
+<!--                    WARNING: Use &#45;&#45;illegal-access=warn to enable warnings of further illegal reflective access operations-->
+<!--                    WARNING: All illegal access operations will be denied in a future release-->
+                    <argLine>
+                        --add-opens=java.security.jgss/sun.security.krb5=ALL-UNNAMED
+                    </argLine>
+
                 </configuration>
             </plugin>
         </plugins>
