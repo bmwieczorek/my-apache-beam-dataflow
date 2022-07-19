@@ -179,6 +179,8 @@
         </dependency>
 
         <!-- json to generic record conversion -->
+<!--        JsonAvroConverter avroConverter = new JsonAvroConverter();-->
+<!--        GenericData.Record r = avroConverter.convertToGenericDataRecord(s.getBytes(), avroSchema);-->
         <!--        <dependency>-->
         <!--            <groupId>tech.allegro.schema.json2avro</groupId>-->
         <!--            <artifactId>converter</artifactId>-->
