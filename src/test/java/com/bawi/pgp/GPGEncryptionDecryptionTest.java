@@ -16,6 +16,15 @@ import java.security.Security;
 import java.security.SignatureException;
 
 public class GPGEncryptionDecryptionTest {
+
+    static final String PUBLIC_KEY = "-----BEGIN PGP PUBLIC KEY BLOCK-----\n" +
+            // ...
+            "-----END PGP PUBLIC KEY BLOCK-----";
+
+    static final String PRIVATE_KEY = "-----BEGIN PGP PRIVATE KEY BLOCK-----\n" +
+            // ...
+            "-----END PGP PRIVATE KEY BLOCK-----";
+
     @Test
     public void test() throws IOException, PGPException, NoSuchProviderException, SignatureException, NoSuchAlgorithmException {
         // given
@@ -36,8 +45,8 @@ public class GPGEncryptionDecryptionTest {
         InMemoryKeyring keyringConfig =
                 KeyringConfigs.forGpgExportedKeys(KeyringConfigCallbacks.withPassword("bartek"));
 
-        keyringConfig.addPublicKey(publicKey.getBytes());
-        keyringConfig.addSecretKey(privateKey.getBytes());
+        keyringConfig.addPublicKey(PUBLIC_KEY.getBytes());
+        keyringConfig.addSecretKey(PRIVATE_KEY.getBytes());
 
         String plainText = "hello world";
         byte[] encryptedBytes;
@@ -64,7 +73,7 @@ public class GPGEncryptionDecryptionTest {
 //        decrypt(keyringConfig, new FileInputStream("a.gpg"), new FileOutputStream("a_decrypted.txt"));
     }
 
-    private void encrypt(InMemoryKeyring keyringConfig, InputStream inputStream, OutputStream outputStream, String recipient) throws IOException, PGPException, NoSuchAlgorithmException, SignatureException, NoSuchProviderException {
+    public static void encrypt(InMemoryKeyring keyringConfig, InputStream inputStream, OutputStream outputStream, String recipient) throws IOException, PGPException, NoSuchAlgorithmException, SignatureException, NoSuchProviderException {
         try (
                 BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);
 
@@ -81,7 +90,7 @@ public class GPGEncryptionDecryptionTest {
         }
     }
 
-    private void decrypt(InMemoryKeyring keyringConfig, InputStream encryptedInputStream, OutputStream outputStream)
+    public static void decrypt(InMemoryKeyring keyringConfig, InputStream encryptedInputStream, OutputStream outputStream)
             throws IOException, NoSuchProviderException {
         try (
                 BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);
