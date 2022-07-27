@@ -14,11 +14,11 @@ import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.TypeDescriptor;
-import org.apache.commons.io.FilenameUtils;
 import org.bouncycastle.openpgp.PGPException;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchProviderException;
 
@@ -125,7 +125,7 @@ public class PGPDecryptJob {
                 decrypt(keyringConfig, encryptedInputStream, decryptedOutputStream);
                 decrypted = decryptedOutputStream.toByteArray();
             }
-            outputReceiver.output(FilenameUtils.getName(kv.getKey()) + "," + new String(decrypted));
+            outputReceiver.output(new File(kv.getKey()).getName() + "," + new String(decrypted));
         }
     }
 
