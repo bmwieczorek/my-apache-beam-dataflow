@@ -17,3 +17,6 @@ target
 terraform.tfstate*
 *.tfbackend
 /terraform/MyPubsubToGCSJob/dev.tfvars
+gpg/*.gpg
+gpg/*.asc
+gpg/*.txt
