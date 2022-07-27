@@ -15,6 +15,7 @@ import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubMessage;
 import org.apache.beam.sdk.metrics.Distribution;
 import org.apache.beam.sdk.metrics.Metrics;
+import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.Validation;
 import org.apache.beam.sdk.options.ValueProvider;
@@ -39,36 +40,34 @@ import java.util.UUID;
 
 public class MyPubsubToGCSJob {
 
-    public interface MyPipelineOptions extends DataflowPipelineOptions {
-//    public interface MyPipelineOptions extends PipelineOptions {
+//    public interface MyPipelineOptions extends DataflowPipelineOptions {
+    public interface MyPipelineOptions extends PipelineOptions {
+        @Validation.Required
+        ValueProvider<String> getProjectId();
+        void setProjectId(ValueProvider<String> value);
+
 //        @Validation.Required
 //        String getSubscription();
-//
 //        void setSubscription(String value);
 
         @Validation.Required
         ValueProvider<String> getSubscription();
-
         void setSubscription(ValueProvider<String> value);
 
 //        @Validation.Required
 //        String getOutput();
-//
 //        void setOutput(String value);
 
         @Validation.Required
         ValueProvider<String> getOutput();
-
         void setOutput(ValueProvider<String> value);
 
 //        @Validation.Required
 //        String getTemp();
-//
 //        void setTemp(String value);
 
         @Validation.Required
         ValueProvider<String> getTemp();
-
         void setTemp(ValueProvider<String> value);
 
         // DataflowPipelineOptions
@@ -124,57 +123,12 @@ gcloud dataflow flex-template run $APP-$OWNER \
     private static final Schema SCHEMA = SchemaBuilder.record("record").fields().requiredString(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID).endRecord();
     private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("'year='yyyy/'month'=MM/'day'=dd/'hour'=HH/'minute'=mm");
 
-
-    static class ConcatBodyAttrAndMsgIdFn extends DoFn<PubsubMessage, GenericRecord> {
-        private static final String CLASS_NAME = ConcatBodyAttrAndMsgIdFn.class.getSimpleName();
-        private static final Distribution PUBSUB_MESSAGE_SIZE_BYTES = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_pubsubMessageSizeBytes");
-        private static final Distribution PROCESSING_TIME_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_processingTimeMs");
-        private static final Distribution INPUT_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_inputDataFreshnessMs");
-        private static final Distribution CUSTOM_PUBLISH_TIME_INPUT_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_customPtInputDataFreshnessMs");
-        private static final Distribution CUSTOM_EVENT_TIME_INPUT_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_customEtInputDataFreshnessMs");
-        private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("yyyy-MM-dd--HH-mm");
-        static final String PUBLISH_TIME_ATTRIBUTE = "pt";
-        static final String EVENT_TIME_ATTRIBUTE = "et";
-
-        @ProcessElement
-        public void process(@Element PubsubMessage pubsubMessage, @Timestamp Instant timestamp, OutputReceiver<GenericRecord> outputReceiver, BoundedWindow window, ProcessContext ctx) {
-            long startMs = System.currentTimeMillis();
-            Metrics.counter(CLASS_NAME, "inputRecordCount_" + FORMATTER.print(startMs)).inc();
-            PUBSUB_MESSAGE_SIZE_BYTES.update(pubsubMessage.getPayload() != null ? pubsubMessage.getPayload().length : 0);
-            DataflowPipelineOptions pipelineOptions = (DataflowPipelineOptions) ctx.getPipelineOptions();
-            List<String> experiments = pipelineOptions.getExperiments();
-            LOGGER.info("experiments={}", experiments);
-            long inputDataFreshnessMs = startMs - timestamp.getMillis();
-            String publishTimeAttribute = pubsubMessage.getAttribute(PUBLISH_TIME_ATTRIBUTE);
-            String eventTimeAttribute = pubsubMessage.getAttribute(EVENT_TIME_ATTRIBUTE);
-            long customPublishTimeInputDataFreshnessMs = publishTimeAttribute != null ? (startMs - Instant.parse(publishTimeAttribute).getMillis()) : -1;
-            long customEventTimeInputDataFreshnessMs = eventTimeAttribute != null ? (startMs - Instant.parse(eventTimeAttribute).getMillis()) : -1;
-
-            GenericData.Record record = doProcess(pubsubMessage, inputDataFreshnessMs, customPublishTimeInputDataFreshnessMs, customEventTimeInputDataFreshnessMs);
-            String windowString = window instanceof GlobalWindow ? "GlobalWindow " + window.maxTimestamp() : window.toString();
-            LOGGER.info("record {} window {} {}", record, windowString, getMessage());
-            outputReceiver.output(record);
-
-            if (inputDataFreshnessMs > 0) INPUT_DATA_FRESHNESS_MS.update(inputDataFreshnessMs);
-            if (customPublishTimeInputDataFreshnessMs > 0) CUSTOM_PUBLISH_TIME_INPUT_DATA_FRESHNESS_MS.update(customPublishTimeInputDataFreshnessMs);
-            if (customEventTimeInputDataFreshnessMs > 0) CUSTOM_EVENT_TIME_INPUT_DATA_FRESHNESS_MS.update(customEventTimeInputDataFreshnessMs);
-
-            long endTimeMs = System.currentTimeMillis();
-            PROCESSING_TIME_MS.update(endTimeMs - startMs);
-        }
-
-        private GenericData.Record doProcess(PubsubMessage pubsubMessage, long inputDataFreshnessMs, long customPublishTimeInputDataFreshnessMs, long customEventTimeInputDataFreshnessMs) {
-            String body = new String(pubsubMessage.getPayload());
-            GenericData.Record record = new GenericData.Record(SCHEMA);
-            String value = "body=" + body + ", attributes=" + new TreeMap<>(pubsubMessage.getAttributeMap()) + ", messageId=" + pubsubMessage.getMessageId()
-                    + ", inputDataFreshnessMs=" + inputDataFreshnessMs + ", customInputDataFreshnessMs=" + customPublishTimeInputDataFreshnessMs
-                    + ", customEventTimeInputDataFreshnessMs=" + customEventTimeInputDataFreshnessMs;
-            record.put(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID, value);
-            return record;
-        }
-    }
-
     public static void main(String[] args) {
+        args = DataflowUtils.updateDataflowArgs(args,
+                "--projectId=" + System.getenv("GCP_PROJECT")
+                // add more
+        );
+
         MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
 //        options.setAutoscalingAlgorithm(DataflowPipelineWorkerPoolOptions.AutoscalingAlgorithmType.THROUGHPUT_BASED);
         Pipeline readingPipeline = Pipeline.create(options);
@@ -260,13 +214,64 @@ gcloud dataflow flex-template run $APP-$OWNER \
                         .withSchema(AvroToBigQuerySchemaConverter.convert(SCHEMA))
                         .withAutoSharding()
                         .withTriggeringFrequency(Duration.standardMinutes(1))
-                        .withLoadJobProjectId(options.getProject())
+                        .withLoadJobProjectId(options.getProjectId())
                         .withMethod(BigQueryIO.Write.Method.FILE_LOADS)
                         .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
                         .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED));
 
         readingPipeline.run();
     }
+
+
+    static class ConcatBodyAttrAndMsgIdFn extends DoFn<PubsubMessage, GenericRecord> {
+        private static final String CLASS_NAME = ConcatBodyAttrAndMsgIdFn.class.getSimpleName();
+        private static final Distribution PUBSUB_MESSAGE_SIZE_BYTES = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_pubsubMessageSizeBytes");
+        private static final Distribution PROCESSING_TIME_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_processingTimeMs");
+        private static final Distribution INPUT_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_inputDataFreshnessMs");
+        private static final Distribution CUSTOM_PUBLISH_TIME_INPUT_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_customPtInputDataFreshnessMs");
+        private static final Distribution CUSTOM_EVENT_TIME_INPUT_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_customEtInputDataFreshnessMs");
+        private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("yyyy-MM-dd--HH-mm");
+        static final String PUBLISH_TIME_ATTRIBUTE = "pt";
+        static final String EVENT_TIME_ATTRIBUTE = "et";
+
+        @ProcessElement
+        public void process(@Element PubsubMessage pubsubMessage, @Timestamp Instant timestamp, OutputReceiver<GenericRecord> outputReceiver, BoundedWindow window, ProcessContext ctx) {
+            long startMs = System.currentTimeMillis();
+            Metrics.counter(CLASS_NAME, "inputRecordCount_" + FORMATTER.print(startMs)).inc();
+            PUBSUB_MESSAGE_SIZE_BYTES.update(pubsubMessage.getPayload() != null ? pubsubMessage.getPayload().length : 0);
+            DataflowPipelineOptions pipelineOptions = (DataflowPipelineOptions) ctx.getPipelineOptions();
+            List<String> experiments = pipelineOptions.getExperiments();
+            LOGGER.info("experiments={}", experiments);
+            long inputDataFreshnessMs = startMs - timestamp.getMillis();
+            String publishTimeAttribute = pubsubMessage.getAttribute(PUBLISH_TIME_ATTRIBUTE);
+            String eventTimeAttribute = pubsubMessage.getAttribute(EVENT_TIME_ATTRIBUTE);
+            long customPublishTimeInputDataFreshnessMs = publishTimeAttribute != null ? (startMs - Instant.parse(publishTimeAttribute).getMillis()) : -1;
+            long customEventTimeInputDataFreshnessMs = eventTimeAttribute != null ? (startMs - Instant.parse(eventTimeAttribute).getMillis()) : -1;
+
+            GenericData.Record record = doProcess(pubsubMessage, inputDataFreshnessMs, customPublishTimeInputDataFreshnessMs, customEventTimeInputDataFreshnessMs);
+            String windowString = window instanceof GlobalWindow ? "GlobalWindow " + window.maxTimestamp() : window.toString();
+            LOGGER.info("record {} window {} {}", record, windowString, getMessage());
+            outputReceiver.output(record);
+
+            if (inputDataFreshnessMs > 0) INPUT_DATA_FRESHNESS_MS.update(inputDataFreshnessMs);
+            if (customPublishTimeInputDataFreshnessMs > 0) CUSTOM_PUBLISH_TIME_INPUT_DATA_FRESHNESS_MS.update(customPublishTimeInputDataFreshnessMs);
+            if (customEventTimeInputDataFreshnessMs > 0) CUSTOM_EVENT_TIME_INPUT_DATA_FRESHNESS_MS.update(customEventTimeInputDataFreshnessMs);
+
+            long endTimeMs = System.currentTimeMillis();
+            PROCESSING_TIME_MS.update(endTimeMs - startMs);
+        }
+
+        private GenericData.Record doProcess(PubsubMessage pubsubMessage, long inputDataFreshnessMs, long customPublishTimeInputDataFreshnessMs, long customEventTimeInputDataFreshnessMs) {
+            String body = new String(pubsubMessage.getPayload());
+            GenericData.Record record = new GenericData.Record(SCHEMA);
+            String value = "body=" + body + ", attributes=" + new TreeMap<>(pubsubMessage.getAttributeMap()) + ", messageId=" + pubsubMessage.getMessageId()
+                    + ", inputDataFreshnessMs=" + inputDataFreshnessMs + ", customInputDataFreshnessMs=" + customPublishTimeInputDataFreshnessMs
+                    + ", customEventTimeInputDataFreshnessMs=" + customEventTimeInputDataFreshnessMs;
+            record.put(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID, value);
+            return record;
+        }
+    }
+
 
     private static String getMessage() {
         InetAddress localHostAddress = getLocalHostAddress();
