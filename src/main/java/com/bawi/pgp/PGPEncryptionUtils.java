@@ -54,7 +54,14 @@ public class PGPEncryptionUtils {
     public static KeyringConfig createKeyringConfigFromPrivateKeyAndPassphrase(byte[] privateKey, byte[] privateKeyPassphrase) throws IOException, PGPException {
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
         InMemoryKeyring keyringConfig = KeyringConfigs.forGpgExportedKeys(KeyringConfigCallbacks.withPassword(new String(privateKeyPassphrase)));
-//            keyringConfig.addPublicKey(PUBLIC_KEY.getBytes());
+        keyringConfig.addSecretKey(privateKey);
+        return keyringConfig;
+    }
+
+    public static KeyringConfig createKeyringConfigFromPublicKeyPrivateKeyAndPassphrase(byte[] publicKey, byte[] privateKey, byte[] privateKeyPassphrase) throws IOException, PGPException {
+        Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+        InMemoryKeyring keyringConfig = KeyringConfigs.forGpgExportedKeys(KeyringConfigCallbacks.withPassword(new String(privateKeyPassphrase)));
+        keyringConfig.addPublicKey(publicKey);
         keyringConfig.addSecretKey(privateKey);
         return keyringConfig;
     }
