@@ -148,29 +148,27 @@
         </dependency>
 
         <!-- ParquetIO -->
-<!--        <dependency>
+        <dependency>
             <groupId>org.apache.beam</groupId>
             <artifactId>beam-sdks-java-io-parquet</artifactId>
             <version>${beam.version}</version>
-        </dependency>-->
+        </dependency>
 
         <!-- required for ParquetIO.sink requiring runtime org.apache.hadoop.io.Writable -->
-<!--        <dependency>
+        <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
             <version>${hadoop.version}</version>
             <scope>runtime</scope>
-        </dependency>-->
+        </dependency>
 
         <!-- required for ParquetIO.read requiring runtime org.apache.hadoop.mapreduce.lib.input.FileInputFormat -->
-<!--        <dependency>
+        <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-mapreduce-client-core</artifactId>
             <version>${hadoop.version}</version>
             <scope>runtime</scope>
-        </dependency>-->
-
-
+        </dependency>
 
         <!-- Used for @AutoService(JvmInitializer.class) -->
         <dependency>
