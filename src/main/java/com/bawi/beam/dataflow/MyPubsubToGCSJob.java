@@ -5,7 +5,6 @@ import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.coders.AvroGenericCoder;
 import org.apache.beam.sdk.io.Compression;
@@ -33,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.NumberFormat;
-import java.util.List;
 import java.util.TreeMap;
 import java.util.UUID;
 
@@ -239,9 +237,9 @@ gcloud dataflow flex-template run $APP-$OWNER \
             long startMs = System.currentTimeMillis();
             Metrics.counter(CLASS_NAME, "inputRecordCount_" + FORMATTER.print(startMs)).inc();
             PUBSUB_MESSAGE_SIZE_BYTES.update(pubsubMessage.getPayload() != null ? pubsubMessage.getPayload().length : 0);
-            DataflowPipelineOptions pipelineOptions = (DataflowPipelineOptions) ctx.getPipelineOptions();
-            List<String> experiments = pipelineOptions.getExperiments();
-            LOGGER.info("experiments={}", experiments);
+//            DataflowPipelineOptions pipelineOptions = (DataflowPipelineOptions) ctx.getPipelineOptions();
+//            List<String> experiments = pipelineOptions.getExperiments();
+//            LOGGER.info("experiments={}", experiments);
             long inputDataFreshnessMs = startMs - timestamp.getMillis();
             String publishTimeAttribute = pubsubMessage.getAttribute(PUBLISH_TIME_ATTRIBUTE);
             String eventTimeAttribute = pubsubMessage.getAttribute(EVENT_TIME_ATTRIBUTE);
