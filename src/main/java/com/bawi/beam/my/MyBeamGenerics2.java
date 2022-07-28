@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 
 public class MyBeamGenerics2 {
     static class MyPCollection<T> {
-        private List<T> elements;
+        private final List<T> elements;
 
         public MyPCollection(List<T> elements) {
             this.elements = elements;
@@ -32,6 +32,7 @@ public class MyBeamGenerics2 {
     }
 
     static class MyCreate {
+        @SafeVarargs
         static <T> MyPTransform<MyPCollection<Void>, MyPCollection<T>> of(T t, T... tt) {
             List<T> list = new ArrayList<>();
             list.add(t);
@@ -57,7 +58,7 @@ public class MyBeamGenerics2 {
     }
 
     static class MyMapElements<In, Out> extends MyPTransform<MyPCollection<In>, MyPCollection<Out>> {
-        private Class<Out> clazz;
+        private final Class<Out> clazz;
 
         public MyMapElements(Class<Out> clazz) {
             this.clazz = clazz;

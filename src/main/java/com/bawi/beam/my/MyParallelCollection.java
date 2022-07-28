@@ -58,8 +58,8 @@ public class MyParallelCollection {
     }
 
     public static class MapElements <T, R> extends MyAbstractFunction<T, R> {
-        private Class<R> clazz;
-        private Function<T, R> function;
+        private final Class<R> clazz;
+        private final Function<T, R> function;
 
         public MapElements(Class<R> clazz, Function<T, R> function) {
             this.clazz = clazz;
@@ -108,8 +108,9 @@ public class MyParallelCollection {
     }
 
     private static <R> MyJavaEncoder<R> getEncoder(Class<R> clazz) {
-        MyJavaEncoder<?> encoder = encoders.get(clazz);
-        return (MyJavaEncoder<R>) encoder;
+        @SuppressWarnings("unchecked")
+        MyJavaEncoder<R> encoder = (MyJavaEncoder<R>) encoders.get(clazz);
+        return encoder;
     }
 
     static abstract class MyJavaEncoder<T> {
@@ -118,7 +119,7 @@ public class MyParallelCollection {
 
     static class MyJavaDataset<T> {
 
-        private Stream<T> elements;
+        private final Stream<T> elements;
 
         private MyJavaDataset(Stream<T> elements) {
             this.elements = elements;
@@ -140,7 +141,7 @@ public class MyParallelCollection {
         public <R> MyJavaDataset<R> map(MyAbstractFunction<T, R> function) {
             MyJavaEncoder<R> encoder = getOutputEncoder(function);
             Stream<R> stream = elements
-                    .map(element -> function.apply(element))
+                    .map(function::apply)
                     .map(encoder::encode);
             return new MyJavaDataset<>(stream);
         }
@@ -173,21 +174,25 @@ public class MyParallelCollection {
                     Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
                     System.out.println("function: " + function + " genericSuperclass actualTypeArguments=" + Arrays.asList(actualTypeArguments));
                     if (actualTypeArguments.length > 1) {
-                        return (Class<R>) actualTypeArguments[1];
+                        @SuppressWarnings("unchecked")
+                        Class<R> actualTypeArgument = (Class<R>) actualTypeArguments[1];
+                        return actualTypeArgument;
                     }
                 }
             }
             throw new IllegalArgumentException("Cannot determine actualTypeArguments for function " + function + ", genericSuperclass=" + genericSuperclass);
         }
         Type[] genericInterfaces = function.getClass().getGenericInterfaces();
-        if (genericInterfaces != null && genericInterfaces.length > 0) {
+        if (genericInterfaces.length > 0) {
             Type genericInterface = genericInterfaces[0];
             if (genericInterface instanceof ParameterizedType) {
                 ParameterizedType parameterizedType = (ParameterizedType) genericInterface;
                 Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
                 System.out.println("function: " + function + " genericInterfaces[0] actualTypeArguments=" + Arrays.asList(actualTypeArguments));
                 if (actualTypeArguments.length > 1) {
-                    return (Class<R>) actualTypeArguments[1];
+                    @SuppressWarnings("unchecked")
+                    Class<R> actualTypeArgument = (Class<R>) actualTypeArguments[1];
+                    return actualTypeArgument;
                 }
             }
         }
