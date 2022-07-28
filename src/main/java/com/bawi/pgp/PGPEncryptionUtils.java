@@ -8,10 +8,7 @@ import name.neuhalfen.projects.crypto.bouncycastle.openpgp.keys.keyrings.Keyring
 import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.util.io.Streams;
 
-import java.io.BufferedOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Security;
@@ -19,7 +16,31 @@ import java.security.SignatureException;
 
 public class PGPEncryptionUtils {
 
-    public static void encrypt(KeyringConfig keyringConfig, InputStream inputStream, OutputStream outputStream, String recipient) throws IOException, PGPException, NoSuchAlgorithmException, SignatureException, NoSuchProviderException {
+    public static byte[] decrypt(byte[] encryptedBytes, KeyringConfig keyringConfig) throws IOException, NoSuchProviderException {
+        byte[] decryptedBytes;
+        try (
+                ByteArrayInputStream encryptedInputStream = new ByteArrayInputStream(encryptedBytes);
+                ByteArrayOutputStream decryptedOutputStream = new ByteArrayOutputStream()
+        ) {
+            decryptStream(keyringConfig, encryptedInputStream, decryptedOutputStream);
+            decryptedBytes = decryptedOutputStream.toByteArray();
+        }
+        return decryptedBytes;
+    }
+
+    public static byte[] encrypt(byte[] plainTextBytes, KeyringConfig keyringConfig, String recipient) throws IOException, PGPException, NoSuchAlgorithmException, SignatureException, NoSuchProviderException {
+        byte[] encryptedBytes;
+        try (
+                ByteArrayInputStream plainTextInputStream = new ByteArrayInputStream(plainTextBytes);
+                ByteArrayOutputStream encryptedOutputStream = new ByteArrayOutputStream()
+        ) {
+            encryptStream(keyringConfig, plainTextInputStream, encryptedOutputStream, recipient);
+            encryptedBytes = encryptedOutputStream.toByteArray();
+        }
+        return encryptedBytes;
+    }
+
+    private static void encryptStream(KeyringConfig keyringConfig, InputStream inputStream, OutputStream outputStream, String recipient) throws IOException, PGPException, NoSuchAlgorithmException, SignatureException, NoSuchProviderException {
         try (
                 BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);
 
@@ -36,7 +57,7 @@ public class PGPEncryptionUtils {
         }
     }
 
-    public static void decrypt(KeyringConfig keyringConfig, InputStream encryptedInputStream, OutputStream outputStream)
+    private static void decryptStream(KeyringConfig keyringConfig, InputStream encryptedInputStream, OutputStream outputStream)
             throws IOException, NoSuchProviderException {
         try (
                 BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);

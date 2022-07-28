@@ -1,5 +1,6 @@
-package com.bawi.pgp;
+package com.bawi.beam.dataflow;
 
+import com.bawi.pgp.PGPEncryptionUtils;
 import name.neuhalfen.projects.crypto.bouncycastle.openpgp.keys.keyrings.KeyringConfig;
 import org.apache.beam.sdk.io.FileIO;
 import org.apache.beam.sdk.testing.PAssert;
@@ -16,8 +17,6 @@ import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
@@ -26,7 +25,6 @@ import java.security.NoSuchProviderException;
 import java.util.stream.Stream;
 
 import static com.bawi.pgp.PGPEncryptionUtils.createKeyringConfigFromPublicKeyPrivateKeyAndPassphrase;
-import static com.bawi.pgp.PGPEncryptionUtils.decrypt;
 import static org.apache.beam.sdk.values.TypeDescriptors.kvs;
 import static org.apache.beam.sdk.values.TypeDescriptors.strings;
 
@@ -38,7 +36,7 @@ public class PGPFileDecryptionJobTest implements Serializable {
     @Test
     public void test() {
         Assume.assumeTrue("Requires pgp files",
-                Stream.of("hello-pp.txt.gpg", "bartek-pp-public.gpg", "bartek-pp-private.gpg", "bartek-pp.txt")
+                Stream.of("hello-pp.txt.gpg", "bartek-pp-public.asc", "bartek-pp-private.asc", "bartek-pp.txt")
                         .allMatch(name -> Path.of("gpg", name).toFile().exists()));
 
         PCollection<String> pCollection = pipeline.apply(FileIO.match().filepattern("gpg/hello-pp.txt.gpg"))
@@ -67,21 +65,15 @@ public class PGPFileDecryptionJobTest implements Serializable {
         @Setup
         public void setup() throws IOException, PGPException {
             keyringConfig = createKeyringConfigFromPublicKeyPrivateKeyAndPassphrase(
-                    Files.readAllBytes(Path.of("gpg", "bartek-pp-public.gpg")),
-                    Files.readAllBytes(Path.of("gpg", "bartek-pp-private.gpg")),
+                    Files.readAllBytes(Path.of("gpg", "bartek-pp-public.asc")),
+                    Files.readAllBytes(Path.of("gpg", "bartek-pp-private.asc")),
                     Files.readAllBytes(Path.of("gpg", "bartek-pp.txt"))
             );
         }
 
         @ProcessElement
         public void process(@Element KV<String,byte[]> kv, OutputReceiver<String> outputReceiver) throws IOException, NoSuchProviderException {
-            byte[] decrypted;
-            try (ByteArrayInputStream encryptedInputStream = new ByteArrayInputStream(kv.getValue());
-                 ByteArrayOutputStream decryptedOutputStream = new ByteArrayOutputStream()
-            ) {
-                decrypt(keyringConfig, encryptedInputStream, decryptedOutputStream);
-                decrypted = decryptedOutputStream.toByteArray();
-            }
+            byte[] decrypted = PGPEncryptionUtils.decrypt(kv.getValue(), keyringConfig);
             outputReceiver.output(FilenameUtils.getName(kv.getKey()) + "," + new String(decrypted));
         }
     }

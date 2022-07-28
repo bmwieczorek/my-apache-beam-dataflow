@@ -1,5 +1,6 @@
 package com.bawi.beam.dataflow;
 
+import com.bawi.pgp.PGPEncryptionUtils;
 import name.neuhalfen.projects.crypto.bouncycastle.openpgp.keys.keyrings.KeyringConfig;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.FileIO;
@@ -16,15 +17,12 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.TypeDescriptor;
 import org.bouncycastle.openpgp.PGPException;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchProviderException;
 
 import static com.bawi.beam.dataflow.SecretManagerUtils.accessSecretVersion;
 import static com.bawi.pgp.PGPEncryptionUtils.createKeyringConfigFromPrivateKeyAndPassphrase;
-import static com.bawi.pgp.PGPEncryptionUtils.decrypt;
 import static org.apache.beam.sdk.values.TypeDescriptors.kvs;
 import static org.apache.beam.sdk.values.TypeDescriptors.strings;
 
@@ -118,13 +116,7 @@ public class PGPDecryptJob {
 
         @ProcessElement
         public void process(@Element KV<String,byte[]> kv, OutputReceiver<String> outputReceiver) throws IOException, NoSuchProviderException {
-            byte[] decrypted;
-            try (ByteArrayInputStream encryptedInputStream = new ByteArrayInputStream(kv.getValue());
-                 ByteArrayOutputStream decryptedOutputStream = new ByteArrayOutputStream()
-            ) {
-                decrypt(keyringConfig, encryptedInputStream, decryptedOutputStream);
-                decrypted = decryptedOutputStream.toByteArray();
-            }
+            byte[] decrypted = PGPEncryptionUtils.decrypt(kv.getValue(), keyringConfig);
             outputReceiver.output(new File(kv.getKey()).getName() + "," + new String(decrypted));
         }
     }
