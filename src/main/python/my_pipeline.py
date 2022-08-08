@@ -4,6 +4,7 @@ import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
 
 # based on https://github.com/apache/beam/blob/master/sdks/python/apache_beam/examples/wordcount.py
+# pip install pytest apache-beam['gcp']
 
 
 def run(argv=None):

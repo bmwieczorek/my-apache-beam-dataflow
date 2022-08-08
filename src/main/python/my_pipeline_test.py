@@ -6,6 +6,7 @@ from apache_beam.testing.util import assert_that
 from apache_beam.testing.util import equal_to
 
 # based on https://github.com/apache/beam/blob/master/sdks/python/apache_beam/examples/wordcount.py
+# pip install pytest apache-beam['gcp']
 
 
 class MyPipelineTransformationTest(unittest.TestCase):

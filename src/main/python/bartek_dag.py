@@ -4,6 +4,9 @@ import pendulum
 from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
 
+
+# pip install apache-airflow==1.10.15
+
 with DAG(dag_id='bartek_dag',
          # start_date=datetime(2022, 8, 8),  # dag or task start_date is required,
          # schedule_interval defaults to execute once a day, catches up all runs since start date until today
