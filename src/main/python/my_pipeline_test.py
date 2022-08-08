@@ -5,9 +5,11 @@ from apache_beam.testing.test_pipeline import TestPipeline
 from apache_beam.testing.util import assert_that
 from apache_beam.testing.util import equal_to
 
+
 # based on https://github.com/apache/beam/blob/master/sdks/python/apache_beam/examples/wordcount.py
 # pip install pytest apache-beam['gcp']
-
+# python3 src/main/python/my_pipeline_test.py
+# python3 -m pytest src/main/python/my_pipeline_test.py -o log_cli=true -v --junit-xml=target/TEST-results.xml
 
 class MyPipelineTransformationTest(unittest.TestCase):
     def test_count(self):

@@ -1,5 +1,6 @@
 # add requirements.txt in main project folder and optionally restart Intellij
 # python3 -m pytest src/main/python -o log_cli=true -v --junit-xml=target/TEST-results.xml
+# python3 -m pytest src/main/python/my_test.py -o log_cli=true -v --junit-xml=target/TEST-results.xml
 
 import unittest
 
