@@ -17,6 +17,11 @@ def main():
         print(e)
     for i in range(len(my_list)):
         print(my_list[i])
+    my_transformed_list = list(map(lambda s: s.upper(), my_list))
+    print(my_transformed_list)
+    to_upper = lambda s: s.upper()
+    my_transformed_list2 = list(map(to_upper, my_list))
+    print(my_transformed_list2)
 
     my_dict = {'a': 1, 'b': 2}  # aka map
     print(my_dict)
@@ -76,4 +81,3 @@ if __name__ == "__main__":
     #    print(calc('a', 'b'))
     print(calc2(2))
     # print(calc2('a'))  # TypeError: unsupported operand type(s) for +: 'int' and 'str'
-
