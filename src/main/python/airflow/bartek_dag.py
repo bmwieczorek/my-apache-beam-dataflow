@@ -81,14 +81,14 @@ def my_python_gcs_list_bash_operator_gsutil():
     time_millis = round(time.time() * 1000)
     impersonation_opts = f"-i {SERVICE_ACCOUNT}"
     gsutil_state_opts = f"-o 'GSUtil:state_dir=/tmp/bartek_dag_gsutil_state_{time_millis}'"
-    command = f"gsutil {gsutil_state_opts} {impersonation_opts} ls {BUCKET}"
+    command = f"gsutil {gsutil_state_opts} {impersonation_opts} ls gs://{BUCKET}"
     operator = BashOperator(task_id='my_python_gcs_list_bash_operator_gsutil', bash_command=command)
     operator.execute(dict())
 
 
 def my_python_bq_select_count_client():
     from google.cloud import bigquery
-    query = f"SELECT * FROM `{BIGQUERY_PROJECT_ID}` LIMIT 10"
+    query = f"SELECT * FROM `{BIGQUERY_TABLE}` LIMIT 10"
 
     # client = bigquery.Client(project=BIGQUERY_PROJECT_ID)
     # query_job = client.query(query=query, location='US')
@@ -199,7 +199,7 @@ with DAG(dag_id='bartek_dag',
     t6 = PythonOperator(task_id='my_python_gcs_list_bash_operator_gsutil',
                         python_callable=my_python_gcs_list_bash_operator_gsutil)
 
-    t7 = BashOperator(task_id='list_gcs_bash_operator_gsutil', bash_command=f"gsutil -i {SERVICE_ACCOUNT} ls {BUCKET}")
+    t7 = BashOperator(task_id='list_gcs_bash_operator_gsutil', bash_command=f"gsutil -i {SERVICE_ACCOUNT} ls gs://{BUCKET}")
 
     t8 = PythonOperator(task_id='my_python_bq_select_count_client', python_callable=my_python_bq_select_count_client)
 
