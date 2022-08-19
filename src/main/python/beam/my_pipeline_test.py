@@ -7,16 +7,17 @@ from apache_beam.testing.util import equal_to
 
 
 # based on https://github.com/apache/beam/blob/master/sdks/python/apache_beam/examples/wordcount.py
-# pip install pytest apache-beam['gcp']
+# pip install pytest apache-beam[gcp]
 # python3 src/main/python/my_pipeline_test.py
 # python3 -m pytest src/main/python/my_pipeline_test.py -o log_cli=true -v --junit-xml=target/TEST-results.xml
 
 class MyPipelineTransformationTest(unittest.TestCase):
+    # noinspection PyMethodMayBeStatic
     def test_count(self):
         # Create a test pipeline.
         with TestPipeline() as p:
-            input = p | beam.Create(["a", "b", "a"])
-            output = input | beam.combiners.Count.PerElement()
+            words = p | beam.Create(["abc", "def", "ghi"])
+            output = words | beam.combiners.Count.PerElement()
             assert_that(output, equal_to([("a", 2), ("b", 1)]))
             # The pipeline will run and verify the results.
 

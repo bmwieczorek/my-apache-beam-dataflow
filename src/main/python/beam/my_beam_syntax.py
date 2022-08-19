@@ -1,6 +1,4 @@
-# python3 src/main/python/my_main.py
-# Intellij File/Project Structure/Project Settings/Modules/Right click on maven module/Add/Python
-# folder python right click Mark directory as Source Root
+# python3 src/main/python/beam/my_main.py
 
 from typing import Optional
 
@@ -16,18 +14,17 @@ class MyPTransform:
     def __str__(self):
         return f"{self.__class__.__name__}"
 
-    def transform(self, input):
-        return None
+    def transform(self, input_p_collection):
+        raise NotImplementedError("Call transform method from subclasses rather that from MyPTransform")
 
 
 class _MyNamedPTransform(MyPTransform):
-
-    def __init__(self, ptransform, label):
+    def __init__(self, p_transform, label):
         super().__init__(label)
-        self.ptransform = ptransform
+        self.p_transform = p_transform
 
-    def transform(self, input):
-        return self.ptransform.transform(input)
+    def transform(self, input_p_collection):
+        return self.p_transform.transform(input_p_collection)
 
     def __str__(self):
         return f"{self.__class__.__name__} created with label {self.label}"
@@ -39,7 +36,7 @@ class MyCreate(MyPTransform):
         super().__init__()
         self.values = values
 
-    def transform(self, input):
+    def transform(self, input_p_collection):
         p_collection = MyPCollection(self.values)
         print(f"{self} created {p_collection}")
         return p_collection
@@ -50,19 +47,19 @@ class MyCreate(MyPTransform):
 
 class MyMap(MyPTransform):
 
-    def __init__(self, callable):
-        self.callable = callable
+    def __init__(self, fn_callable):
+        self.fn_callable = fn_callable
         super().__init__()
 
     def transform(self, p_collection):
         values = p_collection.values
-        transformed_values = list(map(self.callable, values))
+        transformed_values = list(map(self.fn_callable, values))
         transformed_p_collection = MyPCollection(transformed_values)
         print(f"{self} transformed {p_collection} to {transformed_p_collection}")
         return transformed_p_collection
 
     def __str__(self):
-        return f"MyMap created with callable {self.callable}"
+        return f"MyMap created with callable {self.fn_callable}"
 
 
 class MyTestPipeline:
@@ -79,30 +76,33 @@ class MyTestPipeline:
 
 class MyPipeline:
 
-    def apply(self, ptransform):
-        print(ptransform)
-        return MyPCollection()
+    # noinspection PyMethodMayBeStatic
+    def apply(self, p_transform):
+        print(p_transform)
+        return MyPCollection(None)
 
-    def __or__(self, ptransform):
-        print(ptransform)
-        transform = ptransform.transform(None)
+    def __or__(self, p_transform):
+        print(p_transform)
+        transform = p_transform.transform(None)
         return transform
 
+    # noinspection PyMethodMayBeStatic
     def run(self):
         print("run")
 
 
 class MyPCollection:
+
     def __init__(self, values):
         self.values = values
 
-    def apply(self, ptransform):
-        print(ptransform)
+    def apply(self, p_transform):
+        print(p_transform)
         return self
 
-    def __or__(self, ptransform):
-        print(ptransform)
-        transform = ptransform.transform(self)
+    def __or__(self, p_transform):
+        print(p_transform)
+        transform = p_transform.transform(self)
         # return self
         return transform
 
@@ -110,24 +110,13 @@ class MyPCollection:
         return f"MyPCollection with {self.values}"
 
 
-class MyCl:
-    def __init__(self, name):
-        self.name = name
-
-    def __rshift__(self, other):
-        print(f"shift {self.name} {other.name}")
-        return other
-
-
 def main():
-    MyCl("abc1") >> MyCl("abc2") >> MyCl("abc3")
+    p = MyPipeline()
+    p | MyCreate(["a", "b", "a"]) | MyMap(lambda s: s.upper())
+    p.run()
 
-    # p = MyPipeline()
-    # p | MyPTransform("create") | MyPTransform("map")
-    # p.run()
-
-    # with MyTestPipeline() as p:
-    #     p | MyPTransform("create") | MyPTransform("map")
+    with MyTestPipeline() as p:
+        p | MyCreate(["a", "b", "a"]) | MyMap(lambda s: s.upper())
 
     with MyTestPipeline() as p:
         # p | 'create' >> MyCreate(["a", "b", "a"]) | 'map' >> MyMap([])
