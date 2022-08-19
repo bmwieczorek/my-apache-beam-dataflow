@@ -25,7 +25,7 @@ def create_tuple_str_int(_1: str, _2: int = None) -> Tuple[str, int]:
 def create_tuple_str_int2(
         _1,  # type: str
         _2=None,  # type: Optional[int]
-):
+) -> Tuple[str, Optional[int]]:
     return _1, _2
 
 
