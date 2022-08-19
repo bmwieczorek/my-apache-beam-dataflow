@@ -1,3 +1,5 @@
+from typing import Optional, List
+
 def my_args(*args):
     return args
 
@@ -48,8 +50,12 @@ def access_kwargs(kwarg_name, **kwargs):
         print(f"{kwarg_name} key not found in {kwargs}")
 
 
-def my_arg_without_args_kwargs(a, _args, _dict):
-    return a, _args, _dict
+def my_arg_without_args_kwargs(a,  # type: str
+                               b=None,  # type: Optional[str]
+                               _args=None,  # type: Optional[List[str]]
+                               _dict=None  # type: Optional[dict[str]]
+                               ):
+    return a, b, _args, _dict
 
 
 if __name__ == '__main__':
@@ -83,5 +89,6 @@ if __name__ == '__main__':
     access_kwargs('x', x=1, y=2)  # 1
     access_kwargs('z', x=1, y=2)  # z key not found in {'x': 1, 'y': 2}
 
-    my_print(my_arg_without_args_kwargs('a', ('b', 'c'), dict(x=1, y=2)))  # ('a', ('b', 'c'), {'x': 1, 'y': 2}), len=3
+    # ('a', 'b', ['c'], {'x': 1, 'y': 2}), len=4
+    my_print(my_arg_without_args_kwargs('a', 'b', ['c'], dict(x=1, y=2)))
 
