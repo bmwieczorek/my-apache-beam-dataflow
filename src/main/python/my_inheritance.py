@@ -39,11 +39,19 @@ def to_upper_case(s: str):
     return s.upper()
 
 
+def create_processor(fn: Callable[[str], str]):
+    return CallableProcessor(fn)
+
+
 def main():
     upper_elements = CallableProcessor(to_upper_case).process(['a', 'b'])  # or CallableProcessor(lambda s: s.lower()))
     print(f"upper_elements={upper_elements}")
-    lower__elements = ("To lower case processor" >> CallableProcessor(ToLowerCase())).process(['X', 'Y'])
-    print(f"lower__elements={lower__elements}")
+
+    lower_elements = ("To lower case processor" >> CallableProcessor(ToLowerCase())).process(['X', 'Y'])
+    print(f"lower_elements={lower_elements}")
+
+    duplicate_elements = ("Duplicate element" >> create_processor(lambda s: f"{s}{s}")).process(['a', 'b'])
+    print(f"duplicate_elements={duplicate_elements}")
 
 
 if __name__ == '__main__':
