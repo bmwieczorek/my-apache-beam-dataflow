@@ -48,6 +48,10 @@ def access_kwargs(kwarg_name, **kwargs):
         print(f"{kwarg_name} key not found in {kwargs}")
 
 
+def my_arg_without_args_kwargs(a, _args, _dict):
+    return a, _args, _dict
+
+
 if __name__ == '__main__':
     my_print(my_args())  # (), len=0
     my_print(my_args('x', 1, True))  # ('x', 1, True), len=3
@@ -78,3 +82,6 @@ if __name__ == '__main__':
     # kwarg=y->2
     access_kwargs('x', x=1, y=2)  # 1
     access_kwargs('z', x=1, y=2)  # z key not found in {'x': 1, 'y': 2}
+
+    my_print(my_arg_without_args_kwargs('a', ('b', 'c'), dict(x=1, y=2)))  # ('a', ('b', 'c'), {'x': 1, 'y': 2}), len=3
+

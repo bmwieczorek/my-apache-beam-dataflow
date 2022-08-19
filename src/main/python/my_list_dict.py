@@ -4,6 +4,7 @@ if __name__ == '__main__':
     # list
     my_list = ['a', 'b']
     print(f"my_list={my_list}")
+
     for e in my_list:
         print(f"e={e}")
     for i in range(len(my_list)):
@@ -17,6 +18,9 @@ if __name__ == '__main__':
 
     my_transformed_list2 = list(map(to_upper_lambda, my_list))
     print(f"my_transformed_list2={my_transformed_list2}")
+
+    my_list2 = ['a', 1]
+    print(f"my_list2={my_list2}")
 
     my_empty_list = list()
     print(f"my_empty_list={my_empty_list}")
