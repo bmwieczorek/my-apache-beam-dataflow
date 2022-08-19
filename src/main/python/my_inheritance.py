@@ -30,7 +30,7 @@ class CallableProcessor(NamedProcessor):
         return list(map(self.fn, elements2))
 
 
-class ToLowerCase:
+class ToLowerCaseCallable:
     def __call__(self, s: str):
         return s.lower()
 
@@ -47,7 +47,7 @@ def main():
     upper_elements = CallableProcessor(to_upper_case).process(['a', 'b'])  # or CallableProcessor(lambda s: s.lower()))
     print(f"upper_elements={upper_elements}")
 
-    lower_elements = ("To lower case processor" >> CallableProcessor(ToLowerCase())).process(['X', 'Y'])
+    lower_elements = ("To lower case processor" >> CallableProcessor(ToLowerCaseCallable())).process(['X', 'Y'])
     print(f"lower_elements={lower_elements}")
 
     duplicate_elements = ("Duplicate element" >> create_processor(lambda s: f"{s}{s}")).process(['a', 'b'])
