@@ -22,13 +22,18 @@ if __name__ == '__main__':
     my_list2 = ['a', 1]
     print(f"my_list2={my_list2}")
 
+    def process(el):
+        return f"{el}{el}"
+
+    my_new_list = [f"{e}{e}" for e in my_list]
+    my_new_list2 = [process(e) for e in my_list]  # same as above
+    print(f"my_new_list={my_new_list}")  # my_new_list
+
     my_empty_list = list()
     print(f"my_empty_list={my_empty_list}")
 
-
     def to_upper_fn(s):
         return s.upper()
-
 
     my_transformed_list3 = list(map(to_upper_fn, my_list))
     print(f"my_transformed_list3={my_transformed_list3}")
