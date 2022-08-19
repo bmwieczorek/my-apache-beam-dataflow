@@ -199,7 +199,9 @@ with DAG(dag_id='bartek_dag',
     t6 = PythonOperator(task_id='my_python_gcs_list_bash_operator_gsutil',
                         python_callable=my_python_gcs_list_bash_operator_gsutil)
 
-    t7 = BashOperator(task_id='list_gcs_bash_operator_gsutil', bash_command=f"gsutil -i {SERVICE_ACCOUNT} ls gs://{BUCKET}")
+    t7 = BashOperator(task_id='list_gcs_bash_operator_gsutil',
+                      bash_command=f"gsutil -i {SERVICE_ACCOUNT}"
+                                   f" -o 'GSUtil:state_dir=/tmp/bartek_dag_gsutil_state' ls gs://{BUCKET}")
 
     t8 = PythonOperator(task_id='my_python_bq_select_count_client', python_callable=my_python_bq_select_count_client)
 
