@@ -34,6 +34,20 @@ def my_print(val):
     print(f"{val}, len={len(val)}")
 
 
+def my_iterate_print_args_kwargs(*args, **kwargs):
+    for a in args:
+        print(f"arg={a}")
+    for k, v in kwargs.items():
+        print(f"kwarg={k}->{v}")
+
+
+def access_kwargs(kwarg_name, **kwargs):
+    if kwarg_name in kwargs:
+        print(kwargs[kwarg_name])
+    else:
+        print(f"{kwarg_name} key not found in {kwargs}")
+
+
 if __name__ == '__main__':
     my_print(my_args())  # (), len=0
     my_print(my_args('x', 1, True))  # ('x', 1, True), len=3
@@ -55,3 +69,12 @@ if __name__ == '__main__':
     my_print(my_arg_opt_arg_with_args("a", "b", "c"))  # ('a', 'b', ('c',)), len=3
     my_print(my_args_kwargs('a', 'b', a=1, b=2))  # (('a', 'b'), {'a': 1, 'b': 2}), len=2
     my_print(my_arg_opt_arg_with_args_kwargs("a", "b", "c", x=1, y=2))  # ('a', 'b', ('c',), {'x': 1, 'y': 2}), len=4
+
+    my_iterate_print_args_kwargs("a", "b", "c", x=1, y=2)
+    # arg=a
+    # arg=b
+    # arg=c
+    # kwarg=x->1
+    # kwarg=y->2
+    access_kwargs('x', x=1, y=2)  # 1
+    access_kwargs('z', x=1, y=2)  # z key not found in {'x': 1, 'y': 2}
