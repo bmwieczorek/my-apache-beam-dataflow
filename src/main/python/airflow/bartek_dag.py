@@ -86,6 +86,17 @@ def my_python_gcs_list_bash_operator_gsutil():
     operator.execute(dict())
 
 
+def my_python_gcs_list_client():
+    impersonated_credentials = _get_impersonated_credentials(
+        ['https://www.googleapis.com/auth/cloud-platform', 'https://www.googleapis.com/auth/devstorage.read_write'])
+    from google.cloud import storage
+    client = storage.Client(DATAFLOW_PROJECT_ID, impersonated_credentials)
+    bucket = storage.Bucket(client, BUCKET)
+    blobs = list(client.list_blobs(bucket))
+    print(f"Found {len(blobs)} blob(s)")
+    print(f"blobs={blobs[0:10]}")
+
+
 def my_python_bq_select_count_client():
     from google.cloud import bigquery
     query = f"SELECT * FROM `{BIGQUERY_TABLE}` LIMIT 10"
@@ -199,16 +210,18 @@ with DAG(dag_id='bartek_dag',
     t6 = PythonOperator(task_id='my_python_gcs_list_bash_operator_gsutil',
                         python_callable=my_python_gcs_list_bash_operator_gsutil)
 
-    t7 = BashOperator(task_id='list_gcs_bash_operator_gsutil',
+    t7 = PythonOperator(task_id='my_python_gcs_list_client', python_callable=my_python_gcs_list_client)
+
+    t8 = BashOperator(task_id='list_gcs_bash_operator_gsutil',
                       bash_command=f"gsutil -i {SERVICE_ACCOUNT}"
                                    f" -o 'GSUtil:state_dir=/tmp/bartek_dag_gsutil_state' ls gs://{BUCKET}")
 
-    t8 = PythonOperator(task_id='my_python_bq_select_count_client', python_callable=my_python_bq_select_count_client)
+    t9 = PythonOperator(task_id='my_python_bq_select_count_client', python_callable=my_python_bq_select_count_client)
 
-    t9 = PythonOperator(task_id='my_python_secret_manager_access_client',
-                        python_callable=my_python_secret_manager_access_client)
+    t10 = PythonOperator(task_id='my_python_secret_manager_access_client',
+                         python_callable=my_python_secret_manager_access_client)
 
-    t10 = PythonOperator(task_id='my_python_dataflow_templated_operator',
+    t11 = PythonOperator(task_id='my_python_dataflow_templated_operator',
                          python_callable=my_python_dataflow_templated_operator)
     # t1 >> t2
     # t1 >> t3
