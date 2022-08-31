@@ -1,3 +1,7 @@
+# python3 src/main/python/my_main.py
+# Intellij File/Project Structure/Project Settings/Modules/Right click on maven module/Add/Python
+# folder python right click Mark directory as Source Root
+
 from my_lib import hello
 
 
