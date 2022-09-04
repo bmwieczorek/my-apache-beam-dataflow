@@ -9,7 +9,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <beam.version>2.40.0</beam.version> <!-- profiling since 2.33 with service account with roles/cloudprofiler.agent -->
+        <beam.version>2.41.0</beam.version> <!-- profiling since 2.33 with service account with roles/cloudprofiler.agent -->
         <slf4j.version>1.7.36</slf4j.version>
         <kafka.version>1.1.1</kafka.version>
         <auto-service-annotations.version>1.0</auto-service-annotations.version>
