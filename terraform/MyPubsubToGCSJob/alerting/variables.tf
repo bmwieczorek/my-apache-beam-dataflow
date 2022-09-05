@@ -8,7 +8,7 @@ variable "owner" {
   type        = string
 }
 
-variable "job_name_base" {
+variable "job_base_name" {
   description = "Google dataflow job base"
   type        = string
 }
@@ -40,4 +40,10 @@ variable "module_depends_on" {
   type        = any
   description = "(optional) A list of external resources the module depends_on. Default is []."
   default     = []
+}
+
+variable "dashboard_file" {
+  description = "Google dashboard file name"
+  type        = string
+  default     = "alert-dashboard.json"
 }

@@ -47,9 +47,16 @@ variable "owner" {
 variable "dataflow_classic_template_enabled" {
   description = "If dataflow classic template enabled, otherwise flex template enabled"
   type        = bool
+  default     = true
 }
 
 variable "notification_email" {
   description = "Notification email"
   type        = string
+}
+
+variable "force_job_replace" {
+  description = "If dataflow name should be dynamically re-calculated forcing job draining/canceling instead of updating"
+  type        = bool
+  default     = true
 }

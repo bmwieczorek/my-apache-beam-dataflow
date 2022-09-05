@@ -20,6 +20,7 @@ import org.apache.avro.io.DatumReader;
 import org.joda.time.Instant;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +50,15 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
     private static final String MY_MSG_ATTR_NAME = "myMsgAttrName";
     private static final String MY_MSG_ATTR_VALUE = "myMsgAttrValue";
     private boolean dataflow_classic_template_enabled = true;
+
+    @Before
+    @After
+    public void cleanUp() throws IOException, InterruptedException {
+        Process destroyProcess = runBashProcess("terraform destroy -auto-approve -var=\"dataflow_classic_template_enabled=" + dataflow_classic_template_enabled + "\"");
+        logProcess(destroyProcess);
+        int destroyStatus = destroyProcess.waitFor();
+        Assert.assertEquals("destroyProcess should exit terraform with 0 destroyStatus code", 0, destroyStatus);
+    }
 
     @Test
     public void testE2E() throws IOException, InterruptedException, ExecutionException {
@@ -115,22 +125,13 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         Assert.assertTrue(avroRecordsAsStrings.stream().anyMatch(s -> pattern.matcher(s).matches()));
 
 */
-        String query = "select * from " + get("GCP_PROJECT") + ".bartek_dataset.my_table";
+        String query = "select * from " + get("GCP_PROJECT") + "." + get("GCP_OWNER") + "_" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase() + ".my_table";
         long count = waitUpTo10MinsForDataflowJobToPopulateBigQuery(query, 300);
         Assert.assertEquals("Expected to get 300 records from BigQuery", 300, count);
 
         LOGGER.info("Assertions passed, waiting 5 mins before deleting resources");
         Thread.sleep(300 * 1000);
     }
-
-    @After
-    public void cleanUp() throws IOException, InterruptedException {
-        Process destroyProcess = runBashProcess("terraform destroy -auto-approve -var=\"dataflow_classic_template_enabled=" + dataflow_classic_template_enabled + "\"");
-        logProcess(destroyProcess);
-        int destroyStatus = destroyProcess.waitFor();
-        Assert.assertEquals("destroyProcess should exit terraform with 0 destroyStatus code", 0, destroyStatus);
-    }
-
 
     private long waitUpTo10MinsForDataflowJobToPopulateBigQuery(String query, int expectedRowsCount) throws InterruptedException {
         long totalRows = 0;
@@ -254,10 +255,10 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
     }
 
     private Process runBashProcess(String cmd) throws IOException {
-        // Process process = Runtime.getRuntime().exec("./run-terraform.sh", null, new File("terraform/MyBQReadWriteJob"));
+        // Process process = Runtime.getRuntime().exec("./run-terraform.sh", null, new File("terraform/" + MyPubsubToGCSJob.class.getSimpleName()));
         ProcessBuilder processBuilder = new ProcessBuilder();
         processBuilder.inheritIO();
-        processBuilder.directory(new File("terraform/MyPubsubToGCSJob"));
+        processBuilder.directory(new File("terraform/" + MyPubsubToGCSJob.class.getSimpleName()));
 //        processBuilder.command("./run-terraform.sh");
         //processBuilder.command("bash", "-c", "ls -la");
         processBuilder.command("bash", "-c", cmd);
@@ -265,7 +266,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
     }
 
 //    private Process runTerraformInfrastructureSetupAsBashProcess(String pathToTerraform) throws IOException {
-//        // Process process = Runtime.getRuntime().exec("./run-terraform.sh", null, new File("terraform/MyBQReadWriteJob"));
+//        // Process process = Runtime.getRuntime().exec("./run-terraform.sh", null, new File("terraform/" + MyPubsubToGCSJob.class.getSimpleName()));
 //        ProcessBuilder processBuilder = new ProcessBuilder();
 //        processBuilder.inheritIO();
 //        processBuilder.directory(new File(pathToTerraform));

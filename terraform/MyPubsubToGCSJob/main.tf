@@ -1,9 +1,9 @@
 locals {
-  job_name_base                   = "${var.owner}-mypubsubtogcsjob"
-  bucket                          = "${var.project}-${local.job_name_base}"
+  job_base_name                   = "${var.owner}-mypubsubtogcsjob"
+  bucket                          = "${var.project}-${local.job_base_name}"
   topic                           = "${var.owner}-topic"
   subscription                    = "${local.topic}-sub"
-  dataset                         = "bartek_dataset"
+  dataset                         = replace(local.job_base_name, "-", "_")
   table                           = "my_table"
   max_workers                     = 3
   number_of_worker_harness_threads = 8
@@ -13,6 +13,11 @@ locals {
     owner = var.owner
   }
   experiments                     = ["enable_stackdriver_agent_metrics","enable_google_cloud_profiler","enable_google_cloud_heap_sampling"]
+  jar_version                     = element(regex("(\\d+(\\.\\d+){0,2}(-SNAPSHOT)?)", basename(tolist(fileset(path.module, "../../target/my-*.jar"))[0])),0)
+//  job_name                        = replace(lower("${local.job_base_name}-${local.jar_version}"), ".", "_")
+  job_name                        = local.job_base_name
+  ts                              = formatdate("YYYYMMDDhhmmss", timestamp())
+  empty_suffix_optional_replacement = var.force_job_replace ? replace(local.ts, local.ts, "") : ""
 }
 
 //data "google_compute_network" "network" {
@@ -36,13 +41,15 @@ module "dataflow_classic_template" {
 //  bucket              = module.storage.bucket_name
   bucket                            = google_storage_bucket.my_bucket.name
   main_class                        = "com.bawi.beam.dataflow.MyPubsubToGCSJob"
-  job_name                          = local.job_name_base
+  table_spec                        = "${local.dataset}.${local.table}"
+  job_name                          = local.job_base_name
   network                           = var.network
 //  network             = data.google_compute_network.network.self_link
   subnetwork                        = var.subnetwork == "default" ? null : var.subnetwork
 //  subnetwork          = data.google_compute_subnetwork.subnetwork.self_link
   service_account                   = var.service_account
-  dataflow_jar_local_path           = "../../target/my-apache-beam-dataflow-0.1-SNAPSHOT.jar"
+//  dataflow_jar_local_path           = "../../target/my-apache-beam-dataflow-0.1-SNAPSHOT.jar"
+  dataflow_jar_local_path           = tolist(fileset(path.module, "../../target/my-*.jar"))[0]
   image                             = var.image
   number_of_worker_harness_threads  = local.number_of_worker_harness_threads
   enable_streaming_engine           = local.enable_streaming_engine
@@ -61,9 +68,8 @@ module "dataflow_classic_template_job" {
   subnetwork                        = var.subnetwork == "default" ? null : var.subnetwork
   service_account                   = var.service_account
   template_gcs_path                 = module.dataflow_classic_template.template_gcs_path
-//  template_gcs_path                 = "gs://${local.bucket}/templates/${local.job_name_base}-template"
-  job_name                          = local.job_name_base
-//  job_name                          = "${local.job_name_base}-v3"
+//  template_gcs_path                 = "gs://${local.bucket}/templates/${local.job_base_name}-template"
+  job_name                          = "${local.job_name}${local.empty_suffix_optional_replacement}"
   subscription                      = google_pubsub_subscription.my_subscription.id
   max_workers                       = local.max_workers
   experiments                       = local.experiments
@@ -83,7 +89,7 @@ module "dataflow_flex_template" {
   network                           = var.network
   subnetwork                        = var.subnetwork == "default" ? null : var.subnetwork
   service_account                   = var.service_account
-  job                               = local.job_name_base
+  job                               = local.job_base_name
   subscription                      = google_pubsub_subscription.my_subscription.id
   max_workers                       = local.max_workers
   experiments                       = local.experiments
@@ -95,7 +101,7 @@ module "dataflow_flex_template" {
 module "dashboards" {
   source        = "./dashboards"
   project       = var.project
-  job_name_base = local.job_name_base
+  job_base_name = local.job_base_name
   job_name      = var.dataflow_classic_template_enabled ? module.dataflow_classic_template_job.job_name : module.dataflow_flex_template.job_name
   job_id        = var.dataflow_classic_template_enabled ? module.dataflow_classic_template_job.job_id : module.dataflow_flex_template.job_id
   topic         = local.topic
@@ -107,7 +113,7 @@ module "alerting" {
   project            = var.project
   owner              = var.owner
   notification_email = var.notification_email
-  job_name_base      = local.job_name_base
+  job_base_name      = local.job_base_name
   job_name           = var.dataflow_classic_template_enabled ? module.dataflow_classic_template_job.job_name : module.dataflow_flex_template.job_name
   job_id             = var.dataflow_classic_template_enabled ? module.dataflow_classic_template_job.job_id : module.dataflow_flex_template.job_id
 

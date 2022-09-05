@@ -1,7 +1,7 @@
 resource "google_monitoring_notification_channel" "email" {
   project      = var.project
   enabled      = true
-  display_name = "${var.job_name_base} alert - ${var.notification_email}"
+  display_name = "${var.job_base_name} alert - ${var.notification_email}"
   type         = "email"
 
   labels = {

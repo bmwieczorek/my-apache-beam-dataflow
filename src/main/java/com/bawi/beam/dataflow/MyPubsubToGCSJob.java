@@ -68,6 +68,10 @@ public class MyPubsubToGCSJob {
         ValueProvider<String> getTemp();
         void setTemp(ValueProvider<String> value);
 
+        @Validation.Required
+        String getTableSpec();
+        void setTableSpec(String value);
+
         // DataflowPipelineOptions
 //        String getTemplateLocation();
 //        void setTemplateLocation(String value);
@@ -122,10 +126,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
     private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("'year='yyyy/'month'=MM/'day'=dd/'hour'=HH/'minute'=mm");
 
     public static void main(String[] args) {
-        args = DataflowUtils.updateDataflowArgs(args,
-                "--projectId=" + System.getenv("GCP_PROJECT")
-                // add more
-        );
+        args = DataflowUtils.updateDataflowArgs(args);
 
         MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
 //        options.setAutoscalingAlgorithm(DataflowPipelineWorkerPoolOptions.AutoscalingAlgorithmType.THROUGHPUT_BASED);
@@ -206,7 +207,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
                             return element;
                         })
                         .withAvroSchemaFactory(qTableSchema -> SCHEMA)
-                        .to("bartek_dataset.my_table")
+                        .to(options.getTableSpec())
                         .useAvroLogicalTypes()
                         .withoutValidation()
                         .withSchema(AvroToBigQuerySchemaConverter.convert(SCHEMA))

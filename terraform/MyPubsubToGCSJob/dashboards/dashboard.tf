@@ -49,9 +49,9 @@ resource "google_monitoring_dashboard" "dashboard_job_name_current" {
 resource "google_monitoring_dashboard" "dashboard_job_name_all" {
   project = var.project
   dashboard_json = templatefile("${path.module}/${var.dashboard_file}", {
-    dataflow_job_filter = "resource.label.\\\"job_name\\\"=monitoring.regex.full_match(\\\"${var.job_name_base}.*\\\")"
-    instance_dataflow_job_filter = "metadata.user_labels.\\\"dataflow_job_name\\\"=monitoring.regex.full_match(\\\"${var.job_name_base}.*\\\")"
-    dashboard_name = "${var.job_name_base}.* job name all"
+    dataflow_job_filter = "resource.label.\\\"job_name\\\"=monitoring.regex.full_match(\\\"${var.job_base_name}.*\\\")"
+    instance_dataflow_job_filter = "metadata.user_labels.\\\"dataflow_job_name\\\"=monitoring.regex.full_match(\\\"${var.job_base_name}.*\\\")"
+    dashboard_name = "${var.job_base_name}.* job name all"
     read_step_name = "PubsubIO.Read"
     read_step_pcollection = "PubsubIO.Read/PubsubUnboundedSource.out0"
     transform_step_name = "ConcatBodyAttrAndMsgIdFn"

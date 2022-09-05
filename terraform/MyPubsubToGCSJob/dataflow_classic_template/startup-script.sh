@@ -24,6 +24,8 @@ DATAFLOW_JAR_GCS_PATH=$(curl http://metadata.google.internal/computeMetadata/v1/
 echo "DATAFLOW_JAR_GCS_PATH=$DATAFLOW_JAR_GCS_PATH" | tee -a ${LOG}
 DATAFLOW_JAR_MAIN_CLASS=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/dataflow_jar_main_class -H "Metadata-Flavor: Google")
 echo "DATAFLOW_JAR_MAIN_CLASS=$DATAFLOW_JAR_MAIN_CLASS" | tee -a ${LOG}
+TABLE_SPEC=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/table_spec -H "Metadata-Flavor: Google")
+echo "TABLE_SPEC=$TABLE_SPEC" | tee -a ${LOG}
 WAIT_SECS_BEFORE_VM_DELETE=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/wait_secs_before_delete -H "Metadata-Flavor: Google")
 echo "WAIT_SECS_BEFORE_VM_DELETE=$WAIT_SECS_BEFORE_VM_DELETE" | tee -a ${LOG}
 NUMBER_OF_WORKER_HARNESS_THREADS=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/number_of_worker_harness_threads -H "Metadata-Flavor: Google")
@@ -79,6 +81,7 @@ echo "Executing: java -DcreateTemplate=true -Dorg.xerial.snappy.tempdir=$(pwd) -
 java -DcreateTemplate=true -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAIN_CLASS} \
   ${JAVA_DATAFLOW_RUN_OPTS} \
   --runner=DataflowRunner \
+  --tableSpec=${TABLE_SPEC} \
   --stagingLocation="gs://${BUCKET}/staging" \
   --dumpHeapOnOOM=${DUMP_HEAP_ON_OOM} \
   --saveHeapDumpsToGcsPath="gs://${BUCKET}/oom" \
@@ -96,9 +99,17 @@ java -DcreateTemplate=true -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_J
 
 # add maxNumWorkers here to determine number of comsumers for KafkaIO read
 #  --maxNumWorkers=2 \
+result=$?
 
 echo "Done" | tee -a ${LOG}
 echo "Uploading log file and deleting instance in $WAIT_SECS_BEFORE_VM_DELETE secs: gcloud compute instances delete $INSTANCE --zone=$ZONE --quiet" | tee -a ${LOG}
 gsutil cp ${LOG} gs://${BUCKET}/compute/
+
+if [ ${result} -ne 0 ]; then
+  gcloud compute instances add-metadata --zone ${ZONE} ${INSTANCE} --metadata=startup-state="Failed"
+else
+  gcloud compute instances add-metadata --zone ${ZONE} ${INSTANCE} --metadata=startup-state="Completed"
+fi
+
 sleep ${WAIT_SECS_BEFORE_VM_DELETE}
 gcloud compute instances delete ${INSTANCE} --zone=${ZONE} --quiet

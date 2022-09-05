@@ -19,7 +19,7 @@ variable "job_id" {
   type        = string
 }
 
-variable "job_name_base" {
+variable "job_base_name" {
   description = "Google dataflow job name base"
   type        = string
 }

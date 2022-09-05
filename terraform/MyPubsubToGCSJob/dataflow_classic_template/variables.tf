@@ -69,6 +69,11 @@ variable "main_class" {
   type        = string
 }
 
+variable "table_spec" {
+  description = "BigQuery table spec"
+  type        = string
+}
+
 variable "owner" {
   description = "Google resource owner"
   type        = string

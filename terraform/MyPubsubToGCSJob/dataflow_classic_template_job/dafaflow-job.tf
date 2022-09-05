@@ -56,5 +56,5 @@ resource "google_dataflow_job" "job" {
     EOT
   }
 
-//  skip_wait_on_job_termination = true
+  skip_wait_on_job_termination = true
 }
