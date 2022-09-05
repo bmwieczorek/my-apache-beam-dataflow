@@ -46,9 +46,9 @@ public class MyBQReadWriteJob {
         void setExpirationDate(ValueProvider<String> value);
 
         @Validation.Required
-        @Default.String("bartek_dataset.mysubscription_table")
-        String getTable();
-        void setTable(String value);
+//        @Default.String("bartek_mybqreadwritejob.mysubscription_table")
+        String getTableSpec();
+        void setTableSpec(String value);
 
 //        @Validation.Required
 //        ValueProvider<String> getOutputPath();
@@ -71,7 +71,7 @@ public class MyBQReadWriteJob {
         Pipeline pipeline = Pipeline.create(pipelineOptions);
 
         // requires org.apache.beam:beam-sdks-java-io-google-cloud-platform
-        String table = pipelineOptions.getTable();
+        String tableSpec = pipelineOptions.getTableSpec();
 
         //noinspection Convert2Lambda // to infer type from anonymous class runtime types (not to use .setCoder)
         pipeline.apply(BigQueryIO.read(new SerializableFunction<SchemaAndRecord, MySubscription>() { //
@@ -85,7 +85,7 @@ public class MyBQReadWriteJob {
                             }
                         })
                         //.from(pipelineOptions.getTableName()))  // all data
-                        .fromQuery(ValueProvider.NestedValueProvider.of(pipelineOptions.getExpirationDate(), expirationDate -> getQuery(table, expirationDate)))
+                        .fromQuery(ValueProvider.NestedValueProvider.of(pipelineOptions.getExpirationDate(), expirationDate -> getQuery(tableSpec, expirationDate)))
                         // non default settings below:
                         .useAvroLogicalTypes() // convert BQ TIMESTAMP to avro long millis/micros and BQ DATE to avro int
                         .withoutValidation() // skip validation if using value provider for query
@@ -105,7 +105,7 @@ public class MyBQReadWriteJob {
                             return element;
                         })
                         .withAvroSchemaFactory(qTableSchema -> MySubscription.SCHEMA)
-                        .to(table)
+                        .to(tableSpec)
                         .useAvroLogicalTypes()
                         .withSchema(AvroToBigQuerySchemaConverter.convert(MySubscription.SCHEMA))
                         .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
@@ -163,8 +163,8 @@ public class MyBQReadWriteJob {
 //        }
 //    }
 
-    private static String getQuery(String table, String expirationDate) {
-        String query = "SELECT * FROM " + table + " WHERE expiration_date = '" + expirationDate + "'";
+    private static String getQuery(String tableSpec, String expirationDate) {
+        String query = "SELECT * FROM " + tableSpec + " WHERE expiration_date = '" + expirationDate + "'";
         LOGGER.info("query={}", query);
         return query;
     }
@@ -298,7 +298,7 @@ public class MyBQReadWriteJob {
         }
 
         public String id;
-        //@AvroSchema("{\"type\":{\"type\":\"long\",\"logicalType\":\"timestamp-millis\"}")
+        //@AvroSchema("{\"type\":{\"type\":\"long\",\"logicalType\":\"timestamp-millis\"}") // cannot use timestamp-millis for reading
         //@AvroSchema("{\"type\":{\"type\":\"long\",\"logicalType\":\"timestamp-micros\"}")
         public long creationTimestamp;
 

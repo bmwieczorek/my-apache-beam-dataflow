@@ -37,7 +37,8 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
     "dataflow_jar_gcs_path" = "gs://${var.bucket}/${google_storage_bucket_object.dataflow_jar.name}"
     "template_gcs_path" = local.template_gcs_path
     "dataflow_jar_main_class" = var.main_class
-    "wait_secs_before_delete" = 300
+    "table_spec" = var.table_spec
+    "wait_secs_before_delete" = 120
   }
   labels = {
     owner   = var.owner

@@ -39,7 +39,7 @@ public class MyBQReadWriteJobIntegrationTest {
         Assert.assertEquals("terraform init should exit terraform with 0 status code", 0, terraformInitProcessStatus);
 
         int initialPreLoadedRowCount = 4;
-        String query = "select * from " + project + ".bartek_dataset.mysubscription_view";
+        String query = "select * from " + project + "." + env.get("GCP_OWNER") + "_mybqreadwritejob.mysubscription_view";
 
         // when
         Process bigQueryProcess = runTerraformInfrastructureSetupAsBashProcess("terraform apply -auto-approve -target=module.bigquery");

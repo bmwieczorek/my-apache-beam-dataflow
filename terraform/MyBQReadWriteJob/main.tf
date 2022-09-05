@@ -1,6 +1,8 @@
 locals {
   job                 = "${var.owner}-mybqreadwritejob"
   bucket              = "${var.project}-${local.job}"
+  dataset             = replace(local.job, "-", "_")
+  table               = "mysubscription_table"
 }
 
 //data "google_compute_network" "network" {
@@ -26,7 +28,7 @@ module "bigquery" {
   project             = var.project
   owner               = var.owner
   bucket              = module.storage.bucket_name
-  dataset             = "${var.owner}_dataset"
+  dataset             = local.dataset
   table_schema_file   = "../../target/MyBQReadWriteJob.json"
 }
 
@@ -38,6 +40,7 @@ module "dataflow_classic_template" {
   owner               = var.owner
   bucket              = module.storage.bucket_name
   main_class          = "com.bawi.beam.dataflow.MyBQReadWriteJob"
+  table_spec          = "${local.dataset}.${local.table}"
   job                 = local.job
   network             = var.network
 //  network             = data.google_compute_network.network.self_link
