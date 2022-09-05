@@ -38,7 +38,7 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
     "template_gcs_path" = local.template_gcs_path
     "dataflow_jar_main_class" = var.main_class
     "table_spec" = var.table_spec
-    "wait_secs_before_delete" = 120
+    "wait_secs_before_delete" = 300
   }
   labels = {
     owner   = var.owner
@@ -70,7 +70,7 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
     command = <<EOT
       max_retry=40;
       counter=1;
-      while [[ "$(gcloud compute instances describe --project ${var.project} --zone ${var.zone} ${local.instance} --format='value(metadata.startup-state)')" != "Completed" ]] ;
+      while [ "$(gcloud compute instances describe --project ${var.project} --zone ${var.zone} ${local.instance} --format='value(metadata.startup-state)')" != "Completed" ] ;
       do
         sleep 5;
         if [ $counter -eq $max_retry ];
