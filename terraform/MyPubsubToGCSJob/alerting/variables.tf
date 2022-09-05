@@ -45,5 +45,5 @@ variable "module_depends_on" {
 variable "dashboard_file" {
   description = "Google dashboard file name"
   type        = string
-  default     = "alert-dashboard.json"
+  default     = "monitoring-alert-policy-dashboard.json"
 }
