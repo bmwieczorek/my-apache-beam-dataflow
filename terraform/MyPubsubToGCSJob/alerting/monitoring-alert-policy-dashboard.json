@@ -1,0 +1,108 @@
+{
+  "category": "CUSTOM",
+  "displayName": "${dashboard_name}",
+  "mosaicLayout": {
+    "columns": 12,
+    "tiles": [
+      {
+        "height": 4,
+        "widget": {
+          "alertChart": {
+              "name": "${policy1}"
+          }
+        },
+        "width": 4,
+        "xPos": 0,
+        "yPos": 0
+      },
+      {
+        "height": 4,
+        "widget": {
+          "alertChart": {
+              "name": "${policy2}"
+          }
+        },
+        "width": 4,
+        "xPos": 4,
+        "yPos": 0
+      },
+      {
+        "height": 4,
+        "widget": {
+          "alertChart": {
+              "name": "${policy3}"
+          }
+        },
+        "width": 4,
+        "xPos": 8,
+        "yPos": 0
+      },
+      {
+        "height": 4,
+        "widget": {
+          "alertChart": {
+              "name": "${policy4}"
+          }
+        },
+        "width": 4,
+        "xPos": 0,
+        "yPos": 4
+      },
+      {
+        "height": 4,
+        "widget": {
+          "alertChart": {
+              "name": "${policy5}"
+          }
+        },
+        "width": 4,
+        "xPos": 4,
+        "yPos": 4
+      },
+      {
+        "height": 4,
+        "widget": {
+          "alertChart": {
+              "name": "${policy6}"
+          }
+        },
+        "width": 4,
+        "xPos": 4,
+        "yPos": 8
+      },
+      {
+        "height": 4,
+        "widget": {
+          "alertChart": {
+              "name": "${policy7}"
+          }
+        },
+        "width": 4,
+        "xPos": 0,
+        "yPos": 8
+      },
+      {
+        "height": 4,
+        "widget": {
+          "alertChart": {
+            "name": "${policy8}"
+          }
+        },
+        "width": 4,
+        "xPos": 8,
+        "yPos": 8
+      },
+      {
+        "height": 4,
+        "widget": {
+          "alertChart": {
+            "name": "${policy9}"
+          }
+        },
+        "width": 4,
+        "xPos": 8,
+        "yPos": 4
+      }
+    ]
+  }
+}
