@@ -18,9 +18,6 @@ public class DataflowUtils {
             merged.addAll(Arrays.asList(System.getenv("GCP_JAVA_DATAFLOW_RUN_OPTS").split(" +")));
         }
         if (System.getenv("GCP_PROJECT") != null) {
-            if (!argsContain(args, "projectId")) {
-                merged.add("--projectId=" + System.getenv("GCP_PROJECT"));
-            }
             if (!argsContain(args, "stagingLocation") && System.getenv("GCP_OWNER") != null) {
                 merged.add("--stagingLocation=gs://" + System.getenv("GCP_PROJECT") + "-" + System.getenv("GCP_OWNER") + "/staging");
             }
