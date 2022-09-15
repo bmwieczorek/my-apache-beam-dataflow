@@ -39,16 +39,16 @@ mvn compile -DskipTests -Pdataflow-runner exec:java \
   ${GCP_JAVA_DATAFLOW_RUN_OPTS} \
   --workerMachineType=e2-small \
   --workerDiskType=compute.googleapis.com/projects/${GCP_PROJECT}/zones/${GCP_ZONE}/diskTypes/pd-standard \
-  --diskSizeGb=30 \
+  --diskSizeGb=20 \
   --stagingLocation=gs://${GCP_BUCKET}/staging"
 
 */
 
     static class MyDoFn extends DoFn<Integer,Integer> {
-        static Set<Long> THREAD_IDS = new HashSet<>();
         private final Distribution bundleSizeDistribution = Metrics.distribution(MyDoFn.class, "bundleSizeDist");
+        static Set<Long> THREAD_IDS = new HashSet<>();
 
-        private Integer bundleSize;
+        private int bundleSize;
 
         @StartBundle
         public void startBundle() {
@@ -58,9 +58,13 @@ mvn compile -DskipTests -Pdataflow-runner exec:java \
         @ProcessElement
         public void process(@Element Integer i, OutputReceiver<Integer> receiver) {
             bundleSize++;
-            long id = Thread.currentThread().getId();
-            THREAD_IDS.add(id);
-            LOGGER.info("[tid={}] Processing: {}", id, i);
+            THREAD_IDS.add(Thread.currentThread().getId());
+            LOGGER.info("[tid={}] Processing: {}", Thread.currentThread().getId(), i);
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             receiver.output(i);
         }
 
@@ -75,7 +79,7 @@ mvn compile -DskipTests -Pdataflow-runner exec:java \
     public static void main(String[] args) {
 //        args = DataflowUtils.updateDataflowArgs(args);
         Pipeline pipeline = Pipeline.create(PipelineOptionsFactory.fromArgs(args).create());
-        List<Integer> ints = IntStream.rangeClosed(1, 1000).boxed().collect(Collectors.toList());
+        List<Integer> ints = IntStream.rangeClosed(1, 100).boxed().collect(Collectors.toList());
         pipeline.apply(Create.of(ints))
                 .apply(ParDo.of(new MyDoFn()))
 //                .apply(MapElements.into(TypeDescriptors.integers()).via(i -> {
@@ -84,9 +88,32 @@ mvn compile -DskipTests -Pdataflow-runner exec:java \
 //                }))
         ;
         PipelineResult result = pipeline.run();
-        result.metrics().allMetrics().getDistributions().forEach(m -> LOGGER.info("{}: {}", m.getName(), m.getCommitted()));
-        LOGGER.info("{} thread ids: {}", THREAD_IDS.size(), THREAD_IDS);  // Math.max(Runtime.getRuntime().availableProcessors(), 3)
-        // usually waitUntilFinish while pipeline development, remove when generating dataflow classic template
-        //result.waitUntilFinish();
+        if ("DirectPipelineResult".equals(result.getClass().getSimpleName())) {
+            result.metrics().allMetrics().getDistributions().forEach(m -> LOGGER.info("{}: {}", m.getName(), m.getCommitted()));
+            LOGGER.info("{} thread ids: {}", THREAD_IDS.size(), THREAD_IDS);  // Math.max(Runtime.getRuntime().availableProcessors(), 3)
+            result.waitUntilFinish(); // usually waitUntilFinish while pipeline development, remove when generating dataflow classic template
+        }
+
+        // direct runner - 12 worker threads at 12 logical cpu cores on Mac, for 100 elements 26 bundles with size between 2 and 4
+//        2022-09-15 15:53:14,144 [direct-runner-workerid] INFO  com.bawi.beam.dataflow.MySimpleLoggingJob:73 - [tid=22] Bundle size is 4
+//        2022-09-15 15:53:14,145 [direct-runner-workerid] INFO  com.bawi.beam.dataflow.MySimpleLoggingJob:73 - [tid=24] Bundle size is 4
+//        2022-09-15 15:53:14,148 [direct-runner-workerid] INFO  com.bawi.beam.dataflow.MySimpleLoggingJob:62 - [tid=15] Processing: 99
+//        2022-09-15 15:53:14,251 [direct-runner-workerid] INFO  com.bawi.beam.dataflow.MySimpleLoggingJob:62 - [tid=15] Processing: 100
+//        2022-09-15 15:53:14,353 [direct-runner-workerid] INFO  com.bawi.beam.dataflow.MySimpleLoggingJob:73 - [tid=15] Bundle size is 2
+//        2022-09-15 15:53:14,397 [mainid] INFO  com.bawi.beam.dataflow.MySimpleLoggingJob:92 - com.bawi.beam.dataflow.MySimpleLoggingJob$MyDoFn:bundleSizeDist: DistributionResult{sum=100, count=26, min=2, max=4}
+//        2022-09-15 15:53:14,398 [mainid] INFO  com.bawi.beam.dataflow.MySimpleLoggingJob:93 - 12 thread ids: [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 15]
+
+        // dataflow runner with workerMachineType with e2-small with 2 cores
+//        Info 2022-09-15 08:00:39.480 UTC Splitting source [0, 100) produced 1 bundles with total serialized response size 1679
+//        Info 2022-09-15 08:00:48.393 UTC [tid=30] Bundle size is 74
+//        Info 2022-09-15 08:00:51.098 UTC [tid=29] Bundle size is 26
+//        Counter name            Value
+//        bundleSizeDist_COUNT	2
+//        bundleSizeDist_MAX	    74
+//        bundleSizeDist_MEAN	    50
+//        bundleSizeDist_MIN	    26
+
     }
+
+
 }
