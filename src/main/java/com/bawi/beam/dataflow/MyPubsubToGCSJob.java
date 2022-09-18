@@ -203,7 +203,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
                 .apply(BigQueryIO.<GenericRecord>write()
                         .withAvroFormatFunction(r -> {
                             GenericRecord element = r.getElement();
-                            LOGGER.info("element {}, schema {}", element, r.getSchema());
+                            LOGGER.info("[{}][{}] element {}, schema {}", getIP(), getThread(), element, r.getSchema());
                             return element;
                         })
                         .withAvroSchemaFactory(qTableSchema -> SCHEMA)
@@ -249,7 +249,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
             GenericData.Record record = doProcess(pubsubMessage, inputDataFreshnessMs, customPublishTimeInputDataFreshnessMs, customEventTimeInputDataFreshnessMs);
             String windowString = window instanceof GlobalWindow ? "GlobalWindow " + window.maxTimestamp() : window.toString();
-            LOGGER.info("record {} window {} {}", record, windowString, getMessage());
+            LOGGER.info("[{}][{}] record {} window {} {}", getIP(), getThread(), record, windowString, getMessage());
             outputReceiver.output(record);
 
             if (inputDataFreshnessMs > 0) INPUT_DATA_FRESHNESS_MS.update(inputDataFreshnessMs);
@@ -322,7 +322,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
                     pane.getIndex(), pane.getTiming(), shardIndex, numShards,
                     now, hostAddress, UUID.randomUUID(),
                     this.compression, this.format);
-            LOGGER.info("Writing data to path='{}'", path);
+            LOGGER.info("[{}][{}] Writing data to path='{}'", getIP(), getThread(), path);
             return path;
         }
 
@@ -359,8 +359,21 @@ gcloud dataflow flex-template run $APP-$OWNER \
         public void process(@DoFn.Element GenericRecord record, @Timestamp Instant timestamp, OutputReceiver<KV<String, GenericRecord>> outputReceiver) {
 //            String timestampedPath = outputDir + FORMATTER_PATH.print(timestamp);
             String timestampedPath = outputDir.get() + FORMATTER_PATH.print(timestamp);
-            LOGGER.info("timestampedPath={}", timestampedPath);
+            LOGGER.info("[{}][{}] timestampedPath={}", getIP(), getThread(), timestampedPath);
             outputReceiver.output(KV.of(timestampedPath, record));
         }
+    }
+
+    private static String getIP() {
+        try {
+            return InetAddress.getLocalHost().getHostAddress();
+        } catch (UnknownHostException e) {
+            LOGGER.error("Unable to get local host address", e);
+            return null;
+        }
+    }
+
+    private static String getThread() {
+        return Thread.currentThread().getName() + ":" + Thread.currentThread().getId();
     }
 }

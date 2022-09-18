@@ -13,9 +13,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class MyBQReadWriteJobIntegrationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyBQReadWriteJobIntegrationTest.class);
@@ -71,12 +69,13 @@ public class MyBQReadWriteJobIntegrationTest {
     @Before
     @After
     public void cleanUp() throws IOException, InterruptedException {
-        Process destroyProcess = runTerraformInfrastructureSetupAsBashProcess("terraform destroy -auto-approve");
+        Process destroyProcess = runTerraformInfrastructureSetupAsBashProcess("terraform init && terraform destroy -auto-approve");
         logProcess(destroyProcess);
         int destroyStatus = destroyProcess.waitFor();
         Assert.assertEquals("destroyProcess should exit terraform with 0 bigQueryProcessStatus code", 0, destroyStatus);
     }
 
+    @SuppressWarnings("SameParameterValue")
     private Process runMvnAsBashProcess(String cmd) throws IOException {
         ProcessBuilder processBuilder = new ProcessBuilder();
         processBuilder.inheritIO();
@@ -120,11 +119,11 @@ public class MyBQReadWriteJobIntegrationTest {
         return processBuilder.start();
     }
 
-    private String getOutput(Process process) throws IOException {
-        try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-            return bufferedReader
-                    .lines()
-                    .collect(Collectors.joining(System.lineSeparator()));
-        }
-    }
+//    private String getOutput(Process process) throws IOException {
+//        try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+//            return bufferedReader
+//                    .lines()
+//                    .collect(Collectors.joining(System.lineSeparator()));
+//        }
+//    }
 }
