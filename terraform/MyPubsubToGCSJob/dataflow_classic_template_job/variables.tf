@@ -54,6 +54,11 @@ variable "template_gcs_path" {
   type        = string
 }
 
+variable "table_spec" {
+  description = "BigQuery table spec"
+  type        = string
+}
+
 variable "number_of_worker_harness_threads" {
   description = "Number of harness threads in Dataflow worker"
   type        = number

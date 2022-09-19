@@ -21,7 +21,7 @@ resource "google_dataflow_job" "job" {
   network               = var.network
   subnetwork            = var.subnetwork == "default" ? null : var.subnetwork
   max_workers           = var.max_workers
-  //  num_workers           = 1 // num_workers not supported by google_dataflow_job
+  //  num_workers           = 1 // num_workers not supported by google_dataflow_job, needs to be defined in vm startup script
   //  on_delete             = "cancel"
   on_delete             = "drain"
   ip_configuration      = "WORKER_IP_PRIVATE"
@@ -31,6 +31,7 @@ resource "google_dataflow_job" "job" {
   parameters = {
     output         = "gs://${var.bucket}/output"
     temp           = "gs://${var.bucket}/temp"
+    tableSpec      = var.table_spec
     subscription   = var.subscription
   //    dumpHeapOnOOM = var.dump_heap_on_oom                                // Error: googleapi: Error 400: The workflow could not be created. Causes: Found unexpected parameters: ['dumpHeapOnOOM'
   //    saveHeapDumpsToGcsPath = var.save_heap_dumps_to_gcs_path            // Error: googleapi: Error 400: The workflow could not be created. Causes: Found unexpected parameters:
@@ -45,14 +46,52 @@ resource "google_dataflow_job" "job" {
 
   provisioner "local-exec" {
     command = <<EOT
-    max_retry=40; for i in $(seq 1 $max_retry); do if [ -z "$(gcloud dataflow jobs list --filter "NAME:${self.name} AND STATE=Running" --format 'value(JOB_ID)' --region ${self.region})" ]; then if [ $i -eq $max_retry ]; then echo "Failed to reach running state within $max_retry retries" && break; fi; echo "Waiting for job to be in running state"; sleep 5; else echo "Running"; break; fi; done
+    max_retry=40;
+    counter=1;
+    for i in $(seq 1 $max_retry);
+    do
+      gcloud dataflow jobs list --filter "NAME:${self.name} AND STATE=Running" --region ${self.region}
+      if [ -z "$(gcloud dataflow jobs list --filter "NAME:${self.name} AND STATE=Running" --format 'value(JOB_ID)' --region ${self.region})" ];
+      then
+        if [ $i -eq $max_retry ];
+        then
+          echo "Failed to reach running state within $max_retry retries" && break;
+        fi;
+        echo "Waiting for job to be in running state: $counter attempt of $max_retry. Retrying in 5 secs";
+        counter=$(expr $counter + 1);
+        sleep 5;
+      else
+        echo "Running";
+        break;
+      fi;
+    done
     EOT
   }
 
   provisioner "local-exec" {
     when    = destroy
+    // while not empty Cancelling or Running or Draining job
     command = <<EOT
-      max_retry=40; counter=1; until ! [ -z "$(gcloud dataflow jobs list --filter "NAME:${self.name} AND (STATE=Cancelling OR STATE=Running)" --format 'value(JOB_ID)' --region "${self.region}")" ] ; do sleep 5; if [ $counter -eq $max_retry ]; then echo "Failed" && break; fi; echo "Wating for job to be cancelled: $counter attempt"; counter=$(expr $counter + 1); done
+    max_retry=40;
+    counter=1;
+    for i in $(seq 1 $max_retry);
+    do
+      gcloud dataflow jobs list --filter "NAME:${self.name} AND (STATE=Cancelling OR STATE=Running OR STATE=Draining)" --region ${self.region}
+      if ! [ -z "$(gcloud dataflow jobs list --filter "NAME:${self.name} AND (STATE=Cancelling OR STATE=Running OR STATE=Draining)" --format 'value(JOB_ID)' --region ${self.region})" ];
+      then
+        if [ $i -eq $max_retry ];
+        then
+          echo "Failed to exit running/cancelling/draining state within $max_retry retries"
+          break;
+        fi;
+        echo "Waiting for job to exit running/cancelling/draining state: $counter attempt of $max_retry. Retrying in 5 secs";
+        counter=$(expr $counter + 1);
+        sleep 5;
+      else
+        echo "Job has exited running/cancelling/draining state";
+        break;
+      fi;
+    done
     EOT
   }
 

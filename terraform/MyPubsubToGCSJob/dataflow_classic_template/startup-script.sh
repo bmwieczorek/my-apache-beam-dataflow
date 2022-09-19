@@ -24,8 +24,10 @@ DATAFLOW_JAR_GCS_PATH=$(curl http://metadata.google.internal/computeMetadata/v1/
 echo "DATAFLOW_JAR_GCS_PATH=$DATAFLOW_JAR_GCS_PATH" | tee -a ${LOG}
 DATAFLOW_JAR_MAIN_CLASS=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/dataflow_jar_main_class -H "Metadata-Flavor: Google")
 echo "DATAFLOW_JAR_MAIN_CLASS=$DATAFLOW_JAR_MAIN_CLASS" | tee -a ${LOG}
-TABLE_SPEC=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/table_spec -H "Metadata-Flavor: Google")
-echo "TABLE_SPEC=$TABLE_SPEC" | tee -a ${LOG}
+MESSAGE_DEDUPLICATION_ENABLED=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/message_deduplication_enabled -H "Metadata-Flavor: Google")
+echo "MESSAGE_DEDUPLICATION_ENABLED=$MESSAGE_DEDUPLICATION_ENABLED" | tee -a ${LOG}
+CUSTOM_EVENT_TIME_TIMESTAMP_ATTRIBUTE_ENABLED=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/custom_event_time_timestamp_attribute_enabled -H "Metadata-Flavor: Google")
+echo "CUSTOM_EVENT_TIME_TIMESTAMP_ATTRIBUTE_ENABLED=$CUSTOM_EVENT_TIME_TIMESTAMP_ATTRIBUTE_ENABLED" | tee -a ${LOG}
 WAIT_SECS_BEFORE_VM_DELETE=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/wait_secs_before_delete -H "Metadata-Flavor: Google")
 echo "WAIT_SECS_BEFORE_VM_DELETE=$WAIT_SECS_BEFORE_VM_DELETE" | tee -a ${LOG}
 NUMBER_OF_WORKER_HARNESS_THREADS=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/number_of_worker_harness_threads -H "Metadata-Flavor: Google")
@@ -81,23 +83,25 @@ echo "Executing: java -Dorg.xerial.snappy.tempdir=$(pwd) -cp ${DATAFLOW_JAR} ${D
 java -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAIN_CLASS} \
   ${JAVA_DATAFLOW_RUN_OPTS} \
   --runner=DataflowRunner \
-  --tableSpec=${TABLE_SPEC} \
+  --messageDeduplicationEnabled=${MESSAGE_DEDUPLICATION_ENABLED} \
+  --customEventTimeTimestampAttributeEnabled=${CUSTOM_EVENT_TIME_TIMESTAMP_ATTRIBUTE_ENABLED} \
   --stagingLocation="gs://${BUCKET}/staging" \
   --dumpHeapOnOOM=${DUMP_HEAP_ON_OOM} \
   --saveHeapDumpsToGcsPath="gs://${BUCKET}/oom" \
   --numberOfWorkerHarnessThreads=${NUMBER_OF_WORKER_HARNESS_THREADS} \
-  --numWorkers=2 \
+  --numWorkers=1 \
   --diskSizeGb=200 \
   --autoscalingAlgorithm=THROUGHPUT_BASED \
   --enableStreamingEngine=${ENABLE_STREAMING_ENGINE} \
   --templateLocation="${DATAFLOW_TEMPLATE_GCS_PATH}" 2>&1 | tee -a ${LOG}
+
 
 #  --workerDiskType="pd-standard" \
 #  --streaming=true \
 #  --profilingAgentConfiguration="{ \"APICurated\" : true }" \
 
 
-# add maxNumWorkers here to determine number of comsumers for KafkaIO read
+# add maxNumWorkers here to determine number of consumers for KafkaIO read
 #  --maxNumWorkers=2 \
 result=$?
 

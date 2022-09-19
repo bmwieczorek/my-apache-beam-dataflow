@@ -41,23 +41,27 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import static com.bawi.beam.dataflow.MyPubsubToGCSJob.ConcatBodyAttrAndMsgIdFn.EVENT_TIME_ATTRIBUTE;
-import static com.bawi.beam.dataflow.MyPubsubToGCSJob.ConcatBodyAttrAndMsgIdFn.PUBLISH_TIME_ATTRIBUTE;
+import static com.bawi.beam.dataflow.MyPubsubToGCSJob.ConcatBodyAttrAndMsgIdFn.*;
 
 public class MyPubsubToGCSAvroJobIntegrationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyPubsubToGCSAvroJobIntegrationTest.class);
     private static final String MY_MSG_BODY = "myMsgBody";
-    private static final String MY_MSG_ATTR_NAME = "myMsgAttrName";
     private static final String MY_MSG_ATTR_VALUE = "myMsgAttrValue";
-    private boolean dataflow_classic_template_enabled = true;
+    private final boolean dataflow_classic_template_enabled = true;
+    private final boolean generateMessageDuplicates = true;
+    private final boolean isMessageEventTimeIncreasing = false;
 
     @Before
     @After
     public void cleanUp() throws IOException, InterruptedException {
-        Process destroyProcess = runBashProcess("terraform init && terraform destroy -auto-approve -var=\"dataflow_classic_template_enabled=" + dataflow_classic_template_enabled + "\"");
-        logProcess(destroyProcess);
-        int destroyStatus = destroyProcess.waitFor();
-        Assert.assertEquals("destroyProcess should exit terraform with 0 destroyStatus code", 0, destroyStatus);
+        Process process = runBashProcess("terraform init && terraform destroy -auto-approve" +
+                " -var=\"dataflow_classic_template_enabled=" + dataflow_classic_template_enabled + "\"" +
+                " -var=\"dataflow_message_deduplication_enabled=" + generateMessageDuplicates + "\"" +
+                " -var=\"dataflow_custom_event_time_timestamp_attribute_enabled=" + !isMessageEventTimeIncreasing + "\""
+        );
+        logProcess(process);
+        int statusCode = process.waitFor();
+        Assert.assertEquals("init and destroy process should exit terraform with 0 statusCode code", 0, statusCode);
     }
 
     @Test
@@ -75,29 +79,28 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         int mvnProcessStatus = mvnProcess.waitFor();
         Assert.assertEquals("mvn build should exit with 0 status code", 0, mvnProcessStatus);
 
-        Process terraformInitProcess = runBashProcess("terraform init");
-        logProcess(terraformInitProcess);
-        int terraformInitProcessStatus = terraformInitProcess.waitFor();
-        Assert.assertEquals("terraform init should exit with 0 status code", 0, terraformInitProcessStatus);
-
         // given
         String topic = get("GCP_OWNER") + "-topic";
         String gcsBucket = get("GCP_PROJECT") + "-" + get("GCP_OWNER") + "-" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase();
         LOGGER.info("topic={}, bucket={}", topic, gcsBucket);
-        int numMessages = 5 * 60;
+        int numMessages = 10 * 60;
 
         // when
-        Process terraformApplyProcess = runBashProcess("terraform apply -auto-approve -var=\"dataflow_classic_template_enabled=" + dataflow_classic_template_enabled + "\"");
+        Process terraformApplyProcess = runBashProcess("terraform apply -auto-approve" +
+                " -var=\"dataflow_classic_template_enabled=" + dataflow_classic_template_enabled + "\"" +
+                " -var=\"dataflow_message_deduplication_enabled=" + generateMessageDuplicates + "\"" +
+                " -var=\"dataflow_custom_event_time_timestamp_attribute_enabled=" + !isMessageEventTimeIncreasing + "\""
+        );
+
         logProcess(terraformApplyProcess);
         int status = terraformApplyProcess.waitFor();
         Assert.assertEquals("Should exit terraform with 0 status code", 0, status);
 
-        LOGGER.info("Waiting 2 mins for infra to start");
-        Thread.sleep(120 * 1000);
+//        LOGGER.info("Waiting 2 mins for infra to start");
+//        Thread.sleep(120 * 1000);
 
         long firstEventTimeMillis = System.currentTimeMillis();
-//        Function<Integer, Long> fn = msgIdx -> firstEventTimeMillis - ((msgIdx - 1) * 500);
-        Function<Integer, Long> fn = msgIdx -> msgIdx == numMessages ? firstEventTimeMillis : System.currentTimeMillis();
+        Function<Integer, Long> fn = msgIdx -> isMessageEventTimeIncreasing ? System.currentTimeMillis() : firstEventTimeMillis;
 
         List<String> messageIds = sendNPubsubMessagesWithDelay(topic, numMessages, Duration.ofMillis(500), fn);
 
@@ -126,8 +129,9 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
 
 */
         String query = "select * from " + get("GCP_PROJECT") + "." + get("GCP_OWNER") + "_" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase() + ".my_table";
-        long count = waitUpTo10MinsForDataflowJobToPopulateBigQuery(query, 300);
-        Assert.assertEquals("Expected to get 300 records from BigQuery", 300, count);
+        int expectedMessageCount = generateMessageDuplicates ? numMessages / 2 : numMessages;
+        long actualMessageCount = waitUpTo10MinsForDataflowJobToPopulateBigQuery(query, expectedMessageCount);
+        Assert.assertEquals("Expected to get " + expectedMessageCount + " records from BigQuery", expectedMessageCount, actualMessageCount);
 
         LOGGER.info("Assertions passed, waiting 5 mins before deleting resources");
         Thread.sleep(300 * 1000);
@@ -142,7 +146,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
             if (totalRows == expectedRowsCount) {
                 break;
             } else {
-                LOGGER.info("Waiting for dataflow job to complete and to get expected BigQuery results count ... (attempt {}/100)", i);
+                LOGGER.info("Waiting for dataflow job to complete and to get expected BigQuery results count {} ... (attempt {}/100)", expectedRowsCount, i);
                 Thread.sleep(10 * 1000L);
             }
         }
@@ -156,14 +160,18 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
     private List<String> sendNPubsubMessagesWithDelay(String topic, int numMessages, Duration sleepDuration, Function<Integer, Long> msgIdxToTimestampMillisFn) throws IOException, InterruptedException, ExecutionException {
         List<String> messageIds = new ArrayList<>();
         for (int i = 1; i <= numMessages; i++) {
-//            String messageId = sendMessageToPubsub(MY_MSG_BODY + i, MY_MSG_ATTR_NAME, MY_MSG_ATTR_VALUE + (i - (i % 2)), System.currentTimeMillis(), topic); // deduplication
-//            String messageId = sendMessageToPubsub(MY_MSG_BODY + i, MY_MSG_ATTR_NAME + i, MY_MSG_ATTR_VALUE + i, lastEventTimeMillis - ((i - 1) * 500), topic);
-            String messageId = sendMessageToPubsub(MY_MSG_BODY + i, MY_MSG_ATTR_NAME + i, MY_MSG_ATTR_VALUE + i, msgIdxToTimestampMillisFn.apply(i), topic);
-            LOGGER.info("Sent pubsub message ({} of {}), messageId={}", i, numMessages, messageId);
+            // values of myMsgAttrName attribute are not unique but duplicated: 0, 2, 2, 4, 4 ...
+            // attrs: M1: myMsgAttrName1=myMsgAttrValue0, M2: myMsgAttrName2=myMsgAttrValue=2, M3: myMsgAttrName3=myMsgAttrValue=2, M4: myMsgAttrName4=myMsgAttrValue=4
+            String myMsgAttrValue = generateMessageDuplicates ? MY_MSG_ATTR_VALUE + (i + 1 - ((i + 1) % 2)) : MY_MSG_ATTR_VALUE + i;
+
+            long eventTimeMillis = msgIdxToTimestampMillisFn.apply(i);
+            String messageId = sendMessageToPubsub(MY_MSG_BODY + i, MY_MSG_ATTR_NAME, myMsgAttrValue, eventTimeMillis, topic);
+
+            LOGGER.info("Sent pubsub message ({} of {}), {}, eventTime={}", i, numMessages, myMsgAttrValue, Instant.ofEpochMilli(eventTimeMillis).toDateTime());
             messageIds.add(messageId);
             Thread.sleep(sleepDuration.toMillis());
             if (i % (120) == 0) {
-                Thread.sleep(2 * 60 * 1000);
+//                Thread.sleep(2 * 60 * 1000); // temporarily pause sending for 2 mins
             }
         }
 //        String lastMessageId = sendMessageToPubsub(MY_MSG_BODY + numMessages, MY_MSG_ATTR_NAME + numMessages, MY_MSG_ATTR_VALUE + numMessages, lastEventTimeMillis, topic);
@@ -172,11 +180,15 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         return messageIds;
     }
 
-    private String sendMessageToPubsub(String myMsgBody, String myMsgAttrName, String myMsgAttrValue, long eventTimeMillis , String topic) throws IOException, InterruptedException, ExecutionException {
+    private String sendMessageToPubsub(String myMsgBody, String myMsgAttrName, String myMsgAttrValue, long eventTimeMillis, String topic) throws IOException, InterruptedException, ExecutionException {
         Publisher publisher = Publisher.newBuilder(TopicName.of(get("GCP_PROJECT"), topic)).build();
         PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
                 .setData(ByteString.copyFromUtf8(myMsgBody))
-                .putAllAttributes(ImmutableMap.of(myMsgAttrName, myMsgAttrValue, PUBLISH_TIME_ATTRIBUTE, Instant.now().toString(), EVENT_TIME_ATTRIBUTE, Instant.ofEpochMilli(eventTimeMillis).toString()))
+                .putAllAttributes(ImmutableMap.of(
+                        myMsgAttrName, myMsgAttrValue,
+                        PUBLISH_TIME_ATTRIBUTE, Instant.now().toString(),
+                        EVENT_TIME_ATTRIBUTE, Instant.ofEpochMilli(eventTimeMillis).toString()
+                ))
                 .build();
 
         ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
@@ -293,5 +305,48 @@ beam_bq_job_LOAD_mypubsubtogcsjobroot..._00001_00003-0   load       SUCCESS   02
 beam_bq_job_LOAD_mypubsubtogcsjobroot..._00001_00002-0   load       SUCCESS   02 Feb 18:26:14   0:00:04.395000
 beam_bq_job_LOAD_mypubsubtogcsjobroot..._00001_00001-0   load       SUCCESS   02 Feb 18:25:10   0:00:03.775000
 beam_bq_job_LOAD_mypubsubtogcsjobroot..._00001_00000-0   load       SUCCESS   02 Feb 18:22:11   0:00:05.498000
+
+ */
+
+/*
+deduplication on myMsgAttrName and constant even time et:
+Job
+   .apply(PubsubIO.readMessagesWithAttributesAndMessageId().fromSubscription(options.getSubscription()).withIdAttribute(MY_MSG_ATTR_NAME).withTimestampAttribute(ConcatBodyAttrAndMsgIdFn.EVENT_TIME_ATTRIBUTE))
+
+Test
+    private final boolean isMessageAttributeValueUnique = false;
+    private final boolean isMessageEventTimeIncreasing = false;
+
+2022-09-18 19:27:22,413 INFO  Sent pubsub message (1 of 600), myMsgAttrValue2, eventTime=2022-09-18T19:27:19.447+02:00
+2022-09-18 19:27:23,123 INFO  Sent pubsub message (2 of 600), myMsgAttrValue2, eventTime=2022-09-18T19:27:19.447+02:00
+2022-09-18 19:27:24,222 INFO  Sent pubsub message (3 of 600), myMsgAttrValue4, eventTime=2022-09-18T19:27:19.447+02:00
+2022-09-18 19:27:24,944 INFO  Sent pubsub message (4 of 600), myMsgAttrValue4, eventTime=2022-09-18T19:27:19.447+02:00
+...
+2022-09-18 19:41:58,484 INFO  Sent pubsub message (597 of 600), myMsgAttrValue598, eventTime=2022-09-18T19:27:19.447+02:00
+2022-09-18 19:41:59,143 INFO  Sent pubsub message (598 of 600), myMsgAttrValue598, eventTime=2022-09-18T19:27:19.447+02:00
+2022-09-18 19:41:59,797 INFO  Sent pubsub message (599 of 600), myMsgAttrValue600, eventTime=2022-09-18T19:27:19.447+02:00
+2022-09-18 19:42:00,476 INFO  Sent pubsub message (600 of 600), myMsgAttrValue600, eventTime=2022-09-18T19:27:19.447+02:00
+2022-09-18 19:44:02,120 INFO  Returned total rows count: 300
+
+
+data freshness increasing constantly to 15mins
+system latency up to 3 secs
+processed 300 records
+
+
+
+
+41 threads (in main Thread group) with worker harness 8
+
+AfterPubsub_threadId_Thread-26:102	1
+AfterPubsub_threadId_Thread-30:118	10
+AfterPubsub_threadId_Thread-31:121	5
+AfterPubsub_threadId_Thread-33:126	20
+AfterPubsub_threadId_Thread-37:141	23
+..
+AfterPubsub_threadId_Thread-73:812  11
+
+
+177 threads with worker harness 64
 
  */

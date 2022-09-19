@@ -69,9 +69,14 @@ variable "main_class" {
   type        = string
 }
 
-variable "table_spec" {
-  description = "BigQuery table spec"
-  type        = string
+variable "message_deduplication_enabled" {
+  description = "If dataflow should deduplicate messages based on message attribute"
+  type        = bool
+}
+
+variable "custom_event_time_timestamp_attribute_enabled" {
+  description = "If dataflow should use custom attribute as timestamp attribute"
+  type        = bool
 }
 
 variable "owner" {

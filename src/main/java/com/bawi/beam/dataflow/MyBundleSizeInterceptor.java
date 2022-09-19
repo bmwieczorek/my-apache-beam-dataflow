@@ -14,11 +14,7 @@ public class MyBundleSizeInterceptor<T> extends DoFn<T, T> {
 
     private final Distribution bundleSizeDist;
     private final String stepName;
-    private Integer bundleSize;
-
-    public MyBundleSizeInterceptor() {
-        this(MyBundleSizeInterceptor.class.getSimpleName());
-    }
+    private int bundleSize;
 
     public MyBundleSizeInterceptor(String stepName) {
         this.stepName = stepName;
@@ -33,6 +29,7 @@ public class MyBundleSizeInterceptor<T> extends DoFn<T, T> {
     @ProcessElement
     public void process(@Element T element, OutputReceiver<T> receiver) {
         bundleSize++;
+        Metrics.counter(MyBundleSizeInterceptor.class.getSimpleName(), stepName + "_threadId_" + getThread()).inc();
         receiver.output(element);
     }
 

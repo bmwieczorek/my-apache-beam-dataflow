@@ -40,8 +40,10 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
     "dataflow_jar_gcs_path" = "gs://${var.bucket}/${google_storage_bucket_object.dataflow_jar[0].name}"
     "template_gcs_path" = local.template_gcs_path
     "dataflow_jar_main_class" = var.main_class
-    "table_spec" = var.table_spec
+    "message_deduplication_enabled" = var.message_deduplication_enabled
+    "custom_event_time_timestamp_attribute_enabled" = var.custom_event_time_timestamp_attribute_enabled
     "wait_secs_before_delete" = 300
+    // Worker harness starting with
     "number_of_worker_harness_threads" = var.number_of_worker_harness_threads
     "enable_streaming_engine" = var.enable_streaming_engine
     "dump_heap_on_oom" = var.dump_heap_on_oom
@@ -90,12 +92,10 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
         then
           echo "java failed" && break;
         fi;
-        echo "Waiting for VM to complete: $counter attempt" ; counter=$(expr $counter + 1);
+        echo "Waiting for VM to complete: $counter attempt of $max_retry" ; counter=$(expr $counter + 1);
       done
       gcloud compute instances get-serial-port-output ${local.instance} --zone ${var.zone} --project ${var.project} | grep startup | grep script | grep -v 'INFO  org.apache.beam.' | grep -v 'WARN  org.apache.beam.' | grep -v 'Speed' | grep -v '\-\-:\-\-:\-\-'
       gcloud compute instances describe --project ${var.project} --zone ${var.zone} ${local.instance} --format='value(metadata.startup-state)'
     EOT
   }
 }
-
-//       max_retry=40; counter=1; until gsutil stat ${local.template_gcs_path} ; do sleep 5; if [ $counter -eq $max_retry ]; then echo "Failed" && break; fi; if gcloud compute instances get-serial-port-output ${local.instance} --zone ${var.zone} --project ${var.project} | grep startup | grep script | grep Caused |grep Error ; then echo "java failed" && break; fi; echo "Waiting for template to be generated: $counter attempt" ; counter=$(expr $counter + 1); done

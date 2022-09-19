@@ -12,7 +12,8 @@ locals {
   labels = {
     owner = var.owner
   }
-  experiments                     = ["enable_stackdriver_agent_metrics","enable_google_cloud_profiler","enable_google_cloud_heap_sampling"]
+#  experiments                     = ["enable_stackdriver_agent_metrics","enable_google_cloud_profiler","enable_google_cloud_heap_sampling"]
+  experiments                     = ["enable_stackdriver_agent_metrics"]
   jar_version                     = element(regex("(\\d+(\\.\\d+){0,2}(-SNAPSHOT)?)", basename(tolist(fileset(path.module, "../../target/my-*.jar"))[0])),0)
 //  job_name                        = replace(lower("${local.job_base_name}-${local.jar_version}"), ".", "_")
   job_name                        = local.job_base_name
@@ -41,7 +42,8 @@ module "dataflow_classic_template" {
 //  bucket              = module.storage.bucket_name
   bucket                            = google_storage_bucket.my_bucket.name
   main_class                        = "com.bawi.beam.dataflow.MyPubsubToGCSJob"
-  table_spec                        = "${local.dataset}.${local.table}"
+  message_deduplication_enabled     = var.dataflow_message_deduplication_enabled
+  custom_event_time_timestamp_attribute_enabled = var.dataflow_custom_event_time_timestamp_attribute_enabled
   job_name                          = local.job_base_name
   network                           = var.network
 //  network             = data.google_compute_network.network.self_link
@@ -69,6 +71,7 @@ module "dataflow_classic_template_job" {
   service_account                   = var.service_account
   template_gcs_path                 = module.dataflow_classic_template.template_gcs_path
 //  template_gcs_path                 = "gs://${local.bucket}/templates/${local.job_base_name}-template"
+  table_spec                        = "${google_bigquery_table.table.dataset_id}.${google_bigquery_table.table.table_id}"
   job_name                          = "${local.job_name}${local.empty_suffix_optional_replacement}"
   subscription                      = google_pubsub_subscription.my_subscription.id
   max_workers                       = local.max_workers

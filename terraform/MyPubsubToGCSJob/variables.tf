@@ -50,6 +50,16 @@ variable "dataflow_classic_template_enabled" {
   default     = true
 }
 
+variable "dataflow_message_deduplication_enabled" {
+  description = "If dataflow should deduplicate messages based on message attribute"
+  type        = bool
+}
+
+variable "dataflow_custom_event_time_timestamp_attribute_enabled" {
+  description = "If dataflow should use custom attribute as timestamp attribute"
+  type        = bool
+}
+
 variable "notification_email" {
   description = "Notification email"
   type        = string
