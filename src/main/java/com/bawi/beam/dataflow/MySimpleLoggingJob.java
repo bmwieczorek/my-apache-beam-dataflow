@@ -23,28 +23,21 @@ import static com.bawi.beam.dataflow.MySimpleLoggingJob.MyFn.THREAD_IDS;
 public class MySimpleLoggingJob {
     private static final Logger LOGGER = LoggerFactory.getLogger(MySimpleLoggingJob.class);
 
-/*
+    public static void main(String[] args) {
+        args = DataflowUtils.updateDataflowArgs(args);
+        Pipeline pipeline = Pipeline.create(PipelineOptionsFactory.fromArgs(args).create());
 
-#Machine type	vCPUs	Memory	Price (USD)	Preemptible price (same for certral,east,west-1)
-#e2-small	    2	    2GB	    $0.016751	$0.005025
-#n1-standard-1	1	    3.75GB	$0.04749975	$0.01
+        pipeline.apply(Create.of(IntStream.rangeClosed(1, 200).boxed().collect(Collectors.toList())))
+                .apply(ParDo.of(new MyFn()));
 
+        PipelineResult result = pipeline.run();
 
-GCP_BUCKET=${GCP_PROJECT}-${GCP_OWNER}-mysimpleloggingjob
-gsutil -q ls -d gs://${GCP_BUCKET} || if [ $? -ne 0 ]; then gsutil mb gs://${GCP_BUCKET}; fi
-mvn compile -DskipTests -Pdataflow-runner exec:java \
--Dexec.mainClass=com.bawi.beam.dataflow.MySimpleLoggingJob \
--Dexec.args=" \
-  --runner=DataflowRunner \
-  ${GCP_JAVA_DATAFLOW_RUN_OPTS} \
-  --workerMachineType=e2-small \
-  --workerDiskType=compute.googleapis.com/projects/${GCP_PROJECT}/zones/${GCP_ZONE}/diskTypes/pd-standard \
-  --numWorkers=2 \
-  --maxNumWorkers=2 \
-  --diskSizeGb=25 \
-  --stagingLocation=gs://${GCP_BUCKET}/staging"
-
-*/
+        if ("DirectPipelineResult".equals(result.getClass().getSimpleName())) {
+            result.metrics().allMetrics().getDistributions().forEach(m -> LOGGER.info("{}: {}", m.getName(), m.getCommitted()));
+            LOGGER.info("{} thread ids: {}", THREAD_IDS.size(), THREAD_IDS);  // Math.max(Runtime.getRuntime().availableProcessors(), 3)
+            result.waitUntilFinish(); // usually waitUntilFinish while pipeline development, remove when generating dataflow classic template
+        }
+    }
 
     static class MyFn extends DoFn<Integer,Integer> {
         Distribution bundleSizeDist = Metrics.distribution(MyFn.class, "bundleSizeDist");
@@ -79,21 +72,41 @@ mvn compile -DskipTests -Pdataflow-runner exec:java \
         return Thread.currentThread().getId();
     }
 
-    public static void main(String[] args) {
-        Pipeline pipeline = Pipeline.create(PipelineOptionsFactory.fromArgs(args).create());
-
-        pipeline.apply(Create.of(IntStream.rangeClosed(1, 200).boxed().collect(Collectors.toList())))
-                .apply(ParDo.of(new MyFn()));
-
-        PipelineResult result = pipeline.run();
-
-        if ("DirectPipelineResult".equals(result.getClass().getSimpleName())) {
-            result.metrics().allMetrics().getDistributions().forEach(m -> LOGGER.info("{}: {}", m.getName(), m.getCommitted()));
-            LOGGER.info("{} thread ids: {}", THREAD_IDS.size(), THREAD_IDS);  // Math.max(Runtime.getRuntime().availableProcessors(), 3)
-            result.waitUntilFinish(); // usually waitUntilFinish while pipeline development, remove when generating dataflow classic template
+    private static String ip() {
+        try {
+            return InetAddress.getLocalHost().getHostAddress();
+        } catch (UnknownHostException e) {
+            LOGGER.error("Unable to get local host address", e);
+            return null;
         }
+    }
+}
 
-        // direct runner - 12 worker threads at 12 logical cpu cores on Mac, for 100 elements 26 bundles with size between 2 and 4
+/*
+
+#Machine type	vCPUs	Memory	Price (USD)	Preemptible price (same for certral,east,west-1)
+#e2-small	    2	    2GB	    $0.016751	$0.005025
+#n1-standard-1	1	    3.75GB	$0.04749975	$0.01
+
+
+GCP_BUCKET=${GCP_PROJECT}-${GCP_OWNER}-mysimpleloggingjob
+gsutil -q ls -d gs://${GCP_BUCKET} || if [ $? -ne 0 ]; then gsutil mb gs://${GCP_BUCKET}; fi
+mvn compile -DskipTests -Pdataflow-runner exec:java \
+-Dexec.mainClass=com.bawi.beam.dataflow.MySimpleLoggingJob \
+-Dexec.args=" \
+  --runner=DataflowRunner \
+  ${GCP_JAVA_DATAFLOW_RUN_OPTS} \
+  --workerMachineType=e2-small \
+  --workerDiskType=compute.googleapis.com/projects/${GCP_PROJECT}/zones/${GCP_ZONE}/diskTypes/pd-standard \
+  --numWorkers=2 \
+  --maxNumWorkers=2 \
+  --diskSizeGb=25 \
+  --stagingLocation=gs://${GCP_BUCKET}/staging"
+
+*/
+
+
+// direct runner - 12 worker threads at 12 logical cpu cores on Mac, for 100 elements 26 bundles with size between 2 and 4
 //        14:16:12,259 [direct-runner-workerid] INFO  MySimpleLoggingJob$MyFn:59 - [127.0.0.1][tid=25] Starting bundle
 //        14:16:12,259 [direct-runner-workerid] INFO  MySimpleLoggingJob$MyFn:59 - [127.0.0.1][tid=19] Starting bundle
 //        14:16:12,259 [direct-runner-workerid] INFO  MySimpleLoggingJob$MyFn:59 - [127.0.0.1][tid=22] Starting bundle
@@ -150,7 +163,7 @@ mvn compile -DskipTests -Pdataflow-runner exec:java \
 
 
 
-        // dataflow runner with 2 workers and each workerMachineType with e2-small with 2 cores:
+// dataflow runner with 2 workers and each workerMachineType with e2-small with 2 cores:
 //        11:57:02.728 [10.128.0.21][tid=29] Starting bundle
 //        11:57:02.732 [10.128.0.21][tid=29] Processing: 1
 //        11:57:03.747 [10.128.0.21][tid=29] Processing: 2
@@ -194,14 +207,3 @@ mvn compile -DskipTests -Pdataflow-runner exec:java \
 //        bundleSizeDist_MEAN	33	    ParDo(MyFn)
 //        bundleSizeDist_MIN	2	    ParDo(MyFn)
 
-    }
-
-    private static String ip() {
-        try {
-            return InetAddress.getLocalHost().getHostAddress();
-        } catch (UnknownHostException e) {
-            LOGGER.error("Unable to get local host address", e);
-            return null;
-        }
-    }
-}
