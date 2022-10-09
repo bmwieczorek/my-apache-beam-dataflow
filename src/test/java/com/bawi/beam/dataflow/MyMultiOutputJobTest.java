@@ -10,7 +10,7 @@ import org.junit.Test;
 
 import static com.bawi.beam.dataflow.MyMultiOutputJob.*;
 
-public class PipelineMultiOutputTest {
+public class MyMultiOutputJobTest {
 
     @Test
     public void testMultiOutput() {
