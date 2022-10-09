@@ -81,7 +81,6 @@ mvn clean compile -DskipTests -Pdataflow-runner exec:java \
         ListCoder<Integer> integerListCoder = ListCoder.of(SerializableCoder.of(Integer.class));
 
         //pipeline.apply(Create.of(IntStream.rangeClosed(10000, 25000).boxed().collect(Collectors.toList())))
-        //LOGGER.info("element {}, schema {}", r.getElement(), r.getSchema());
         pipeline.apply(Create.ofProvider(nestedValueProvider, integerListCoder))
                 .apply(FlatMapElements.into(TypeDescriptors.integers()).via(iter -> iter))
 
