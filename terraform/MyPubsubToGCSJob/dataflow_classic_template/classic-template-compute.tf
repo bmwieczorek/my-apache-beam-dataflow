@@ -1,6 +1,6 @@
 locals {
-  instance          = "${var.job_name}-vm"
-  template_gcs_path = "gs://${var.bucket}/templates/${var.job_name}-template"
+  instance          = "${var.job_base_name}-vm"
+  template_gcs_path = "gs://${var.bucket}/templates/${var.job_base_name}-template"
   dataflow_jar     = basename(var.dataflow_jar_local_path)
   startup_script_local_path = "${path.module}/startup-script.sh"
 }

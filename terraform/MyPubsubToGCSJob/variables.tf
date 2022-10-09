@@ -65,8 +65,14 @@ variable "notification_email" {
   type        = string
 }
 
-variable "force_job_replace" {
-  description = "If dataflow name should be dynamically re-calculated forcing job draining/canceling instead of updating"
-  type        = bool
-  default     = true
+variable "skip_wait_on_job_termination" {
+  type = bool
+  default = false
 }
+
+variable "recalculate_template" {
+  type = bool
+  default = true
+}
+
+

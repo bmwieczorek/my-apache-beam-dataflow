@@ -29,7 +29,7 @@ variable "bucket" {
   type        = string
 }
 
-variable "job_name" {
+variable "job_base_name" {
   description = "Google dataflow job name (lowercase)"
   type        = string
 }

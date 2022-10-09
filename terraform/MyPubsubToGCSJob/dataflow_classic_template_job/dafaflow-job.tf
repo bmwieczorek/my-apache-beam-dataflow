@@ -43,57 +43,5 @@ resource "google_dataflow_job" "job" {
   additional_experiments = var.experiments
 
   labels = local.labels
-
-  provisioner "local-exec" {
-    command = <<EOT
-    max_retry=40;
-    counter=1;
-    for i in $(seq 1 $max_retry);
-    do
-      gcloud dataflow jobs list --filter "NAME:${self.name} AND STATE=Running" --region ${self.region}
-      if [ -z "$(gcloud dataflow jobs list --filter "NAME:${self.name} AND STATE=Running" --format 'value(JOB_ID)' --region ${self.region})" ];
-      then
-        if [ $i -eq $max_retry ];
-        then
-          echo "Failed to reach running state within $max_retry retries" && break;
-        fi;
-        echo "Waiting for job to be in running state: $counter attempt of $max_retry. Retrying in 5 secs";
-        counter=$(expr $counter + 1);
-        sleep 5;
-      else
-        echo "Running";
-        break;
-      fi;
-    done
-    EOT
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    // while not empty Cancelling or Running or Draining job
-    command = <<EOT
-    max_retry=40;
-    counter=1;
-    for i in $(seq 1 $max_retry);
-    do
-      gcloud dataflow jobs list --filter "NAME:${self.name} AND (STATE=Cancelling OR STATE=Running OR STATE=Draining)" --region ${self.region}
-      if ! [ -z "$(gcloud dataflow jobs list --filter "NAME:${self.name} AND (STATE=Cancelling OR STATE=Running OR STATE=Draining)" --format 'value(JOB_ID)' --region ${self.region})" ];
-      then
-        if [ $i -eq $max_retry ];
-        then
-          echo "Failed to exit running/cancelling/draining state within $max_retry retries"
-          break;
-        fi;
-        echo "Waiting for job to exit running/cancelling/draining state: $counter attempt of $max_retry. Retrying in 5 secs";
-        counter=$(expr $counter + 1);
-        sleep 5;
-      else
-        echo "Job has exited running/cancelling/draining state";
-        break;
-      fi;
-    done
-    EOT
-  }
-
-  skip_wait_on_job_termination = true
+  skip_wait_on_job_termination = var.skip_wait_on_job_termination
 }

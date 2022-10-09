@@ -1,6 +1,6 @@
 resource "time_sleep" "wait_180_seconds" {
   depends_on = [var.module_depends_on]
-  create_duration = "180s"
+  create_duration = "120s"
 }
 
 resource "google_monitoring_alert_policy" "job_name_no_reducer_all_series_policy" {

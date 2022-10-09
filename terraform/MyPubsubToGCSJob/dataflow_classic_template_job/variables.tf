@@ -88,3 +88,7 @@ variable "owner" {
   description = "Google resource owner"
   type        = string
 }
+
+variable "skip_wait_on_job_termination" {
+  type = bool
+}

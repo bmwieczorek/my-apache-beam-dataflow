@@ -15,10 +15,12 @@ locals {
 #  experiments                     = ["enable_stackdriver_agent_metrics","enable_google_cloud_profiler","enable_google_cloud_heap_sampling"]
   experiments                     = ["enable_stackdriver_agent_metrics"]
   jar_version                     = element(regex("(\\d+(\\.\\d+){0,2}(-SNAPSHOT)?)", basename(tolist(fileset(path.module, "../../target/my-*.jar"))[0])),0)
+  ts                              = formatdate("YYYY_MM_DD__hh_mm_ss", timestamp())
+  job_name_suffix                 =  ""
+#  job_name_suffix                 =  "-${local.ts}"
+#  job_name_suffix                 = replace(local.ts, local.ts, "")
 //  job_name                        = replace(lower("${local.job_base_name}-${local.jar_version}"), ".", "_")
-  job_name                        = local.job_base_name
-  ts                              = formatdate("YYYYMMDDhhmmss", timestamp())
-  empty_suffix_optional_replacement = var.force_job_replace ? replace(local.ts, local.ts, "") : ""
+
 }
 
 //data "google_compute_network" "network" {
@@ -44,7 +46,7 @@ module "dataflow_classic_template" {
   main_class                        = "com.bawi.beam.dataflow.MyPubsubToGCSJob"
   message_deduplication_enabled     = var.dataflow_message_deduplication_enabled
   custom_event_time_timestamp_attribute_enabled = var.dataflow_custom_event_time_timestamp_attribute_enabled
-  job_name                          = local.job_base_name
+  job_base_name                     = local.job_base_name
   network                           = var.network
 //  network             = data.google_compute_network.network.self_link
   subnetwork                        = var.subnetwork == "default" ? null : var.subnetwork
@@ -69,13 +71,13 @@ module "dataflow_classic_template_job" {
   network                           = var.network
   subnetwork                        = var.subnetwork == "default" ? null : var.subnetwork
   service_account                   = var.service_account
-  template_gcs_path                 = module.dataflow_classic_template.template_gcs_path
-//  template_gcs_path                 = "gs://${local.bucket}/templates/${local.job_base_name}-template"
+  template_gcs_path                 = var.recalculate_template ? module.dataflow_classic_template.template_gcs_path : "gs://${local.bucket}/templates/${local.job_base_name}-template"
   table_spec                        = "${google_bigquery_table.table.dataset_id}.${google_bigquery_table.table.table_id}"
-  job_name                          = "${local.job_name}${local.empty_suffix_optional_replacement}"
+  job_name                          = "${local.job_base_name}${local.job_name_suffix}"
   subscription                      = google_pubsub_subscription.my_subscription.id
   max_workers                       = local.max_workers
   experiments                       = local.experiments
+  skip_wait_on_job_termination      = var.skip_wait_on_job_termination
   number_of_worker_harness_threads  = local.number_of_worker_harness_threads
   enable_streaming_engine           = local.enable_streaming_engine
   dump_heap_on_oom                  = local.dump_heap_on_oom

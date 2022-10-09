@@ -49,7 +49,9 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
     private static final String MY_MSG_ATTR_VALUE = "myMsgAttrValue";
     private final boolean dataflow_classic_template_enabled = true;
     private final boolean generateMessageDuplicates = true;
-    private final boolean isMessageEventTimeIncreasing = false;
+    private final boolean isMessageEventTimeIncreasing = true;
+    private final boolean skip_wait_on_job_termination = false;
+    private final boolean recalculate_template = true;
 
     @Before
     @After
@@ -57,7 +59,9 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         Process process = runBashProcess("terraform init && terraform destroy -auto-approve" +
                 " -var=\"dataflow_classic_template_enabled=" + dataflow_classic_template_enabled + "\"" +
                 " -var=\"dataflow_message_deduplication_enabled=" + generateMessageDuplicates + "\"" +
-                " -var=\"dataflow_custom_event_time_timestamp_attribute_enabled=" + !isMessageEventTimeIncreasing + "\""
+                " -var=\"dataflow_custom_event_time_timestamp_attribute_enabled=" + !isMessageEventTimeIncreasing + "\""+
+                " -var=\"skip_wait_on_job_termination=" + skip_wait_on_job_termination + "\"" +
+                " -var=\"recalculate_template=" + recalculate_template + "\""
         );
         logProcess(process);
         int statusCode = process.waitFor();
@@ -89,7 +93,9 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         Process terraformApplyProcess = runBashProcess("terraform apply -auto-approve" +
                 " -var=\"dataflow_classic_template_enabled=" + dataflow_classic_template_enabled + "\"" +
                 " -var=\"dataflow_message_deduplication_enabled=" + generateMessageDuplicates + "\"" +
-                " -var=\"dataflow_custom_event_time_timestamp_attribute_enabled=" + !isMessageEventTimeIncreasing + "\""
+                " -var=\"dataflow_custom_event_time_timestamp_attribute_enabled=" + !isMessageEventTimeIncreasing + "\"" +
+                " -var=\"skip_wait_on_job_termination=" + skip_wait_on_job_termination + "\"" +
+                " -var=\"recalculate_template=" + recalculate_template + "\""
         );
 
         logProcess(terraformApplyProcess);
@@ -134,7 +140,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         Assert.assertEquals("Expected to get " + expectedMessageCount + " records from BigQuery", expectedMessageCount, actualMessageCount);
 
         LOGGER.info("Assertions passed, waiting 5 mins before deleting resources");
-        Thread.sleep(300 * 1000);
+        Thread.sleep(600 * 1000);
     }
 
     private long waitUpTo10MinsForDataflowJobToPopulateBigQuery(String query, int expectedRowsCount) throws InterruptedException {
@@ -165,7 +171,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
             String myMsgAttrValue = generateMessageDuplicates ? MY_MSG_ATTR_VALUE + (i + 1 - ((i + 1) % 2)) : MY_MSG_ATTR_VALUE + i;
 
             long eventTimeMillis = msgIdxToTimestampMillisFn.apply(i);
-            String messageId = sendMessageToPubsub(MY_MSG_BODY + i, MY_MSG_ATTR_NAME, myMsgAttrValue, eventTimeMillis, topic);
+            String messageId = sendMessageToPubsub(MY_MSG_BODY + i, myMsgAttrValue, eventTimeMillis, topic);
 
             LOGGER.info("Sent pubsub message ({} of {}), {}, eventTime={}", i, numMessages, myMsgAttrValue, Instant.ofEpochMilli(eventTimeMillis).toDateTime());
             messageIds.add(messageId);
@@ -180,12 +186,12 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         return messageIds;
     }
 
-    private String sendMessageToPubsub(String myMsgBody, String myMsgAttrName, String myMsgAttrValue, long eventTimeMillis, String topic) throws IOException, InterruptedException, ExecutionException {
+    private String sendMessageToPubsub(String myMsgBody, String myMsgAttrValue, long eventTimeMillis, String topic) throws IOException, InterruptedException, ExecutionException {
         Publisher publisher = Publisher.newBuilder(TopicName.of(get("GCP_PROJECT"), topic)).build();
         PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
                 .setData(ByteString.copyFromUtf8(myMsgBody))
                 .putAllAttributes(ImmutableMap.of(
-                        myMsgAttrName, myMsgAttrValue,
+                        MY_MSG_ATTR_NAME, myMsgAttrValue,
                         PUBLISH_TIME_ATTRIBUTE, Instant.now().toString(),
                         EVENT_TIME_ATTRIBUTE, Instant.ofEpochMilli(eventTimeMillis).toString()
                 ))
@@ -221,10 +227,11 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
                         File tempAvroFile = File.createTempFile("avro-", ".avro");
                         b.downloadTo(Paths.get(tempAvroFile.toURI()));
                         DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
-                        DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(tempAvroFile, datumReader);
-                        while (dataFileReader.hasNext()) {
-                            GenericRecord genericRecord = dataFileReader.next();
-                            results.add(genericRecord.toString());
+                        try (DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(tempAvroFile, datumReader)) {
+                            while (dataFileReader.hasNext()) {
+                                GenericRecord genericRecord = dataFileReader.next();
+                                results.add(genericRecord.toString());
+                            }
                         }
                         //noinspection ResultOfMethodCallIgnored
                         tempAvroFile.delete();
