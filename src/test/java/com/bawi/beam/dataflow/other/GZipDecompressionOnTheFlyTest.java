@@ -15,7 +15,7 @@ import static org.junit.Assert.assertEquals;
 
 public class GZipDecompressionOnTheFlyTest {
     @Test
-    public void testDecompression() throws IOException {
+    public void testDecompression() throws Exception {
         // given
         List<String> receivedMessages = new ArrayList<>();
 
@@ -31,8 +31,6 @@ public class GZipDecompressionOnTheFlyTest {
                 String singleRootXml = new String(splitBytes);
                 messageReceiver.accept(singleRootXml);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
 
         // then
@@ -57,7 +55,7 @@ public class GZipDecompressionOnTheFlyTest {
 
         byte[] endTag;
 
-        private InputStream is;
+        private final InputStream is;
 
         private static final int MAX_BYTES_READ = 1024 * 1024;
 
