@@ -11,6 +11,7 @@ import java.net.UnknownHostException;
 
 public class MyBundleSizeInterceptor<T> extends DoFn<T, T> {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyBundleSizeInterceptor.class);
+    private static final String INTERCEPTOR_CLASS = MyBundleSizeInterceptor.class.getSimpleName();
 
     private final Distribution bundleSizeDist;
     private final String stepName;
@@ -18,7 +19,7 @@ public class MyBundleSizeInterceptor<T> extends DoFn<T, T> {
 
     public MyBundleSizeInterceptor(String stepName) {
         this.stepName = stepName;
-        bundleSizeDist = Metrics.distribution(MyBundleSizeInterceptor.class.getSimpleName(), stepName + "_bundleSize");
+        bundleSizeDist = Metrics.distribution(INTERCEPTOR_CLASS, stepName + "_bundleSize");
     }
 
     @StartBundle
@@ -29,14 +30,13 @@ public class MyBundleSizeInterceptor<T> extends DoFn<T, T> {
     @ProcessElement
     public void process(@Element T element, OutputReceiver<T> receiver) {
         bundleSize++;
-        Metrics.counter(MyBundleSizeInterceptor.class.getSimpleName(), stepName + "_threadId_" + getThread()).inc();
         receiver.output(element);
     }
 
     @FinishBundle
     public void finishBundle() {
         bundleSizeDist.update(bundleSize);
-        LOGGER.info("[{}][{}] Bundle size for {} is {}", getIP(), getThread(), stepName, bundleSize);
+        LOGGER.info("[{}][{}] Bundle size is {} for {}", getIP(), getThreadInfo(), bundleSize, stepName);
     }
 
     private static String getIP() {
@@ -48,7 +48,7 @@ public class MyBundleSizeInterceptor<T> extends DoFn<T, T> {
         }
     }
 
-    private static String getThread() {
+    private static String getThreadInfo() {
         return Thread.currentThread().getName() + ":" + Thread.currentThread().getId();
     }
 }
