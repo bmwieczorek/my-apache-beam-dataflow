@@ -14,7 +14,6 @@ import org.slf4j.LoggerFactory;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -48,7 +47,7 @@ mvn compile -DskipTests -Pdataflow-runner exec:java \
 */
 
     static class MyFn extends DoFn<Integer,Integer> {
-        private final Distribution bundleSizeDistribution = Metrics.distribution(MyFn.class, "bundleSizeDist");
+        Distribution bundleSizeDist = Metrics.distribution(MyFn.class, "bundleSizeDist");
         static Set<Long> THREAD_IDS = new HashSet<>();
 
         private int bundleSize;
@@ -56,42 +55,38 @@ mvn compile -DskipTests -Pdataflow-runner exec:java \
         @StartBundle
         public void startBundle() {
             bundleSize = 0;
-            LOGGER.info("[{}][tid={}] Starting bundle", getIP(), Thread.currentThread().getId());
+            LOGGER.info("[{}][tid={}] Starting bundle", ip(), threadId());
         }
 
         @ProcessElement
-        public void process(@Element Integer i, OutputReceiver<Integer> receiver) {
+        public void process(@Element Integer i, OutputReceiver<Integer> receiver) throws InterruptedException {
             bundleSize++;
-            THREAD_IDS.add(Thread.currentThread().getId());
-            LOGGER.info("[{}][tid={}] Processing: {}", getIP(), Thread.currentThread().getId(), i);
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+            THREAD_IDS.add(threadId());
+            LOGGER.info("[{}][tid={}] Processing: {}", ip(), threadId(), i);
+            Thread.sleep(1000);
             receiver.output(i);
         }
 
         @FinishBundle
         public void finishBundle() {
-            LOGGER.info("[{}][tid={}] Bundle size is {}", getIP(), Thread.currentThread().getId(), bundleSize);
-            bundleSizeDistribution.update(bundleSize);
+            LOGGER.info("[{}][tid={}] Bundle size: {}", ip(), threadId(), bundleSize);
+            bundleSizeDist.update(bundleSize);
             bundleSize=0;
-
         }
     }
+
+    private static long threadId() {
+        return Thread.currentThread().getId();
+    }
+
     public static void main(String[] args) {
-//        args = DataflowUtils.updateDataflowArgs(args);
         Pipeline pipeline = Pipeline.create(PipelineOptionsFactory.fromArgs(args).create());
-        List<Integer> ints = IntStream.rangeClosed(1, 200).boxed().collect(Collectors.toList());
-        pipeline.apply(Create.of(ints))
-                .apply(ParDo.of(new MyFn()))
-//                .apply(MapElements.into(TypeDescriptors.integers()).via(i -> {
-//                    LOGGER.info("[{}][tid={}] Processing: {}", getLocalHostAddress(), Thread.currentThread().getId(), i);
-//                    return i;
-//                }))
-        ;
+
+        pipeline.apply(Create.of(IntStream.rangeClosed(1, 200).boxed().collect(Collectors.toList())))
+                .apply(ParDo.of(new MyFn()));
+
         PipelineResult result = pipeline.run();
+
         if ("DirectPipelineResult".equals(result.getClass().getSimpleName())) {
             result.metrics().allMetrics().getDistributions().forEach(m -> LOGGER.info("{}: {}", m.getName(), m.getCommitted()));
             LOGGER.info("{} thread ids: {}", THREAD_IDS.size(), THREAD_IDS);  // Math.max(Runtime.getRuntime().availableProcessors(), 3)
@@ -201,7 +196,7 @@ mvn compile -DskipTests -Pdataflow-runner exec:java \
 
     }
 
-    private static String getIP() {
+    private static String ip() {
         try {
             return InetAddress.getLocalHost().getHostAddress();
         } catch (UnknownHostException e) {
