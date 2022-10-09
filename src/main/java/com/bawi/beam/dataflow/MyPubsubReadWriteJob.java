@@ -1,7 +1,6 @@
 package com.bawi.beam.dataflow;
 
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubMessage;
 import org.apache.beam.sdk.options.PipelineOptions;
@@ -70,8 +69,7 @@ mvn clean compile -DskipTests -Pdataflow-runner exec:java \
                     // requires org.apache.beam:beam-sdks-java-io-google-cloud-platform
                     .apply(PubsubIO.writeMessages().to(options.getTopic()));
 
-            PipelineResult result = writingPipeline.run();
-//            result.waitUntilFinish();
+            writingPipeline.run();
         }
 
         private static class CreatePubsubMessageFn extends DoFn<String, PubsubMessage> {
@@ -101,6 +99,7 @@ mvn clean compile -DskipTests exec:java \
   --stagingLocation=gs://${BUCKET}/staging \
   --topic=projects/${PROJECT}/topics/$OWNER-${JOB} \
   --jobName=${JOB}-read-$OWNER \
+  --workerMachineType=n1-standard-4 \
   --maxNumWorkers=5 \
   --subscription=projects/${PROJECT}/subscriptions/$OWNER-${JOB}-sub \
   --experiments=enable_stackdriver_agent_metrics \
@@ -114,7 +113,15 @@ mvn clean compile -DskipTests exec:java \
         private static final Logger LOGGER = LoggerFactory.getLogger(Read.class);
 
         public static void main(String[] args) {
+            args = DataflowUtils.updateDataflowArgs(args);
             MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
+
+//            DataflowProfilingOptions.DataflowProfilingAgentConfiguration profilingConf = new DataflowProfilingOptions.DataflowProfilingAgentConfiguration();
+//            profilingConf.put("APICurated", true);
+//            options.setProfilingAgentConfiguration(profilingConf);
+//            options.setStreaming(true);
+//            options.setAutoscalingAlgorithm(DataflowPipelineWorkerPoolOptions.AutoscalingAlgorithmType.THROUGHPUT_BASED);
+
             Pipeline readingPipeline = Pipeline.create(options);
 
             // requires org.apache.beam:beam-sdks-java-io-google-cloud-platform
@@ -125,7 +132,7 @@ mvn clean compile -DskipTests exec:java \
                         public String apply(PubsubMessage msg) {
                             int i = Integer.parseInt(new String(msg.getPayload()));
                             String factorial = factorial(i);
-                            LOGGER.info("{}, fact={}", getMessage(), i);
+                            LOGGER.info("[{}], i={}, fact={}", getMessage(), i, factorial);
                             return "body=" + i +
                                     ", attributes=" + msg.getAttributeMap() +
                                     ", messageId=" + msg.getMessageId();
@@ -134,8 +141,7 @@ mvn clean compile -DskipTests exec:java \
                     }))
                     .apply(MyConsoleIO.write());
 
-            PipelineResult result = readingPipeline.run();
-//            result.waitUntilFinish();
+            readingPipeline.run();
         }
 
         private static String factorial(int limit) {
