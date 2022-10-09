@@ -44,6 +44,9 @@
                     <source>11</source>
                     <target>11</target>
 
+                    <!-- show compilation error when mvn compile -->
+                    <forceJavacCompilerUse>true</forceJavacCompilerUse>
+
                     <!-- used for @AutoService(JvmInitializer.class) -->
                     <annotationProcessorPaths>
                         <annotationProcessorPath>
