@@ -50,7 +50,7 @@ public class MyOOMJob {
         void setTable(ValueProvider<String> value);
 
         @Validation.Required
-        @Default.String("1,2000000")
+        @Default.String("100,2000000")
         ValueProvider<String> getSequenceStartCommaEnd();
         @SuppressWarnings("unused")
         void setSequenceStartCommaEnd(ValueProvider<String> value);
@@ -67,7 +67,7 @@ mvn clean compile -DskipTests -Pdataflow-runner exec:java \
  -Dexec.args="${GCP_JAVA_DATAFLOW_RUN_OPTS} \
   --runner=DataflowRunner \
   --stagingLocation=gs://${BUCKET}/staging \
-  --workerMachineType=n1-standard-1 \
+  --workerMachineType=e2-micro \
   --dumpHeapOnOOM \
   --saveHeapDumpsToGcsPath=gs://${BUCKET}/oom \
   --workerLogLevelOverrides='{ \"com.bawi.beam.dataflow.MyOOMJob\": \"DEBUG\" }' \
@@ -85,46 +85,52 @@ gcloud compute ssh --project=$PROJECT --zone=$WORKER_ZONE $WORKER_NAME --ssh-fla
 
 
 java -agentpath:/opt/cprof/profiler_java_agent.so=-cprof_service=myoomjob,-cprof_service_version=1.0.0 \
-   -cp my-apache-beam-dataflow-0.1-SNAPSHOT.jar com.bawi.beam.dataflow.MyOOMJob --runner=DataflowRunner --stagingLocation=gs://${BUCKET}/staging --workerMachineType=n1-standard-1
-
+   -cp my-apache-beam-dataflow-0.1-SNAPSHOT.jar com.bawi.beam.dataflow.MyOOMJob --runner=DataflowRunner \
+   --stagingLocation=gs://${BUCKET}/staging --workerMachineType=n1-standard-1
 #   --profilingAgentConfiguration='{ \"APICurated\" : true }'"
  */
 
-    public static void main(String[] args) {
-        args = DataflowUtils.updateDataflowArgs(args, "--profilingAgentConfiguration={ \"APICurated\" : true }");
+// Shutting down JVM after 8 consecutive periods of measured GC thrashing.
+// Memory is used/total/max = 888/1218/2292 MB, GC last/max = 51.49/60.13 %, #pushbacks=0, gc thrashing=true.
+// Heap dump written to '/var/log/dataflow/heap_dump.hprof'.
+// The worker was shut down after a long period of high memory pressure.
 
-/*
+// Heap dump /var/log/dataflow/heap_dump.hprof detected, attempting to upload to GCS
+// Heap dump /var/log/dataflow/heap_dump.hprof uploaded to gs://.../oom/....-heap_dump-myoomjob-...-...-...-fleu-harness-....hprof
+
+    public static void main(String[] args) {
+//        args = DataflowUtils.updateDataflowArgs(args, "--profilingAgentConfiguration={ \"APICurated\" : true }");
+
         args = DataflowUtils.updateDataflowArgs(args,
-                "--profilingAgentConfiguration={\"APICurated\":true}",
+            // use either --profilingAgentConfiguration={\"APICurated\":true}"  or  -dataflowServiceOptions=enable_google_cloud_profiler
+//                "--profilingAgentConfiguration={\"APICurated\":true}",
                 "--dumpHeapOnOOM=true",
                 "--diskSizeGb=200",
                 "--saveHeapDumpsToGcsPath=gs://" + System.getenv("GCP_PROJECT") + "-" + System.getenv("GCP_OWNER") + "/oom",
                 "--maxNumWorkers=1",
-                "--workerMachineType=n1-standard-1"
-//                "--dataflowServiceOptions=enable_google_cloud_profiler"
+                "--workerMachineType=e2-micro",
+                "--dataflowServiceOptions=enable_google_cloud_profiler" // adds a link to jobs https://console.cloud.google.com/profiler
         );
-*/
 
         MyPipelineOptions pipelineOptions = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
 //        DataflowProfilingOptions.DataflowProfilingAgentConfiguration profilingConf = new DataflowProfilingOptions.DataflowProfilingAgentConfiguration();
 //        profilingConf.put("APICurated", true);
 //        pipelineOptions.setProfilingAgentConfiguration(profilingConf);
 //        pipelineOptions.setDumpHeapOnOOM(true);
-//        pipelineOptions.setSaveHeapDumpsToGcsPath("gs://mybucket-bartek/oom");
+//        pipelineOptions.setSaveHeapDumpsToGcsPath("gs://" + System.getenv("GCP_PROJECT") + "-" + System.getenv("GCP_OWNER") + "/oom");
 //        pipelineOptions.setDataflowServiceOptions(List.of("enable_google_cloud_profiler"));
 
         Pipeline pipeline = Pipeline.create(pipelineOptions);
+        //pipeline.apply(Create.of(IntStream.rangeClosed(10000, 25000).boxed().collect(Collectors.toList())))
 
         ValueProvider.NestedValueProvider<List<Integer>, String> nestedValueProvider = ValueProvider.NestedValueProvider.of(pipelineOptions.getSequenceStartCommaEnd(), startCommaStop -> {
             int start = Integer.parseInt(startCommaStop.substring(0, startCommaStop.indexOf(",")));
             int end = Integer.parseInt(startCommaStop.substring(startCommaStop.indexOf(",") + 1));
-            LOGGER.info("Sequence start={}, end={}", start, end);
+            LOGGER.info("Sequence start={}, end={}", start, end); // executed by each worker thread
             return IntStream.rangeClosed(start, end).boxed().collect(Collectors.toList());
         });
-
         ListCoder<Integer> integerListCoder = ListCoder.of(SerializableCoder.of(Integer.class));
 
-        //pipeline.apply(Create.of(IntStream.rangeClosed(10000, 25000).boxed().collect(Collectors.toList())))
         pipeline.apply(Create.ofProvider(nestedValueProvider, integerListCoder))
                 .apply(FlatMapElements.into(TypeDescriptors.integers()).via(iter -> iter))
 
@@ -167,7 +173,7 @@ java -agentpath:/opt/cprof/profiler_java_agent.so=-cprof_service=myoomjob,-cprof
 
 //                .apply(FileIO.<GenericRecord>write().via(ParquetIO.sink(SCHEMA)).to(pipelineOptions.getOutput()));
 
-        pipeline.run().waitUntilFinish();
+        pipeline.run();
     }
 
 //    private static String format(long value) {
@@ -185,7 +191,7 @@ java -agentpath:/opt/cprof/profiler_java_agent.so=-cprof_service=myoomjob,-cprof
     private static int createBigArrayList(int limit) {
         List<byte[]> strings = new ArrayList<>();
         for (int i = 1; i <= limit; i++) {
-            strings.add(new byte[2 * 1024]);
+            strings.add(new byte[10 * 1024]);
         }
         return strings.size();
     }
