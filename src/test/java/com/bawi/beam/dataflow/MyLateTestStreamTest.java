@@ -24,8 +24,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MyLateTestStream {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MyLateTestStream.class);
+public class MyLateTestStreamTest {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MyLateTestStreamTest.class);
 
     private static class MyToStringFn<T> extends DoFn<T, String> {
         @ProcessElement
@@ -45,7 +45,9 @@ public class MyLateTestStream {
 
             .advanceWatermarkTo(Instant.parse("2021-12-16T00:00:01Z"))
             .advanceProcessingTime(Duration.standardSeconds(1))
-            .addElements(TimestampedValue.of(KV.of("a", 20L), Instant.parse("2021-12-16T00:00:01Z")), TimestampedValue.of(KV.of("b", 20L), Instant.parse("2021-12-16T00:00:01Z")))
+            .addElements(
+                    TimestampedValue.of(KV.of("a", 20L), Instant.parse("2021-12-16T00:00:01Z")),
+                    TimestampedValue.of(KV.of("b", 20L), Instant.parse("2021-12-16T00:00:01Z")))
 
             .advanceProcessingTime(Duration.standardSeconds(1))
             .advanceWatermarkTo(Instant.parse("2021-12-16T00:00:02Z"))
@@ -54,6 +56,7 @@ public class MyLateTestStream {
             .advanceWatermarkTo(Instant.parse("2021-12-16T00:00:03Z"))
             .advanceProcessingTime(Duration.standardSeconds(1))
             .addElements(TimestampedValue.of(KV.of("a", 40L), Instant.parse("2021-12-16T00:00:01Z"))) // late
+
             .advanceWatermarkToInfinity();
 
 
@@ -74,7 +77,7 @@ public class MyLateTestStream {
 
         // then
         PAssert.that(pCollection).containsInAnyOrder(
-                // W1 [0,2) 2 "a" elements
+                // W1 [0,2) 2 x "a" elements + 1 "b" element
                 "e=KV{a, 30},ts=2021-12-16T00:00:01.999Z,w=[2021-12-16T00:00:00.000Z..2021-12-16T00:00:02.000Z),pTm=ON_TIME",
                 "e=KV{b, 20},ts=2021-12-16T00:00:01.999Z,w=[2021-12-16T00:00:00.000Z..2021-12-16T00:00:02.000Z),pTm=ON_TIME",
 
@@ -96,24 +99,21 @@ public class MyLateTestStream {
         // when
         PCollection<String> pCollection = pipeline.apply(testStream)
                 .apply(Window.<KV<String, Long>>into(FixedWindows.of(Duration.standardSeconds(2))).withAllowedLateness(Duration.standardSeconds(2)).discardingFiredPanes())
-
-//                .apply(Window.<KV<String, Long>>into(FixedWindows.of(Duration.standardSeconds(2))).withAllowedLateness(Duration.standardSeconds(2)).accumulatingFiredPanes())
                 .apply(Sum.longsPerKey())
 //                .apply(Group.globally())
-
                 .apply(ParDo.of(new MyToStringFn<>()));
 
 
         // then
         PAssert.that(pCollection).containsInAnyOrder(
-                // W1 [0,2) 2 "a" elements
+                // W1 [0,2) 2 x "a" elements + 1 "b" element
                 "e=KV{a, 30},ts=2021-12-16T00:00:01.999Z,w=[2021-12-16T00:00:00.000Z..2021-12-16T00:00:02.000Z),pTm=ON_TIME",
                 "e=KV{b, 20},ts=2021-12-16T00:00:01.999Z,w=[2021-12-16T00:00:00.000Z..2021-12-16T00:00:02.000Z),pTm=ON_TIME",
 
                 // W2 [2,4)
                 "e=KV{b, 30},ts=2021-12-16T00:00:03.999Z,w=[2021-12-16T00:00:02.000Z..2021-12-16T00:00:04.000Z),pTm=ON_TIME",
 
-                // W1 [0,2) l is late event but it is not discarded since allowed lateness, note 40 -> not summed up with previous "a" events
+                // W1 [0,2) l is late event, but it is not discarded since allowed lateness, note 40 -> not summed up with previous "a" events
                 "e=KV{a, 40},ts=2021-12-16T00:00:01.999Z,w=[2021-12-16T00:00:00.000Z..2021-12-16T00:00:02.000Z),pTm=LATE"
         );
         pipeline.run().waitUntilFinish();
@@ -130,12 +130,13 @@ public class MyLateTestStream {
         PCollection<String> pCollection = pipeline.apply(testStream)
                 .apply(Window.<KV<String, Long>>into(FixedWindows.of(Duration.standardSeconds(2))).withAllowedLateness(Duration.standardSeconds(2)).accumulatingFiredPanes())
                 .apply(Sum.longsPerKey())
+//                .apply(Group.globally())
                 .apply(ParDo.of(new MyToStringFn<>()));
 
 
         // then
         PAssert.that(pCollection).containsInAnyOrder(
-                // W1 [0,2) 2 "a" elements
+                // W1 [0,2) 2 x "a" elements + 1 "b" element
                 "e=KV{a, 30},ts=2021-12-16T00:00:01.999Z,w=[2021-12-16T00:00:00.000Z..2021-12-16T00:00:02.000Z),pTm=ON_TIME",
                 "e=KV{b, 20},ts=2021-12-16T00:00:01.999Z,w=[2021-12-16T00:00:00.000Z..2021-12-16T00:00:02.000Z),pTm=ON_TIME",
 
@@ -163,7 +164,9 @@ public class MyLateTestStream {
 
                 .advanceWatermarkTo(Instant.parse("2021-12-16T00:00:01Z"))
                 .advanceProcessingTime(Duration.standardSeconds(1))
-                .addElements(TimestampedValue.of(KV.of("a", 20L), Instant.parse("2021-12-16T00:00:01Z")), TimestampedValue.of(KV.of("b", 20L), Instant.parse("2021-12-16T00:00:01Z")))
+                .addElements(
+                        TimestampedValue.of(KV.of("a", 20L), Instant.parse("2021-12-16T00:00:01Z")),
+                        TimestampedValue.of(KV.of("b", 20L), Instant.parse("2021-12-16T00:00:01Z")))
 
                 .advanceProcessingTime(Duration.standardSeconds(1))
                 .advanceWatermarkTo(Instant.parse("2021-12-16T00:00:02Z"))
@@ -180,19 +183,20 @@ public class MyLateTestStream {
         PCollection<String> pCollection = pipeline.apply(testStream)
                 .apply(Window.<KV<String, Long>>into(FixedWindows.of(Duration.standardSeconds(2))).withAllowedLateness(Duration.standardSeconds(2)).discardingFiredPanes())
                 .apply(Sum.longsPerKey())
+//                .apply(Group.globally())
                 .apply(ParDo.of(new MyToStringFn<>()));
 
 
         // then
         PAssert.that(pCollection).containsInAnyOrder(
-                // W1 [0,2) 2 "a" elements
+                // W1 [0,2) 2 x "a" elements + 1 "b" element
                 "e=KV{a, 30},ts=2021-12-16T00:00:01.999Z,w=[2021-12-16T00:00:00.000Z..2021-12-16T00:00:02.000Z),pTm=ON_TIME",
                 "e=KV{b, 20},ts=2021-12-16T00:00:01.999Z,w=[2021-12-16T00:00:00.000Z..2021-12-16T00:00:02.000Z),pTm=ON_TIME",
 
                 // W2 [2,4)
                 "e=KV{b, 30},ts=2021-12-16T00:00:03.999Z,w=[2021-12-16T00:00:02.000Z..2021-12-16T00:00:04.000Z),pTm=ON_TIME"
 
-                // W1 [0,2) l is late event but discarded since exceeded allowed lateness
+                // W1 [0,2) l is late event but discarded since exceeded allowed lateness (discarded regardless discardingFiredPanes or accumulatingFiredPanes)
         );
         pipeline.run().waitUntilFinish();
     }
