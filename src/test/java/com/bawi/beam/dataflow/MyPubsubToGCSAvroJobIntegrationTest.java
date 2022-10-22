@@ -139,8 +139,8 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         long actualMessageCount = waitUpTo10MinsForDataflowJobToPopulateBigQuery(query, expectedMessageCount);
         Assert.assertEquals("Expected to get " + expectedMessageCount + " records from BigQuery", expectedMessageCount, actualMessageCount);
 
-        LOGGER.info("Assertions passed, waiting 5 mins before deleting resources");
-        Thread.sleep(300 * 1000);
+        LOGGER.info("Assertions passed, waiting 3 mins before deleting resources");
+        Thread.sleep(180 * 1000);
     }
 
     private long waitUpTo10MinsForDataflowJobToPopulateBigQuery(String query, int expectedRowsCount) throws InterruptedException {
