@@ -2,7 +2,7 @@ from datetime import timedelta
 import time
 import pendulum
 from airflow import DAG
-from airflow.models import DagRun, TaskInstance
+from airflow.models import DagRun, TaskInstance, Variable
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.providers.google.cloud.operators.gcs import GCSListObjectsOperator
@@ -47,6 +47,7 @@ def my_python_operator(*args, **kwargs):
         dr: DagRun = kwargs['dag_run']
         print(f"dr.dag_id={dr.dag_id}")
         print(f"dr.start_date={dr.start_date}")
+        # Trigger dag configuration JSON (Optional)
         print(f"dr.conf={dr.conf}")  # Bigf={'my_param': 1} when manually tiggered dag with {'my_param': 1}
         print(f"dr.end_date={dr.end_date}")
         print(f"dr.id={dr.id}")
@@ -67,6 +68,9 @@ def my_python_operator(*args, **kwargs):
         # print(f"ti.={ti.}")
         # ti.xcom_push(key="", value="")
         # value = ti.xcom_pull(task_ids="", key="")
+    # admin variables
+    my_airflow_admin_overwrite_variable = Variable.get('my_airflow_admin_overwrite_variable', 0)
+    print(f"my_airflow_admin_overwrite_variable={my_airflow_admin_overwrite_variable}")
     return kwargs['city']
 
 
@@ -203,29 +207,4 @@ with DAG(dag_id='bartek_dag',
     t3 = PythonOperator(task_id='hello_python_with_context', python_callable=my_python_operator, op_args=["Bartek"],
                         op_kwargs={'city': 'NY'}, provide_context=True)
 
-    t4 = GCSListObjectsOperator(task_id='gcs_list_operator', bucket=BUCKET, prefix='', delimiter=".*")
 
-    t5 = PythonOperator(task_id='my_python_gcs_list_operator', python_callable=my_python_gcs_list_operator)
-
-    t6 = PythonOperator(task_id='my_python_gcs_list_bash_operator_gsutil',
-                        python_callable=my_python_gcs_list_bash_operator_gsutil)
-
-    t7 = PythonOperator(task_id='my_python_gcs_list_client', python_callable=my_python_gcs_list_client)
-
-    t8 = BashOperator(task_id='list_gcs_bash_operator_gsutil',
-                      bash_command=f"gsutil -i {SERVICE_ACCOUNT}"
-                                   f" -o 'GSUtil:state_dir=/tmp/bartek_dag_gsutil_state' ls gs://{BUCKET}")
-
-    t9 = PythonOperator(task_id='my_python_bq_select_count_client', python_callable=my_python_bq_select_count_client)
-
-    t10 = PythonOperator(task_id='my_python_secret_manager_access_client',
-                         python_callable=my_python_secret_manager_access_client)
-
-    t11 = PythonOperator(task_id='my_python_dataflow_templated_operator',
-                         python_callable=my_python_dataflow_templated_operator)
-    # t1 >> t2
-    # t1 >> t3
-    # t1 >> t4
-    # t1 >> t5
-    # t1 >> t6
-    # t1 >> t7
