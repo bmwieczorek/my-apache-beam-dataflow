@@ -1,6 +1,8 @@
 import unittest
+from typing import Tuple, List, Dict, Union
+
 import apache_beam as beam
-from apache_beam import FlatMap, CoGroupByKey
+from apache_beam import FlatMap, CoGroupByKey, pvalue, PCollection, Map
 
 from apache_beam.testing.test_pipeline import TestPipeline
 from apache_beam.testing.util import assert_that
@@ -12,15 +14,24 @@ from apache_beam.testing.util import equal_to
 # python3 src/main/python/my_pipeline_test.py
 # python3 -m pytest src/main/python/my_pipeline_test.py -o log_cli=true -v --junit-xml=target/TEST-results.xml
 
-def inner_join(element):
+def inner_join(element: Tuple[str, Dict[str, List[int]]]) -> List[Dict[str, Union[str, int]]]:
     key = element[0]
     _dict = element[1]
     _m_list = _dict['m']
     _s_list = _dict['s']
-    print(key, _m_list, _s_list)
+    print(element, key, _m_list, _s_list)
     return [{"key": key, "m": _m, "s": _s} for _m in _m_list for _s in _s_list]
 
 
+def broadcast_join(element: Tuple[str, int], side_input: Dict[str, int]) -> Tuple[str, int]:
+    key = element[0]
+    val = element[1]
+    _multiplier = side_input.get(key, 1)
+    print(key, val, side_input, _multiplier)
+    return key, val * _multiplier
+
+
+# noinspection PyUnresolvedReferences
 class MyPipelineTransformationTest(unittest.TestCase):
 
     # noinspection PyMethodMayBeStatic
@@ -65,17 +76,24 @@ class MyPipelineTransformationTest(unittest.TestCase):
                 ('b', [{'k1': 'b', 'v': 'b2'}])
             ]))
 
-    def test_join(self):
+    def test_join_using_cogroupbykey(self):
         with TestPipeline() as p:
-            m = p | "M" >> beam.Create([('a', 1), ('b', 2), ('c', 3)])
-            s = p | "S" >> beam.Create([('b', 11), ('c', 22), ('c', 33), ('d', 44)])
-            cogbk = {"m": m, "s": s} | CoGroupByKey()
-            output = cogbk | FlatMap(inner_join)
+            m: PCollection[Tuple[str, int]] = p | "M" >> beam.Create([('a', 1), ('b', 2), ('c', 3), ('c', 4)])
+            s: PCollection[Tuple[str, int]] = p | "S" >> beam.Create([('b', 11), ('c', 22), ('d', 33)])
+            cogbk: PCollection[Tuple[str, Dict[str, List[int]]]] = {"m": m, "s": s} | CoGroupByKey()
+            output: PCollection[Dict[str, Union[str, int]]] = cogbk | FlatMap(inner_join)
             assert_that(output, equal_to([
                 {'key': 'b', 'm': 2, 's': 11},
                 {'key': 'c', 'm': 3, 's': 22},
-                {'key': 'c', 'm': 3, 's': 33}
+                {'key': 'c', 'm': 4, 's': 22}
             ]))
+
+    def test_join_using_sideinput(self):
+        with TestPipeline() as p:
+            m = p | "M" >> beam.Create([('a', 1), ('b', 2), ('c', 3), ('c', 4)])
+            s = p | "S" >> beam.Create([('b', 11), ('c', 22), ('d', 33)])
+            joined: PCollection[Tuple[str, int]] = m | Map(broadcast_join, side_input=pvalue.AsDict(s))
+            assert_that(joined, equal_to([('a', 1), ('b', 22), ('c', 66), ('c', 88)]))
 
 
 if __name__ == '__main__':
