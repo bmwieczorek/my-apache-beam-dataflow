@@ -9,6 +9,8 @@ import org.apache.beam.sdk.coders.KvCoder;
 import org.apache.beam.sdk.extensions.protobuf.ByteStringCoder;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
 import org.apache.beam.sdk.io.gcp.bigtable.BigtableIO;
+import org.apache.beam.sdk.io.range.ByteKey;
+import org.apache.beam.sdk.io.range.ByteKeyRange;
 import org.apache.beam.sdk.options.*;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
@@ -59,16 +61,30 @@ public class MyBigtableWriteReadTest {
 
 
         Pipeline readPipeline = TestPipeline.create(options);
+        RowFilter build = RowFilter.newBuilder().setFamilyNameRegexFilter("my-column-family1.*").build();
         readPipeline
                 .apply(BigtableIO.read()
                         .withProjectId(project)
                         .withInstanceId(options.getInstanceId())
                         .withTableId(options.getTableId())
-//                        .withRowFilter(RowFilter.newBuilder().setFamilyNameRegexFilter("my-column-family1.*").build())
-//                        .withRowFilter(RowFilter.newBuilder().setColumnQualifierRegexFilter(ByteString.copyFromUtf8("my-column-qualifier1.*")).build())
-                        .withRowFilter(RowFilter.newBuilder().setCellsPerColumnLimitFilter(1).build())
+
+                        .withKeyRange(ByteKeyRange.of(ByteKey.copyFrom("myKey1".getBytes()), ByteKey.copyFrom("myKey1_".getBytes()))) // returns row for key1 only
 //                        .withKeyRange(ByteKeyRange.of(ByteKey.copyFrom("myKey1".getBytes()), ByteKey.copyFrom("myKey3".getBytes()))) // returns rows with key1 and key2 (not key3)
 //                        .withKeyRange(ByteKeyRange.ALL_KEYS.withStartKey(ByteKey.copyFrom("myKey2".getBytes()))) // all keys starting with key2 (inc) onwards
+
+//                        .withRowFilter(RowFilter.newBuilder().setColumnQualifierRegexFilter(ByteString.copyFromUtf8("my-column-qualifier1.*")).build())
+
+                        // chained filter (all applied)
+                        .withRowFilter(RowFilter.newBuilder().setChain(
+                                            RowFilter.Chain.newBuilder().addAllFilters(
+                                                List.of(
+                                                    RowFilter.newBuilder().setFamilyNameRegexFilter("my-column-family1.*").build(),
+                                                    RowFilter.newBuilder().setColumnQualifierRegexFilter(ByteString.copyFromUtf8("my-column-qualifier1.*")).build(),
+//                                                    RowFilter.newBuilder().setCellsPerColumnLimitFilter(1).build(), // latest version based on timestamp
+                                                    RowFilter.newBuilder().setValueRegexFilter(ByteString.copyFromUtf8(".*1$")).build()
+                                                )
+                                            )
+                                       ).build())
                 )
                 .apply(MapElements.into(TypeDescriptors.voids()).via(row -> {
                     ByteString key = row.getKey();
