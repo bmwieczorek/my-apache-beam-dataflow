@@ -11,6 +11,7 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
+import org.joda.time.Instant;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -25,9 +26,9 @@ public class MyBatchRequestSenderTest implements Serializable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MyBatchRequestSenderTest.class);
 
-    private static class MyService {
+    private static class MyBatchService {
         private static final Map<String, List<String>> MAPPING = Map.of("A", List.of("_A_", "_A_A_"), "B", List.of("_B_"));
-        public static Map<String, List<String>> calculateMapping(List<String> keys) {
+        public static Map<String, List<String>> batchQuery(List<String> keys) {
             return keys.stream().map(key -> KV.of(key, MAPPING.getOrDefault(key, Collections.emptyList()))).collect(Collectors.toMap(KV::getKey, KV::getValue));
         }
     }
@@ -58,18 +59,19 @@ public class MyBatchRequestSenderTest implements Serializable {
                     public void process(@Element KV<String, Event> kv,
                                         @StateId("counter") ValueState<Integer> counterState,
                                         @StateId("buffer") BagState<KV<String, Event>> bufferState,
-                                        OutputReceiver<KV<String, Event>> outputReceiver
+                                        OutputReceiver<KV<String, Event>> outputReceiver,
+                                        @Timestamp Instant timestamp
                     ) {
                         int cnt = counterState.read() == null ? 0 : counterState.read();
                         cnt = cnt + 1;
-                        LOGGER.info("processing {} with {}", kv, cnt);
+                        LOGGER.info("processing {} with {}, {}", kv, cnt, timestamp);
                         counterState.write(cnt);
                         bufferState.add(kv);
                         if (cnt >= 2) {
                             List<KV<String, Event>> elements = iterableToList(bufferState.read());
                             LOGGER.info("querying: {}", elements);
                             List<String> eventNames = elements.stream().map(_kv -> _kv.getValue().getName()).collect(Collectors.toList());
-                            Map<String, List<String>> mapped = MyService.calculateMapping(eventNames);
+                            Map<String, List<String>> mapped = MyBatchService.batchQuery(eventNames);
                             List<KV<String, Event>> mappedElements = enrich(elements, mapped);
                             mappedElements.forEach(e -> {
                                 LOGGER.info("outputting: {}", e);
@@ -80,12 +82,30 @@ public class MyBatchRequestSenderTest implements Serializable {
                             bufferState.clear();
                         }
                     }
+
+                    @OnWindowExpiration
+                    public void onWindowExpiration(
+                            @StateId("buffer") BagState<KV<String, Event>> bufferState,
+                            OutputReceiver<KV<String, Event>> outputReceiver,
+                            @Timestamp Instant timestamp,
+                            @Key String key) {
+                        List<KV<String, Event>> elements = iterableToList(bufferState.read());
+                        LOGGER.info("finishBundle querying: {} for {}, {}", elements, timestamp, key);
+                        List<String> eventNames = elements.stream().map(_kv -> _kv.getValue().getName()).collect(Collectors.toList());
+                        Map<String, List<String>> mapped = MyBatchService.batchQuery(eventNames);
+                        List<KV<String, Event>> mappedElements = enrich(elements, mapped);
+                        mappedElements.forEach(e -> {
+                            LOGGER.info("finishBundle outputting: {}", e);
+                            outputReceiver.output(e);
+                        });
+                    }
                 }));
 
         PAssert.that(resultPCollection).satisfies(resultEventsIter -> {
             List<KV<String, Event>> resultEvents = iterableToList(resultEventsIter);
-            Assert.assertEquals(inputEvents.size() - 1, resultEvents.size()); // one b event is skipped
+            Assert.assertEquals(inputEvents.size(), resultEvents.size()); // one b event is skipped
             Assert.assertTrue(resultEvents.contains(KV.of("a", new Event("A:_A_A_"))));
+            Assert.assertTrue(resultEvents.contains(KV.of("b", new Event("B:_B_"))));
             Assert.assertTrue(resultEvents.contains(KV.of("a", new Event("AAAA:UNKNOWN"))));
             return null;
         });
