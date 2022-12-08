@@ -39,6 +39,9 @@ import java.util.stream.StreamSupport;
 import static com.google.cloud.bigtable.data.v2.models.Filters.FILTERS;
 
 public class MyBigtableWriteReadTest {
+    private static final Instant NOW = Instant.now();
+    public static final Instant NOW_PLUS_3_SECS = NOW.plusMillis(3000);
+
 
     @BeforeClass
     public static void setup() throws IOException, InterruptedException {
@@ -49,7 +52,6 @@ public class MyBigtableWriteReadTest {
         runBashProcess("cbt createfamily my-table " + OPTIONAL_KEY_CF);
         runBashProcess("cbt createfamily my-table " + VALUE_CF);
 
-        Instant now = Instant.now();
         Pipeline writePipeline = TestPipeline.create(OPTIONS);
         PCollection<KV<ByteString, Iterable<Mutation>>> input =
                 writePipeline.apply(Create.of(
@@ -57,43 +59,43 @@ public class MyBigtableWriteReadTest {
 //                        aacc#9223370366594304660#AcSG    optional_key_cf:A1C1,SERV2                value_cf:ac1,1
 
                         // same key prefix, different last portion (revert timestamp newer on the top)
-                        cbtKV("aabb#" + (Long.MAX_VALUE - now.toEpochMilli()) + "#" + randomString(),
+                        cbtKV("aabb#" + reverseTs(NOW) + "#" + randomString(), NOW,
                                 OPTIONAL_KEY_CF, Collections.emptyMap(),
                                 VALUE_CF,      Map.of(ID_CQ, "ab1", SUB_ID_CQ, "1")),
 
-                        cbtKV("aabb#" + (Long.MAX_VALUE - now.plusMillis(2000).toEpochMilli()) + "#" + randomString(),
+                        cbtKV("aabb#" + reverseTs(NOW.plusSeconds(2)) + "#" + randomString(), NOW.plusSeconds(2),
                                 OPTIONAL_KEY_CF, Collections.emptyMap(),
                                 VALUE_CF,      Map.of(ID_CQ, "ab2", SUB_ID_CQ, "1")),
 
-                        cbtKV("aabb#" + (Long.MAX_VALUE - now.plusMillis(1000).toEpochMilli()) + "#" + randomString(),
+                        cbtKV("aabb#" + reverseTs(NOW.plusSeconds(1)) + "#" + randomString(), NOW.plusSeconds(1),
                                 OPTIONAL_KEY_CF, Collections.emptyMap(),
                                 VALUE_CF,      Map.of(ID_CQ, "ab3", SUB_ID_CQ, "1")),
 
                         // by rq_id (unique)
-                        cbtKV("aabb#" + (Long.MAX_VALUE - now.plusMillis(3000).toEpochMilli()) + "#" + randomString(),
+                        cbtKV("aabb#" + reverseTs(NOW_PLUS_3_SECS) + "#" + randomString(), NOW_PLUS_3_SECS,
                                 OPTIONAL_KEY_CF, Map.of(RQ_ID_CQ, "abc123", CODE_CQ, "A1B1_"),
                                 VALUE_CF,      Map.of(ID_CQ, "ab4", SUB_ID_CQ, "1")),
 
                         // most recent by code and service
-                        cbtKV("aabb#" + (Long.MAX_VALUE - now.plusMillis(4000).toEpochMilli()) + "#" + randomString(),
+                        cbtKV("aabb#" + reverseTs(NOW.plusSeconds(4)) + "#" + randomString(), NOW.plusSeconds(4),
                                 OPTIONAL_KEY_CF, Map.of(CODE_CQ, "A1B1", SERVICE_CQ, "Serv1"),
                                 VALUE_CF,      Map.of(ID_CQ, "ab5", SUB_ID_CQ, "1")),
 
-                        cbtKV("aabb#" + (Long.MAX_VALUE - now.plusMillis(5000).toEpochMilli()) + "#" + randomString(),
+                        cbtKV("aabb#" + reverseTs(NOW.plusSeconds(5)) + "#" + randomString(), NOW.plusSeconds(5),
                                 OPTIONAL_KEY_CF, Map.of(CODE_CQ, "A1B1_", SERVICE_CQ, "Serv1"),
                                 VALUE_CF,      Map.of(ID_CQ, "ab6", SUB_ID_CQ, "1")),
 
                         // single row with aacc row prefix
-                        cbtKV("aacc#" + (Long.MAX_VALUE - now.toEpochMilli()) + "#" + randomString(),
+                        cbtKV("aacc#" + reverseTs(NOW) + "#" + randomString(), NOW,
                                 OPTIONAL_KEY_CF, Map.of(CODE_CQ, "A1C1", SERVICE_CQ, "Serv2"),
                                 VALUE_CF,      Map.of(ID_CQ, "ac1", SUB_ID_CQ, "1")),
 
                         // two rows with exactly the same key (api stores only one of them)
-                        cbtKV("aadd#" + (Long.MAX_VALUE - now.toEpochMilli()) + "#AbCd",
+                        cbtKV("aadd#" + reverseTs(NOW) + "#AbCd", NOW,
                                 OPTIONAL_KEY_CF, Map.of(CODE_CQ, "A1D1", SERVICE_CQ, "Serv2"),
                                 VALUE_CF,      Map.of(ID_CQ, "ad1", SUB_ID_CQ, "1")),
 
-                        cbtKV("aadd#" + (Long.MAX_VALUE - now.toEpochMilli()) + "#AbCd",
+                        cbtKV("aadd#" + reverseTs(NOW) + "#AbCd", NOW,
                                 OPTIONAL_KEY_CF, Map.of(CODE_CQ, "A1D1", SERVICE_CQ, "Serv2"),
                                 VALUE_CF,      Map.of(ID_CQ, "ad2", SUB_ID_CQ, "2"))
 
@@ -105,7 +107,7 @@ public class MyBigtableWriteReadTest {
         PCollection<KV<ByteString, Iterable<Mutation>>> input2 =
                 writePipeline2.apply(Create.of(
                         // additional row with the same key as above but inserted by other pipeline
-                        cbtKV("aadd#" + (Long.MAX_VALUE - now.toEpochMilli()) + "#AbCd",
+                        cbtKV("aadd#" + reverseTs(NOW) + "#AbCd", NOW,
                                 OPTIONAL_KEY_CF, Map.of(CODE_CQ, "A1D1", SERVICE_CQ, "Serv2"),
                                 VALUE_CF,      Map.of(ID_CQ, "ad3", SUB_ID_CQ, "3"))
 
@@ -114,6 +116,10 @@ public class MyBigtableWriteReadTest {
         writePipeline2.run().waitUntilFinish();
 
         runBashProcess("cbt read my-table");
+    }
+
+    private static long reverseTs(Instant now) {
+        return Long.MAX_VALUE - now.toEpochMilli();
     }
 
     @Test
@@ -127,7 +133,7 @@ public class MyBigtableWriteReadTest {
                     String key = row.getKey().toStringUtf8();
                     String keyPrefix = key.substring(0, key.indexOf("#") + 1);
                     List<RowCell> cells = row.getCells();
-                    return keyPrefix + "... " + cells.stream().map(cell -> {
+                    String result = keyPrefix + "... " + cells.stream().map(cell -> {
                         String family = cell.getFamily();
                         String qualifier = cell.getQualifier().toStringUtf8();
                         String value = cell.getValue().toStringUtf8();
@@ -135,13 +141,18 @@ public class MyBigtableWriteReadTest {
 //                        LOGGER.info("by key: key={},family={},qualifier={},column={},labels={}", key, family, qualifier, value, labels);
                         return family + ":" + qualifier + "=" + value + "->" + labels;
                     }).collect(Collectors.joining(","));
+                    LOGGER.info("Read filtered: {}", result);
+                    return result;
                 }));
 
-        PAssert.that(read).containsInAnyOrder(List.of(
-                "aabb#... optional_key_cf:code_cq=A1B1_->[e-rq-id--r-code],optional_key_cf:rq_id_cq=abc123->[e-rq-id--r-code],value_cf:id_cq=ab4->[e-rq-id--r-code],value_cf:sub_id_cq=1->[e-rq-id--r-code]",
-                "aacc#... optional_key_cf:code_cq=A1C1->[e-code],optional_key_cf:service_cq=Serv2->[e-code],value_cf:id_cq=ac1->[e-code],value_cf:sub_id_cq=1->[e-code]",
-                "aadd#... optional_key_cf:code_cq=A1D1->[e-code],optional_key_cf:service_cq=Serv2->[e-code],value_cf:id_cq=ad3->[e-code],value_cf:sub_id_cq=3->[e-code]"
-        ));
+//        filtered out aacc and aadd row as not matching timestamp range for aabb
+//        PAssert.that(read).containsInAnyOrder(List.of(
+//                "aabb#... optional_key_cf:code_cq=A1B1_->[e-rq-id--r-code],optional_key_cf:rq_id_cq=abc123->[e-rq-id--r-code],value_cf:id_cq=ab4->[e-rq-id--r-code],value_cf:sub_id_cq=1->[e-rq-id--r-code]",
+//                "aacc#... optional_key_cf:code_cq=A1C1->[e-code],optional_key_cf:service_cq=Serv2->[e-code],value_cf:id_cq=ac1->[e-code],value_cf:sub_id_cq=1->[e-code]",
+//                "aadd#... optional_key_cf:code_cq=A1D1->[e-code],optional_key_cf:service_cq=Serv2->[e-code],value_cf:id_cq=ad3->[e-code],value_cf:sub_id_cq=3->[e-code]"
+//        ));
+        PAssert.thatSingleton(read).isEqualTo(
+                "aabb#... optional_key_cf:code_cq=A1B1_->[e-rq-id--r-code],optional_key_cf:rq_id_cq=abc123->[e-rq-id--r-code],value_cf:id_cq=ab4->[e-rq-id--r-code],value_cf:sub_id_cq=1->[e-rq-id--r-code]");
 
         readPipeline.run().waitUntilFinish();
     }
@@ -162,6 +173,9 @@ public class MyBigtableWriteReadTest {
                     .range(key, key + "~") // filter
                     .filter(FILTERS.chain()
                             .filter(FILTERS.limit().cellsPerColumn(1)) // include only the newest cell values
+                            .filter(FILTERS.timestamp().range() // filter out rows with cells outside timestamp range (other than aabb# id ab4)
+                                    .startClosed(NOW_PLUS_3_SECS.minusMillis(10).toEpochMilli() * 1000)
+                                    .endOpen(NOW_PLUS_3_SECS.plusMillis(10).toEpochMilli() * 1000))
                             .filter(FILTERS
                                     .condition(FILTERS.chain().filter(FILTERS.qualifier().exactMatch(RQ_ID_CQ)).filter(FILTERS.value().exactMatch("abc123")))
                                     .then(
@@ -218,11 +232,11 @@ public class MyBigtableWriteReadTest {
 //                        .withKeyRange(ByteKeyRange.of(ByteKey.copyFrom("aabb#".getBytes()), ByteKey.copyFrom("aabb#~".getBytes()))) // returns 7 rows out of 10 rows
                         .withKeyRange(ByteKeyRange.ALL_KEYS.withStartKey(ByteKey.copyFrom("aabb#".getBytes()))) // (same as above) all keys starting with aabb# (inc) onwards
                         .withRowFilter(RowFilter.newBuilder().setCondition(condition).build()) // filter only one row with rq_id=abc123
-
                 )
                 .apply(MapElements.into(TypeDescriptors.strings()).via(MyBigtableWriteReadTest::toString));
 
         PAssert.that(read).satisfies((Iterable<String> stringIterable) -> {
+            LOGGER.info("Read filtered: {}", stringIterable);
             List<String> strings = StreamSupport.stream(stringIterable.spliterator(), false).collect(Collectors.toList());
             Assert.assertEquals(1, strings.size());
             Assert.assertEquals("aabb#... optional_key_cf:code_cq=A1B1_,rq_id_cq=abc123|value_cf:id_cq=ab4,sub_id_cq=1", strings.get(0));
@@ -358,7 +372,7 @@ public class MyBigtableWriteReadTest {
 
 
     @SuppressWarnings("SameParameterValue")
-    private static KV<ByteString, Iterable<Mutation>> cbtKV(String rowKey,
+    private static KV<ByteString, Iterable<Mutation>> cbtKV(String rowKey, Instant instant,
                                                             String columnFamily1, Map<String, String> columnQualifierAndValueList1,
                                                             String columnFamily2, Map<String, String> columnQualifierAndValueList2) {
         ByteString key = ByteString.copyFromUtf8(rowKey);
@@ -367,7 +381,7 @@ public class MyBigtableWriteReadTest {
             Mutation.SetCell cell = Mutation.SetCell.newBuilder()
                     .setFamilyName(columnFamily1)
                     .setColumnQualifier(ByteString.copyFromUtf8(columnQualifier))
-                    .setTimestampMicros(System.currentTimeMillis() * 1000)
+                    .setTimestampMicros(instant.toEpochMilli() * 1000)
                     .setValue(ByteString.copyFromUtf8(value))
                     .build();
             Mutation mutation = Mutation.newBuilder().setSetCell(cell).build();
@@ -377,7 +391,7 @@ public class MyBigtableWriteReadTest {
             Mutation.SetCell cell = Mutation.SetCell.newBuilder()
                     .setFamilyName(columnFamily2)
                     .setColumnQualifier(ByteString.copyFromUtf8(columnQualifier))
-                    .setTimestampMicros(System.currentTimeMillis() * 1000)
+                    .setTimestampMicros(instant.toEpochMilli() * 1000)
                     .setValue(ByteString.copyFromUtf8(value))
                     .build();
             Mutation mutation = Mutation.newBuilder().setSetCell(cell).build();
