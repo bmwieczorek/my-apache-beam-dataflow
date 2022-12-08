@@ -14,7 +14,7 @@ import org.junit.Test;
 
 import java.util.List;
 
-public class MyRowInnerJoinTest {
+public class MyInnerJoinTest {
     @Test
     public void testRowInnerJoin() {
         // given
