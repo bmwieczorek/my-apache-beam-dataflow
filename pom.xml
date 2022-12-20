@@ -9,28 +9,28 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <beam.version>2.42.0</beam.version> <!-- profiling since 2.33 with service account with roles/cloudprofiler.agent -->
+        <beam.version>2.43.0</beam.version> <!-- profiling since 2.33 with service account with roles/cloudprofiler.agent -->
         <slf4j.version>1.7.36</slf4j.version>
         <kafka.version>1.1.1</kafka.version>
-        <auto-service-annotations.version>1.0</auto-service-annotations.version>
+        <auto-service-annotations.version>1.0.1</auto-service-annotations.version>
         <log4j-api.version>2.19.0</log4j-api.version>
 
         <flume.version>1.9.0</flume.version>
         <avro.version>1.7.5</avro.version> <!-- org.apache.avro.SchemaBuilder available since 1.7.5 -->
-        <hadoop.version>2.10.2</hadoop.version> <!-- https://github.com/apache/beam/blob/release-2.42.0/buildSrc/src/main/groovy/org/apache/beam/gradle/BeamModulePlugin.groovy -->
+        <hadoop.version>2.10.2</hadoop.version> <!-- https://github.com/apache/beam/blob/release-2.43.0/buildSrc/src/main/groovy/org/apache/beam/gradle/BeamModulePlugin.groovy -->
 
         <!-- upgrade commons-codec to fix missing class org.apache.commons.codec.net.PercentCodec -->
         <commons-codec.version>1.15</commons-codec.version>
 
         <!-- testing -->
         <junit.version>4.13.2</junit.version>
-        <google-cloud-bigquery.version>2.17.1</google-cloud-bigquery.version>
+        <google-cloud-bigquery.version>2.19.1</google-cloud-bigquery.version>
 
         <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
         <maven-exec-plugin.version>3.1.0</maven-exec-plugin.version>
-        <maven-shade-plugin.version>3.4.0</maven-shade-plugin.version>
+        <maven-shade-plugin.version>3.4.1</maven-shade-plugin.version>
         <maven-surefire-plugin.version>3.0.0-M7</maven-surefire-plugin.version>
-        <jib-maven-plugin.version>3.3.0</jib-maven-plugin.version>
+        <jib-maven-plugin.version>3.3.1</jib-maven-plugin.version>
         <maven-enforcer-plugin.version>3.1.0</maven-enforcer-plugin.version>
     </properties>
 
@@ -200,7 +200,7 @@
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
-            <version>1.71.1</version>
+            <version>1.72</version>
         </dependency>
 
 
