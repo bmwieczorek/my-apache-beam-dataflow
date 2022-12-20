@@ -14,7 +14,7 @@ import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.junit.Test;
 
-public class GroupCombineWindowedTimestampedEvents {
+public class GroupCombineWindowedTimestampedEventsTest {
     
 
     private static class MyStringFormatFn<T> extends DoFn<T, String> {
