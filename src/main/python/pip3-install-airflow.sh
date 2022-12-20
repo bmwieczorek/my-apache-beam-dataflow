@@ -11,8 +11,13 @@ sleep 1
 echo -ne '####################      (100%)\r'
 echo -ne '\n'
 
+pip3 uninstall -y -r <(pip3 freeze | grep -v my-package)
+
 pip3 --use-deprecated legacy-resolver install \
  "apache-airflow==${AIRFLOW_VERSION}" \
  apache-airflow-backport-providers-apache-beam==2021.3.13 apache-airflow-backport-providers-google==2021.3.3 \
  pytest \
+ jupyter \
+ apache-beam[gcp] \
+ apache-beam[interactive] \
  --constraint "${CONSTRAINT_URL}"
