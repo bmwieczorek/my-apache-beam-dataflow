@@ -17,6 +17,7 @@ resource "google_project_iam_member" "sa_roles" {
 }
 
 resource "google_storage_bucket" "bucket" {
+  location      = "US"
   project       = var.project
   name          = local.bucket
 }
