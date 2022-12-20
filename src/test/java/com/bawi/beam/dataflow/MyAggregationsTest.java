@@ -73,6 +73,16 @@ public class MyAggregationsTest {
     }
 
     @Test
+    public void testTopNElements() {
+        Pipeline pipeline = Pipeline.create();
+        PCollection<Integer> result = pipeline.apply(Create.of(1, 3, 2, 4))
+                .apply(Top.largest(2))
+                .apply(Flatten.iterables());
+        PAssert.that(result).containsInAnyOrder(3, 4);
+        pipeline.run().waitUntilFinish();
+    }
+
+    @Test
     public void testGroupByKey() {
         Pipeline pipeline = Pipeline.create();
         PCollection<KV<String, Iterable<Integer>>> result = pipeline.apply(Create.of(KV.of("a", 1), KV.of("b", 1), KV.of("a", 2)))
@@ -133,7 +143,7 @@ public class MyAggregationsTest {
     static class MyToDelimitedString<T> extends Combine.CombineFn<T, String, String> {
         private static final String DEFAULT_DELIMITER = ":";
         private final String delimiter;
-        private String accum = "";
+        private final String accum = "";
 
         public MyToDelimitedString(String delimiter) {
             this.delimiter = delimiter;
