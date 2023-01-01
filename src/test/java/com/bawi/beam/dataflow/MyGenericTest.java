@@ -1,5 +1,7 @@
 package com.bawi.beam.dataflow;
 
+import org.junit.Test;
+
 public class MyGenericTest {
     static abstract class Fn<In, Out> {
         abstract Out apply(In in);
@@ -29,7 +31,8 @@ public class MyGenericTest {
     }
 
 
-    public static void main(String[] args) {
+    @Test
+    public void test() {
 
         MyWindow<Object> tObject = MyWindow.m1T(new ObjectToIntegerFn());
 
