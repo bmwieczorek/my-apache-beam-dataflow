@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class DynamicShardWindowedTimestampedEventsTest implements Serializable {
+public class CustomShardingFileIOWriteDynamicTest implements Serializable {
 
     private static final Create.TimestampedValues<KV<String, Integer>> TIMESTAMPED_KV_EVENTS = Create.timestamped(
         // W1 [0-5) s
@@ -122,10 +122,10 @@ public class DynamicShardWindowedTimestampedEventsTest implements Serializable {
         }
     }
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DynamicShardWindowedTimestampedEventsTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CustomShardingFileIOWriteDynamicTest.class);
 
-    private static final String OUTPUT_DIR = Paths.get("target", DynamicShardWindowedTimestampedEventsTest.class.getSimpleName(), "output").toAbsolutePath().toString();
-    private static final String TEMP_DIR = Paths.get("target", DynamicShardWindowedTimestampedEventsTest.class.getSimpleName(), "temp").toAbsolutePath().toString();
+    private static final String OUTPUT_DIR = Paths.get("target", CustomShardingFileIOWriteDynamicTest.class.getSimpleName(), "output").toAbsolutePath().toString();
+    private static final String TEMP_DIR = Paths.get("target", CustomShardingFileIOWriteDynamicTest.class.getSimpleName(), "temp").toAbsolutePath().toString();
 
     @Before
     public void setup() throws IOException {
