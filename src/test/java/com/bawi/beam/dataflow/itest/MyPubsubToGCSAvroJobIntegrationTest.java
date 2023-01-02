@@ -1,5 +1,6 @@
-package com.bawi.beam.dataflow;
+package com.bawi.beam.dataflow.itest;
 
+import com.bawi.beam.dataflow.MyPubsubToGCSJob;
 import com.google.api.core.ApiFuture;
 import com.google.api.gax.paging.Page;
 import com.google.cloud.bigquery.BigQueryOptions;
@@ -41,7 +42,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import static com.bawi.beam.dataflow.MyPubsubToGCSJob.ConcatBodyAttrAndMsgIdFn.*;
+import static com.bawi.beam.dataflow.MyPubsubToGCSJob.*;
 
 public class MyPubsubToGCSAvroJobIntegrationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyPubsubToGCSAvroJobIntegrationTest.class);

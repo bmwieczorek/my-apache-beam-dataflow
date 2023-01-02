@@ -1,4 +1,4 @@
-package com.bawi.beam.dataflow;
+package com.bawi.beam.dataflow.itest;
 
 import com.google.cloud.bigquery.BigQueryOptions;
 import com.google.cloud.bigquery.QueryJobConfiguration;

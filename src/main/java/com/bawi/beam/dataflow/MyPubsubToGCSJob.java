@@ -35,13 +35,12 @@ import java.text.NumberFormat;
 import java.util.TreeMap;
 import java.util.UUID;
 
-import static com.bawi.beam.dataflow.MyPubsubToGCSJob.ConcatBodyAttrAndMsgIdFn.EVENT_TIME_ATTRIBUTE;
-import static com.bawi.beam.dataflow.MyPubsubToGCSJob.ConcatBodyAttrAndMsgIdFn.MY_MSG_ATTR_NAME;
 
 
 public class MyPubsubToGCSJob {
 
 //    public interface MyPipelineOptions extends DataflowPipelineOptions {
+    @SuppressWarnings("unused")
     public interface MyPipelineOptions extends PipelineOptions {
 
         @Validation.Required
@@ -122,6 +121,10 @@ gcloud dataflow flex-template run $APP-$OWNER \
     static final String BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID = "bodyWithAttributesMessageId";
     private static final Schema SCHEMA = SchemaBuilder.record("record").fields().requiredString(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID).endRecord();
     private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("'year='yyyy/'month'=MM/'day'=dd/'hour'=HH/'minute'=mm");
+
+    public static final String MY_MSG_ATTR_NAME = "myMsgAttrName";
+    public static final String PUBLISH_TIME_ATTRIBUTE = "pt";
+    public static final String EVENT_TIME_ATTRIBUTE = "et";
 
     public static void main(String[] args) {
         args = DataflowUtils.updateDataflowArgs(args);
@@ -243,10 +246,6 @@ gcloud dataflow flex-template run $APP-$OWNER \
         private static final Distribution CUSTOM_PUBLISH_TIME_INPUT_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_customPtInputDataFreshnessMs");
         private static final Distribution CUSTOM_EVENT_TIME_INPUT_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME +"_customEtInputDataFreshnessMs");
         private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("yyyy-MM-dd--HH-mm");
-        static final String MY_MSG_ATTR_NAME = "myMsgAttrName";
-        static final String PUBLISH_TIME_ATTRIBUTE = "pt";
-        static final String EVENT_TIME_ATTRIBUTE = "et";
-
 
         @ProcessElement
         public void process(@Element PubsubMessage pubsubMessage, @Timestamp Instant timestamp, OutputReceiver<GenericRecord> outputReceiver, BoundedWindow window, ProcessContext ctx) {
