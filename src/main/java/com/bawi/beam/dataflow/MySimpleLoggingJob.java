@@ -24,7 +24,7 @@ public class MySimpleLoggingJob {
     private static final Logger LOGGER = LoggerFactory.getLogger(MySimpleLoggingJob.class);
 
     public static void main(String[] args) {
-        args = DataflowUtils.updateDataflowArgs(args);
+        args = PipelineUtils.updateArgsWithDataflowRunner(args);
         Pipeline pipeline = Pipeline.create(PipelineOptionsFactory.fromArgs(args).create());
 
         pipeline.apply(Create.of(IntStream.rangeClosed(1, 200).boxed().collect(Collectors.toList())))

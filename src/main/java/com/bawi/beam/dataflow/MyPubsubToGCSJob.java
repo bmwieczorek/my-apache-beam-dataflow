@@ -127,7 +127,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
     public static final String EVENT_TIME_ATTRIBUTE = "et";
 
     public static void main(String[] args) {
-        args = DataflowUtils.updateDataflowArgs(args);
+        args = PipelineUtils.updateArgsWithDataflowRunner(args);
 
         MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
 //        options.setAutoscalingAlgorithm(DataflowPipelineWorkerPoolOptions.AutoscalingAlgorithmType.THROUGHPUT_BASED);

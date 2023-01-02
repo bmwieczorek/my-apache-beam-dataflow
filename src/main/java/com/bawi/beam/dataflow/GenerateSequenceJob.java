@@ -9,7 +9,7 @@ import org.joda.time.Duration;
 
 public class GenerateSequenceJob {
     public static void main(String[] args) {
-        args = DataflowUtils.updateDataflowArgs(args);
+        args = PipelineUtils.updateArgsWithDataflowRunner(args);
         PipelineOptions options = PipelineOptionsFactory.fromArgs(args).as(PipelineOptions.class);
 
         Pipeline pipeline = Pipeline.create(options);

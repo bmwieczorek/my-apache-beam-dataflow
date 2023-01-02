@@ -188,6 +188,7 @@ public class MyDynamicBQWriteJob {
         }
     }
 
+    @SuppressWarnings("unused")
     public interface MyPipelineOptions extends PipelineOptions {
 
         @Validation.Required
@@ -200,7 +201,7 @@ public class MyDynamicBQWriteJob {
     }
 
     public static void main(String[] args) {
-        args = DataflowUtils.updateDataflowArgs(args, "--bqLoadProjectId=" + System.getenv("GCP_PROJECT"),
+        args = PipelineUtils.updateArgsWithDataflowRunner(args, "--bqLoadProjectId=" + System.getenv("GCP_PROJECT"),
                 "--dataset=" + System.getenv("GCP_OWNER") + "_" + MyDynamicBQWriteJob.class.getSimpleName().toLowerCase());
 
         MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).as(MyPipelineOptions.class);

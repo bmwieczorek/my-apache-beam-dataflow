@@ -33,7 +33,7 @@ public class MyLoggingJob {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyLoggingJob.class);
 
     public static void main(String[] args) {
-        args = DataflowUtils.updateDataflowArgs(args);
+        args = PipelineUtils.updateArgsWithDataflowRunner(args);
         PipelineOptions options = PipelineOptionsFactory.fromArgs(args).create();
 
 // Maven runtime dependency org.apache.beam:

@@ -29,7 +29,7 @@ import static org.apache.beam.sdk.values.TypeDescriptors.strings;
 public class PGPDecryptJob {
 
     public static void main(String[] args) {
-        args = DataflowUtils.updateDataflowArgs(args,
+        args = PipelineUtils.updateArgsWithDataflowRunner(args,
                 "--filePattern=gs://" + System.getenv("GCP_PROJECT") + "-" + System.getenv("GCP_OWNER") + "/hello-pp.txt.gpg",
                 "--projectId=" + System.getenv("GCP_PROJECT"),
                 "--privateKeySecretName=bartosz-private-key", "--privateKeyPassphraseSecretName=bartosz-private-key-passphrase");

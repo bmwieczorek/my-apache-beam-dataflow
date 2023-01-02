@@ -101,7 +101,7 @@ java -agentpath:/opt/cprof/profiler_java_agent.so=-cprof_service=myoomjob,-cprof
     public static void main(String[] args) {
 //        args = DataflowUtils.updateDataflowArgs(args, "--profilingAgentConfiguration={ \"APICurated\" : true }");
 
-        args = DataflowUtils.updateDataflowArgs(args,
+        args = PipelineUtils.updateArgsWithDataflowRunner(args,
             // use either --profilingAgentConfiguration={\"APICurated\":true}"  or  -dataflowServiceOptions=enable_google_cloud_profiler
 //                "--profilingAgentConfiguration={\"APICurated\":true}",
                 "--dumpHeapOnOOM=true",

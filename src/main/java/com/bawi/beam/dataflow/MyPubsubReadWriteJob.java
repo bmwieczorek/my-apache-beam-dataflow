@@ -113,7 +113,7 @@ mvn clean compile -DskipTests exec:java \
         private static final Logger LOGGER = LoggerFactory.getLogger(Read.class);
 
         public static void main(String[] args) {
-            args = DataflowUtils.updateDataflowArgs(args);
+            args = PipelineUtils.updateArgsWithDataflowRunner(args);
             MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
 
 //            DataflowProfilingOptions.DataflowProfilingAgentConfiguration profilingConf = new DataflowProfilingOptions.DataflowProfilingAgentConfiguration();
