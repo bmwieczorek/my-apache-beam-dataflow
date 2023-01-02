@@ -2,6 +2,8 @@ package com.bawi.beam.dataflow;
 
 import com.google.api.gax.rpc.ServerStream;
 import com.google.bigtable.v2.*;
+import com.google.cloud.bigtable.admin.v2.BigtableInstanceAdminClient;
+import com.google.cloud.bigtable.admin.v2.BigtableInstanceAdminSettings;
 import com.google.cloud.bigtable.data.v2.BigtableDataClient;
 import com.google.cloud.bigtable.data.v2.models.Query;
 import com.google.cloud.bigtable.data.v2.models.RowCell;
@@ -31,7 +33,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.time.Instant;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -42,15 +46,23 @@ public class MyBigtableWriteReadTest {
     private static final Instant NOW = Instant.now();
     public static final Instant NOW_PLUS_3_SECS = NOW.plusMillis(3000);
 
+    private static boolean bigTableInstanceExists;
+
 
     @BeforeClass
     public static void setup() throws IOException, InterruptedException {
+        if (!bigTableInstanceExists(PROJECT, INSTANCE_ID)) {
+            LOGGER.info("BigTable instance missing - skipping setup");
+            return;
+        }
+        bigTableInstanceExists = true;
+
         // cbt createinstance my-instance my-instance-name my-cluster us-central1-a 1 HDD
         // echo project = `gcloud config get-value project` > ~/.cbtrc
         // echo instance = my-instance >> ~/.cbtrc
         // cbt createtable my-table
-        runBashProcess("cbt createfamily my-table " + OPTIONAL_KEY_CF);
-        runBashProcess("cbt createfamily my-table " + VALUE_CF);
+        runBashProcess("cbt createfamily " + TABLE_ID + " " + OPTIONAL_KEY_CF);
+        runBashProcess("cbt createfamily " + TABLE_ID + " " + VALUE_CF);
 
         Pipeline writePipeline = TestPipeline.create(OPTIONS);
         PCollection<KV<ByteString, Iterable<Mutation>>> input =
@@ -115,7 +127,7 @@ public class MyBigtableWriteReadTest {
         input2.apply(BigtableIO.write().withProjectId(PROJECT).withInstanceId(OPTIONS.getInstanceId()).withTableId(OPTIONS.getTableId()));
         writePipeline2.run().waitUntilFinish();
 
-        runBashProcess("cbt read my-table");
+        runBashProcess("cbt read " + TABLE_ID);
     }
 
     private static long reverseTs(Instant now) {
@@ -124,6 +136,8 @@ public class MyBigtableWriteReadTest {
 
     @Test
     public void usingBigTableClientInProcessShouldFilter() {
+        Assume.assumeTrue("BigTable instance exists", bigTableInstanceExists);
+
         Pipeline readPipeline = TestPipeline.create(OPTIONS);
 
         PCollection<String> read = readPipeline
@@ -209,6 +223,8 @@ public class MyBigtableWriteReadTest {
 
     @Test
     public void readEntireRowFilteringByKeyAndValueCondition() {
+        Assume.assumeTrue("BigTable instance exists", bigTableInstanceExists);
+
         Pipeline readPipeline = TestPipeline.create(OPTIONS);
 
         RowFilter.Chain chain = RowFilter.Chain.newBuilder().addAllFilters(
@@ -264,6 +280,8 @@ public class MyBigtableWriteReadTest {
 
     @Test
     public void shouldFilterRowAndReadPartially() {
+        Assume.assumeTrue("BigTable instance exists", bigTableInstanceExists);
+
         Pipeline readPipeline = TestPipeline.create(OPTIONS);
 
         PCollection<String> read = readPipeline
@@ -319,8 +337,21 @@ public class MyBigtableWriteReadTest {
 
     @AfterClass
     public static void after() throws IOException, InterruptedException {
-        runBashProcess("cbt deletefamily my-table " + OPTIONAL_KEY_CF);
-        runBashProcess("cbt deletefamily my-table " + VALUE_CF);
+        if (!bigTableInstanceExists) {
+            LOGGER.info("BigTable instance missing - skipping destroy");
+            return;
+        }
+
+        runBashProcess("cbt deletefamily " + TABLE_ID + " " + OPTIONAL_KEY_CF);
+        runBashProcess("cbt deletefamily  " + TABLE_ID + " " + VALUE_CF);
+    }
+
+    private static boolean bigTableInstanceExists(String project, String instanceId) throws IOException {
+        BigtableInstanceAdminSettings instanceAdminSettings =
+                BigtableInstanceAdminSettings.newBuilder().setProjectId(project).build();
+        try (BigtableInstanceAdminClient adminClient = BigtableInstanceAdminClient.create(instanceAdminSettings)) {
+            return adminClient.exists(instanceId);
+        }
     }
 
     private static final String PROJECT = System.getenv("GCP_PROJECT");
@@ -356,7 +387,7 @@ public class MyBigtableWriteReadTest {
 
     @SuppressWarnings("SameParameterValue")
     private static MyBigtablePipelineOptions createPipelineOptions(String project) {
-        String[] args = {"--project=" + project, "--tableId=my-table"};
+        String[] args = {"--project=" + project, "--tableId=" + TABLE_ID};
 //        args = DataflowUtils.updateDataflowArgs(args);
         return PipelineOptionsFactory.fromArgs(args).as(MyBigtablePipelineOptions.class);
     }
