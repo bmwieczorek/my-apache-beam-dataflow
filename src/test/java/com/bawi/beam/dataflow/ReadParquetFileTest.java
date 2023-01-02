@@ -37,12 +37,9 @@ public class ReadParquetFileTest implements Serializable {
         record.put("name", "Bob");
         record.put("body", ByteBuffer.wrap("abc".getBytes()));
 
-        Path path = new Path("myRecord.parquet");
+        Path path = new Path("target/myRecord.parquet");
         File file = new File(path.toUri().getPath());
-        if (file.exists()) {
-            //noinspection ResultOfMethodCallIgnored
-            file.delete();
-        }
+        deleteIfPresent(file);
 
         try (ParquetWriter<GenericData.Record> writer =
              AvroParquetWriter.<GenericData.Record>builder(HadoopOutputFile.fromPath(path,new Configuration()))
@@ -66,11 +63,19 @@ public class ReadParquetFileTest implements Serializable {
                         return name.toString() + "," + new String(bytes);
                     }
                 })
-                .from("myRecord.parquet")
+                .from("target/myRecord.parquet")
         );
 
         // assert
         PAssert.thatSingleton(pCollection).isEqualTo("Bob,abc");
         pipeline.run().waitUntilFinish();
+        deleteIfPresent(file);
+    }
+
+    private static void deleteIfPresent(File file) {
+        if (file.exists()) {
+            //noinspection ResultOfMethodCallIgnored
+            file.delete();
+        }
     }
 }

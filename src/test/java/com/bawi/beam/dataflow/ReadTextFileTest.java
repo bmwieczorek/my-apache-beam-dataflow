@@ -28,10 +28,10 @@ public class ReadTextFileTest implements Serializable {
     @Test
     public void test() throws IOException {
         // given - generate file
-        Files.write(Paths.get("myFile.txt"), "abc123".getBytes(), StandardOpenOption.CREATE);
+        Files.write(Paths.get("target/myFile.txt"), "abc123".getBytes(), StandardOpenOption.CREATE);
 
         // when - read file
-        PCollection<String> pCollection = pipeline.apply(FileIO.match().filepattern("my*.txt"))
+        PCollection<String> pCollection = pipeline.apply(FileIO.match().filepattern("target/my*.txt"))
                 .apply(FileIO.readMatches())
                 .apply("Read to file name and bytes", MapElements
                         .into(kvs(strings(), TypeDescriptor.of(byte[].class)))

@@ -34,7 +34,7 @@ public class ReadAvroFileTest implements Serializable {
         record.put("name", "Bob");
         record.put("body", ByteBuffer.wrap("abc".getBytes()));
 
-        File avroFile = new File("myRecord.avro");
+        File avroFile = new File("target/myRecord.avro");
         DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
         DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter);
         dataFileWriter.create(schema, avroFile);
@@ -53,7 +53,7 @@ public class ReadAvroFileTest implements Serializable {
                         return name.toString() + "," + new String(bytes);
                     }
                 })
-                .from("myRecord.avro")
+                .from("target/myRecord.avro")
         );
 
         // assert
