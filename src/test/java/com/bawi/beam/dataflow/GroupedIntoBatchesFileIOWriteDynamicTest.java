@@ -5,6 +5,10 @@ import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.io.Compression;
 import org.apache.beam.sdk.io.FileIO;
 import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.options.Validation;
+import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
 import org.apache.beam.sdk.transforms.windowing.FixedWindows;
@@ -36,6 +40,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.bawi.beam.dataflow.Runner.Direct;
+
 public class GroupedIntoBatchesFileIOWriteDynamicTest implements Serializable {
 
     private static final Create.TimestampedValues<KV<String, Integer>> TIMESTAMPED_KV_EVENTS = Create.timestamped(
@@ -52,110 +58,123 @@ public class GroupedIntoBatchesFileIOWriteDynamicTest implements Serializable {
         TimestampedValue.of(KV.of("d", 50), Instant.parse("2021-12-16T00:00:07Z"))
     );
 
+    private final Runner runner = Direct;
+
     @Test
-    public void shouldCountPerKey() throws IOException {
+    public void shouldCreateBatches() throws IOException {
         // given
-        Pipeline pipeline = Pipeline.create();
+        String[] args = runner == Direct ? new String[]{"--output=" + LOCAL_OUTPUT_DIR, "--temp=" + LOCAL_TEMP_DIR} :
+                PipelineUtils.updateArgsWithDataflowRunner(new String[]{
+                        "--output=gs://" + System.getenv("GCP_PROJECT") + "-" + System.getenv("GCP_OWNER") + "/output",
+                        "--temp=gs://" + System.getenv("GCP_PROJECT") + "-" + System.getenv("GCP_OWNER") + "/temp"
+                });
+
+        MyOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyOptions.class);
+        Pipeline pipeline = Pipeline.create(options);
 
         // when
         pipeline.apply(TIMESTAMPED_KV_EVENTS)
             // group per 5 secs window and create kv with key of output2/2021-12-16_00-00 (min granularity)
             .apply(Window.into(FixedWindows.of(Duration.standardSeconds(5))))
-            .apply(ParDo.of(new DoFn<KV<String, Integer>, KV<String, String>>(){
+            .apply(ParDo.of(new DoFn<KV<String, Integer>, KV<String, String>>() {
 
                 @ProcessElement
                 public void process(ProcessContext ctx) {
                     KV<String, Integer> element = ctx.element();
                     if (element == null) return;
                     Instant timestamp = ctx.timestamp();
-                    String key = Paths.get(OUTPUT_DIR, timestamp.toString(DateTimeFormat.forPattern("yyyy-MM-dd_HH-mm"))).toString();
+                    String key = timestamp.toString(DateTimeFormat.forPattern("yyyy-MM-dd_HH-mm"));
                     KV<String, String> kv = KV.of(key, element.getKey() + ":" + element.getValue());
                     LOGGER.info("Processing: {}", kv);
                     ctx.output(kv);
                 }
 
-        }))
-                .apply(GroupIntoBatches.ofSize(5))
-                .apply("Flatten values iterable", ParDo.of(new DoFn<KV<String, Iterable<String>>, KV<String, String>>() {
-                    @ProcessElement
-                    public void process(ProcessContext ctx) {
-                        KV<String, Iterable<String>> element = ctx.element();
-                        if (element != null) {
-                            element.getValue().forEach(v -> ctx.output(KV.of(element.getKey(), v)));
-                        }
+            }))
+            .apply(GroupIntoBatches.ofSize(5))
+            .apply("Flatten values iterable", ParDo.of(new DoFn<KV<String, Iterable<String>>, KV<String, String>>() {
+                @ProcessElement
+                public void process(ProcessContext ctx) {
+                    KV<String, Iterable<String>> element = ctx.element();
+                    if (element != null) {
+                        element.getValue().forEach(v -> ctx.output(KV.of(element.getKey(), v)));
                     }
-                }))
-                    .apply(FileIO
-                            .<String, KV<String, String>>writeDynamic()
-                            .by(KV::getKey)
-                            .via(Contextful.fn(KV::getValue), TextIO.sink())
-                            .withDestinationCoder(StringUtf8Coder.of())
-                            .withNaming(path -> new MyFileNaming(path, ".txt"))
-                            .to(OUTPUT_DIR)
-                            .withTempDirectory(TEMP_DIR)
-                            .withSharding(new PTransform<>() {
-                                @Override
-                                public PCollectionView<Integer> expand(PCollection<KV<String, String>> input) {
-                                    return input
-                                            .apply(Combine.globally(Count.<KV<String, String>>combineFn()).withoutDefaults())
-                                            .apply(MapElements.via(new SimpleFunction<Long, Integer>() {
-                                                @Override
-                                                public Integer apply(Long elementsCountPerWindow) {
-                                                    int i = (int) (long) elementsCountPerWindow / 2;
-                                                    LOGGER.info("number of shards: {} -> {}", elementsCountPerWindow, i);
-                                                    return i;
-                                                }
-                                            }))
-                                            .apply(View.asSingleton());
-                                }
-                            }));
+                }
+            }))
+            .apply(FileIO
+                    .<String, KV<String, String>>writeDynamic()
+                    .by(KV::getKey)
+                    .via(Contextful.fn(KV::getValue), TextIO.sink())
+                    .withDestinationCoder(StringUtf8Coder.of())
+                    .withNaming(subPath -> new MyFileNaming(subPath, ".txt"))
+                    .to(options.getOutput())
+                    .withTempDirectory(options.getTemp())
+                    .withSharding(new PTransform<>() {
+                        @Override
+                        public PCollectionView<Integer> expand(PCollection<KV<String, String>> input) {
+                            return input
+                                    .apply(Combine.globally(Count.<KV<String, String>>combineFn()).withoutDefaults())
+                                    .apply(MapElements.via(new SimpleFunction<Long, Integer>() {
+                                        @Override
+                                        public Integer apply(Long elementsCountPerWindow) {
+                                            int i = (int) (long) elementsCountPerWindow / 2;
+                                            LOGGER.info("number of shards: {} -> {}", elementsCountPerWindow, i);
+                                            return i;
+                                        }
+                                    }))
+                                    .apply(View.asSingleton());
+                        }
+                    })
+            );
 
         pipeline.run().waitUntilFinish();
 
-        // only 1 shard for first window W1 [0-5)
-        MatcherAssert.assertThat(
-                getLinesInOutputFile("2021-12-16_00-00-winMaxTs-2021-12-16T00_00_04.999Z-paneTiming-ON_TIME-shard-0-of-1.txt"),
-                Matchers.containsInAnyOrder("a:1", "a:2", "b:3")
-        );
+        if (runner == Direct) {
+            // only 1 shard for first window W1 [0-5)
+            MatcherAssert.assertThat(
+                    getLinesInOutputFile("2021-12-16_00-00-winMaxTs-2021-12-16T00_00_04.999Z-paneTiming-ON_TIME-shard-0-of-1.txt"),
+                    Matchers.containsInAnyOrder("a:1", "a:2", "b:3")
+            );
 
-        // 2 shards for second window W2 [5-10)
-        List<String> shard1Lines = getLinesInOutputFile("2021-12-16_00-00-winMaxTs-2021-12-16T00_00_09.999Z-paneTiming-ON_TIME-shard-0-of-2.txt");
-        Assert.assertTrue(shard1Lines.size() >= 1 && shard1Lines.stream().allMatch(l -> l.endsWith("0")));
+            // 2 shards for second window W2 [5-10)
+            List<String> shard1Lines = getLinesInOutputFile("2021-12-16_00-00-winMaxTs-2021-12-16T00_00_09.999Z-paneTiming-ON_TIME-shard-0-of-2.txt");
+            Assert.assertTrue(shard1Lines.size() >= 1 && shard1Lines.stream().allMatch(l -> l.endsWith("0")));
 
-        List<String> shard2Lines = getLinesInOutputFile("2021-12-16_00-00-winMaxTs-2021-12-16T00_00_09.999Z-paneTiming-ON_TIME-shard-1-of-2.txt");
-        Assert.assertTrue(shard2Lines.size() >= 1 && shard2Lines.stream().allMatch(l -> l.endsWith("0")));
+            List<String> shard2Lines = getLinesInOutputFile("2021-12-16_00-00-winMaxTs-2021-12-16T00_00_09.999Z-paneTiming-ON_TIME-shard-1-of-2.txt");
+            Assert.assertTrue(shard2Lines.size() >= 1 && shard2Lines.stream().allMatch(l -> l.endsWith("0")));
+        }
     }
 
     private static List<String> getLinesInOutputFile(String s) throws IOException {
-        try (Stream<String> lines = Files.lines(Path.of(OUTPUT_DIR, s))) {
+        try (Stream<String> lines = Files.lines(Path.of(LOCAL_OUTPUT_DIR, s))) {
             return lines.collect(Collectors.toList());
         }
     }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GroupedIntoBatchesFileIOWriteDynamicTest.class);
-
-    private static final String OUTPUT_DIR = Paths.get("target", GroupedIntoBatchesFileIOWriteDynamicTest.class.getSimpleName(), "output").toAbsolutePath().toString();
-    private static final String TEMP_DIR = Paths.get("target", GroupedIntoBatchesFileIOWriteDynamicTest.class.getSimpleName(), "temp").toAbsolutePath().toString();
+    private static final String LOCAL_OUTPUT_DIR = Paths.get("target", GroupedIntoBatchesFileIOWriteDynamicTest.class.getSimpleName(), "output").toAbsolutePath().toString();
+    private static final String LOCAL_TEMP_DIR = Paths.get("target", GroupedIntoBatchesFileIOWriteDynamicTest.class.getSimpleName(), "temp").toAbsolutePath().toString();
 
     @Before
     public void setup() throws IOException {
-        deleteContents(OUTPUT_DIR);
-        deleteContents(TEMP_DIR);
+        if (runner == Direct) {
+            deleteContents(LOCAL_OUTPUT_DIR);
+            deleteContents(LOCAL_TEMP_DIR);
+        }
     }
 
     static class MyFileNaming implements FileIO.Write.FileNaming {
-        private final String path;
+        private final String subPath;
         private final String extension;
 
-        public MyFileNaming(String path, String extension) {
-            this.path = path;
+        public MyFileNaming(String subPath, String extension) {
+            this.subPath = subPath;
             this.extension = extension;
         }
 
         @Override
         public String getFilename(BoundedWindow window, PaneInfo pane, int numShards, int shardIndex, Compression compression) {
-            String filename = String.format("%s-winMaxTs-%s-paneTiming-%s-shard-%s-of-%s%s", path, window.maxTimestamp().toString().replace(":","_").replace(" ","_"), pane.getTiming(), shardIndex, numShards, extension);
-            LOGGER.info("Writing data to path='{}'", filename);
+            String filename = String.format("%s-winMaxTs-%s-paneTiming-%s-shard-%s-of-%s%s", subPath, window.maxTimestamp().toString().replace(":","_").replace(" ","_"), pane.getTiming(), shardIndex, numShards, extension);
+            LOGGER.info("Writing data to subPath='{}'", filename);
             return filename;
         }
     }
@@ -170,6 +189,17 @@ public class GroupedIntoBatchesFileIOWriteDynamicTest implements Serializable {
             }
         }
         Files.createDirectories(directoryPath);
+    }
+
+    @SuppressWarnings("unused")
+    public interface MyOptions extends PipelineOptions {
+        @Validation.Required
+        ValueProvider<String> getOutput();
+        void setOutput(ValueProvider<String> value);
+
+        @Validation.Required
+        ValueProvider<String> getTemp();
+        void setTemp(ValueProvider<String> value);
     }
 
 }

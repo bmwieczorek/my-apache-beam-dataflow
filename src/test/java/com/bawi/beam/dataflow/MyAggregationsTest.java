@@ -1,6 +1,7 @@
 package com.bawi.beam.dataflow;
 
 import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
@@ -17,34 +18,35 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 public class MyAggregationsTest {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Log.class);
+    private static Pipeline getPipeline(Runner runner) {
+        return runner == Runner.Direct ?
+                Pipeline.create() :
+                Pipeline.create(PipelineOptionsFactory.fromArgs(PipelineUtils.updateArgsWithDataflowRunner()).create());
+    }
 
-    static class Log<T> extends PTransform<PCollection<T>, PCollection<T>> {
-        static class LogFn<E> extends DoFn<E, E> {
-            @ProcessElement
-            public void process(@Element E element, OutputReceiver<E> receiver, @Timestamp Instant timestamp, BoundedWindow window, PaneInfo paneInfo) {
-                LOGGER.info("Processing: {} ", String.format("%s (%s %s)", element, window.getClass().getSimpleName(), window.maxTimestamp()));
-                receiver.output(element);
-            }
+    @Test
+    public void testNoAggregation() {
+        Runner runner = Runner.Direct;
+//        Runner runner = Runner.Dataflow;
+        Pipeline pipeline = getPipeline(runner);
+
+        PCollection<Integer> result = pipeline.apply(Create.of(1, 2, 3, 4, 5, 6))
+                .apply(new Log<>());
+
+        if (isDirect(runner)) {
+            PAssert.that(result).containsInAnyOrder(1, 2, 3, 4, 5, 6);
         }
 
-        @Override
-        public PCollection<T> expand(PCollection<T> input) {
-//            input.apply(MapElements.via(new SimpleFunction<T, T>() {
-//                @Override
-//                public T apply(T element) {
-//                    LOGGER.info("Processing: {}", element);
-//                    return element;
-//                }
-//            }));
-            input.apply(ParDo.of(new LogFn<>()));
-            return input;
-        }
+        pipeline.run().waitUntilFinish();
+    }
+
+    private static boolean isDirect(Runner runner) {
+        return runner == Runner.Direct;
     }
 
     @Test
     public void testSumGlobally() {
-        Pipeline pipeline = Pipeline.create();
+        Pipeline pipeline = getPipeline(Runner.Direct);
         PCollection<Integer> result = pipeline.apply(Create.of(1, 2, 3))
                 .apply(Sum.integersGlobally())
                 .apply(new Log<>());
@@ -84,19 +86,23 @@ public class MyAggregationsTest {
 
     @Test
     public void testGroupByKey() {
-        Pipeline pipeline = Pipeline.create();
+        Runner runner = Runner.Direct;
+//        Runner runner = Runner.Dataflow;
+        Pipeline pipeline = getPipeline(runner);
         PCollection<KV<String, Iterable<Integer>>> result = pipeline.apply(Create.of(KV.of("a", 1), KV.of("b", 1), KV.of("a", 2)))
                 .apply(GroupByKey.create())
                 .apply(new Log<>());
-        PAssert.that(result).satisfies((SerializableFunction<Iterable<KV<String, Iterable<Integer>>>, Void>) input -> {
-            MatcherAssert.assertThat(input, Matchers.iterableWithSize(2));
-            MatcherAssert.assertThat(input, Matchers
-                    .either(Matchers.<KV<String, Iterable<Integer>>>hasItem(KV.of("a", List.of(1, 2))))
-                    .or(Matchers.hasItem(KV.of("a", List.of(2, 1))))
-            );
-            MatcherAssert.assertThat(input, Matchers.hasItem(KV.of("b", List.of(1))));
-            return null;
-        });
+        if (isDirect(runner)) {
+            PAssert.that(result).satisfies((SerializableFunction<Iterable<KV<String, Iterable<Integer>>>, Void>) input -> {
+                MatcherAssert.assertThat(input, Matchers.iterableWithSize(2));
+                MatcherAssert.assertThat(input, Matchers
+                        .either(Matchers.<KV<String, Iterable<Integer>>>hasItem(KV.of("a", List.of(1, 2))))
+                        .or(Matchers.hasItem(KV.of("a", List.of(2, 1))))
+                );
+                MatcherAssert.assertThat(input, Matchers.hasItem(KV.of("b", List.of(1))));
+                return null;
+            });
+        }
         pipeline.run().waitUntilFinish();
     }
 
@@ -143,7 +149,6 @@ public class MyAggregationsTest {
     static class MyToDelimitedString<T> extends Combine.CombineFn<T, String, String> {
         private static final String DEFAULT_DELIMITER = ":";
         private final String delimiter;
-        private final String accum = "";
 
         public MyToDelimitedString(String delimiter) {
             this.delimiter = delimiter;
@@ -160,7 +165,7 @@ public class MyAggregationsTest {
 
         @Override
         public String addInput(String mutableAccumulator, T input) {
-            return mutableAccumulator.isEmpty() ? input.toString() : mutableAccumulator + delimiter + input.toString();
+            return mutableAccumulator == null || mutableAccumulator.isEmpty() ? input.toString() : mutableAccumulator + delimiter + input.toString();
         }
 
         @Override
@@ -179,6 +184,24 @@ public class MyAggregationsTest {
         @Override
         public String extractOutput(String accumulator) {
             return accumulator;
+        }
+    }
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Log.class);
+
+    static class Log<T> extends PTransform<PCollection<T>, PCollection<T>> {
+        static class LogFn<E> extends DoFn<E, E> {
+            @ProcessElement
+            public void process(@Element E element, OutputReceiver<E> receiver, @Timestamp Instant timestamp, BoundedWindow window, PaneInfo paneInfo) {
+                LOGGER.info("Processing: {} ", String.format("%s (%s %s)", element, window.getClass().getSimpleName(), window.maxTimestamp()));
+                receiver.output(element);
+            }
+        }
+
+        @Override
+        public PCollection<T> expand(PCollection<T> input) {
+            input.apply(ParDo.of(new LogFn<>()));
+            return input;
         }
     }
 
