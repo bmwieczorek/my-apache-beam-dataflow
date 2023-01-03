@@ -3,6 +3,10 @@ package com.bawi.beam.dataflow;
 import org.apache.beam.sdk.metrics.Distribution;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
+import org.apache.beam.sdk.transforms.windowing.GlobalWindow;
+import org.apache.beam.sdk.transforms.windowing.PaneInfo;
+import org.joda.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,12 +18,12 @@ public class MyBundleSizeInterceptor<T> extends DoFn<T, T> {
     private static final String INTERCEPTOR_CLASS = MyBundleSizeInterceptor.class.getSimpleName();
 
     private final Distribution bundleSizeDist;
-    private final String stepName;
+    private final String label;
     private int bundleSize;
 
-    public MyBundleSizeInterceptor(String stepName) {
-        this.stepName = stepName;
-        bundleSizeDist = Metrics.distribution(INTERCEPTOR_CLASS, stepName + "_bundleSize");
+    public MyBundleSizeInterceptor(String label) {
+        this.label = label;
+        bundleSizeDist = Metrics.distribution(INTERCEPTOR_CLASS, label + "_bundleSize");
     }
 
     @StartBundle
@@ -28,15 +32,18 @@ public class MyBundleSizeInterceptor<T> extends DoFn<T, T> {
     }
 
     @ProcessElement
-    public void process(@Element T element, OutputReceiver<T> receiver) {
+    public void process(@Element T element, OutputReceiver<T> receiver, @Timestamp Instant timestamp, BoundedWindow window, PaneInfo paneInfo) {
         bundleSize++;
+        String windowString = window instanceof GlobalWindow ? "GlobalWindow: maxTimestamp=" + window.maxTimestamp() : window.getClass().getSimpleName() + ": " + window;
+        String msg = String.format("[" + label + "] Processing '%s',ts=%s,w=%s,p=%s", element, timestamp, windowString, paneInfo);
+        LOGGER.info(msg);
         receiver.output(element);
     }
 
     @FinishBundle
     public void finishBundle() {
         bundleSizeDist.update(bundleSize);
-        LOGGER.info("[{}][{}] Bundle size is {} for {}", getIP(), getThreadInfo(), bundleSize, stepName);
+        LOGGER.info("[{}][{}] Bundle size is {} for {}", getIP(), getThreadInfo(), bundleSize, label);
     }
 
     private static String getIP() {

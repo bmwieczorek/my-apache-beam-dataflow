@@ -156,6 +156,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
             readingPipeline
                     .apply(read)
+                    .apply("AfterPubSub", ParDo.of(new MyBundleSizeInterceptor<>("AfterPubSub")))
                     .apply(Window
                             .<PubsubMessage>into(FixedWindows.of(Duration.standardSeconds(60)))
                             .triggering(Repeatedly.forever(
@@ -167,10 +168,10 @@ gcloud dataflow flex-template run $APP-$OWNER \
                             )
                             .withAllowedLateness(Duration.standardMinutes(10))
                             .discardingFiredPanes()) // if Window.into is after DoFn then DoFn logs Global Window otherwise IntervalWindow
-                    .apply(ParDo.of(new MyBundleSizeInterceptor<>("AfterPubsub")))
+                    .apply("AfterWindowInfo", ParDo.of(new MyBundleSizeInterceptor<>("AfterWindowInfo")))
                     .apply(ConcatBodyAttrAndMsgIdFn.CLASS_NAME, ParDo.of(new ConcatBodyAttrAndMsgIdFn()))
                     .setCoder(AvroGenericCoder.of(SCHEMA)) // required to explicitly set coder for GenericRecord
-                    .apply(ParDo.of(new MyBundleSizeInterceptor<>("AfterConcatBodyAttrAndMsgIdFn")))
+                    .apply("AfterConcatBodyAttrAndMsgIdFn", ParDo.of(new MyBundleSizeInterceptor<>("AfterConcatBodyAttrAndMsgIdFn")))
     /*
                     .apply(AvroIO.writeGenericRecords(SCHEMA).withWindowedWrites()
                             //.to(options.getOutput())
