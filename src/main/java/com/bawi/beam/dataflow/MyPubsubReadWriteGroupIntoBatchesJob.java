@@ -49,7 +49,7 @@ public class MyPubsubReadWriteGroupIntoBatchesJob {
         Pipeline readingPipeline = Pipeline.create(readOptions);
 
         readingPipeline.apply(PubsubIO.readMessagesWithAttributesAndMessageId().fromSubscription(readOptions.getSubscription()))
-                .apply(MapElements.via(new SimpleFunction<PubsubMessage, KV<Integer, Integer>>() {
+                .apply("Log processing", MapElements.via(new SimpleFunction<PubsubMessage, KV<Integer, Integer>>() {
                     @Override
                     public KV<Integer, Integer> apply(PubsubMessage msg) {
                         int i = Integer.parseInt(new String(msg.getPayload()));
@@ -59,7 +59,7 @@ public class MyPubsubReadWriteGroupIntoBatchesJob {
                     }
                 }))
                 .apply(GroupIntoBatches.ofSize(5))
-                .apply(MapElements.via(new SimpleFunction<KV<Integer, Iterable<Integer>>, Void>() {
+                .apply("Log batches", MapElements.via(new SimpleFunction<KV<Integer, Iterable<Integer>>, Void>() {
                     @Override
                     public Void apply(KV<Integer, Iterable<Integer>> input) {
                         LOGGER.info("[{}] Batched element {}", LogUtils.getMessage(), input);
