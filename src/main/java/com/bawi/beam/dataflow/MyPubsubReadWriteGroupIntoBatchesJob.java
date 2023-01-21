@@ -54,7 +54,7 @@ public class MyPubsubReadWriteGroupIntoBatchesJob {
                     public KV<Integer, Integer> apply(PubsubMessage msg) {
                         int i = Integer.parseInt(new String(msg.getPayload()));
                         KV<Integer, Integer> kv = KV.of(i % 100, i);
-                        LOGGER.info("[{}] Processing element {}:{}", LogUtils.getMessage(), i, i % 100);
+                        LOGGER.info("[{}] Processing element {}:{}", LogUtils.ipAddressAndThread(), i, i % 100);
                         return kv;
                     }
                 }))
@@ -62,7 +62,7 @@ public class MyPubsubReadWriteGroupIntoBatchesJob {
                 .apply("Log batches", MapElements.via(new SimpleFunction<KV<Integer, Iterable<Integer>>, Void>() {
                     @Override
                     public Void apply(KV<Integer, Iterable<Integer>> input) {
-                        LOGGER.info("[{}] Batched element {}", LogUtils.getMessage(), input);
+                        LOGGER.info("[{}] Batched element {}", LogUtils.ipAddressAndThread(), input);
                         return null;
                     }
                 }));
