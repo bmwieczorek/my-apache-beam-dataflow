@@ -137,10 +137,10 @@ public class GroupedIntoBatchesFileIOWriteDynamicTest implements Serializable {
 
             // 2 shards for second window W2 [5-10)
             List<String> shard1Lines = getLinesInOutputFile("2021-12-16_00-00-winMaxTs-2021-12-16T00_00_09.999Z-paneTiming-ON_TIME-shard-0-of-2.txt");
-            Assert.assertTrue(shard1Lines.size() >= 1 && shard1Lines.stream().allMatch(l -> l.endsWith("0")));
+            Assert.assertTrue(shard1Lines.size() >= 1 && shard1Lines.stream().allMatch(charNumberKVLine -> charNumberKVLine.endsWith("0")));
 
             List<String> shard2Lines = getLinesInOutputFile("2021-12-16_00-00-winMaxTs-2021-12-16T00_00_09.999Z-paneTiming-ON_TIME-shard-1-of-2.txt");
-            Assert.assertTrue(shard2Lines.size() >= 1 && shard2Lines.stream().allMatch(l -> l.endsWith("0")));
+            Assert.assertTrue(shard2Lines.size() >= 1 && shard2Lines.stream().allMatch(charNumberKVLine -> charNumberKVLine.endsWith("0")));
         }
     }
 
