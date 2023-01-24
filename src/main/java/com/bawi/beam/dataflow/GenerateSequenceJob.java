@@ -13,11 +13,14 @@ public class GenerateSequenceJob {
         PipelineOptions options = PipelineOptionsFactory.fromArgs(args).as(PipelineOptions.class);
 
         Pipeline pipeline = Pipeline.create(options);
-        PCollection<Long> apply = pipeline.apply(org.apache.beam.sdk.io.GenerateSequence
-                .from(1)
-                //.to(60) // bounded
-                .withRate(20, Duration.standardSeconds(1L)));
-        apply
+
+        // generate numbers from 0 to 5999 and send each number every ~1/10s
+        PCollection<Long> numbers = pipeline.apply(org.apache.beam.sdk.io.GenerateSequence
+                .from(0)
+                .to(6000) // exclusive
+                .withRate(10, Duration.standardSeconds(1L)));
+
+        numbers
                 .apply(MyConsoleIO.write());
         PipelineResult run = pipeline.run();
         run.waitUntilFinish();
