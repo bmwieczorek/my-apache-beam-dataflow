@@ -39,7 +39,7 @@ public class LogUtils {
         }
     }
 
-    public static String getLocalHostName() {
+    public static String hostname() {
         try {
             return InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException e) {
