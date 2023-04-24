@@ -46,7 +46,7 @@ public class MySeqXmlGzAggregationStreamingJob {
                 isDataflowRunnerOnClasspath() ?
                         updateArgsWithDataflowRunner(args
                                 , "--jobName=" + JOB_NAME + "--30000-elements-per-sec--3x-t2dst2"
-                                , "--jobName=" + JOB_NAME + "--random-key-suffix--30000-elements-per-sec--3x-t2dst2"
+//                                , "--jobName=" + JOB_NAME + "--random-key-suffix--30000-elements-per-sec--3x-t2dst2"
                                 , "--numWorkers=3"
                                 , "--maxNumWorkers=3"
                                 , "--workerMachineType=t2d-standard-2"
