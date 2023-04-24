@@ -75,9 +75,9 @@ public class MySeqXmlGzAggregationBatchJob {
                 .apply("GunzipSplitMultiXml", ParDo.of(new GunzipAndSplitMultiXml("<college", "</college>")))
 
                 .apply("XmlVtdParse", ParDo.of(new XmlVtdParse()))
-                .apply("SumSalariesPerXml", MapElements.into(integers())
-                        .via(map -> parseInt(map.get("staff_basic_salary_sum"))))
-                .apply("SumAllSalaries", Sum.integersGlobally().withoutDefaults())
+                .apply("SumSalariesPerXml", MapElements.into(longs())
+                        .via(xmlAsMap -> (long) xmlAsMap.get("staff_basic_salary_sum")))
+                .apply("SumAllSalaries", Sum.longsGlobally().withoutDefaults())
 
 //                .apply("LogSumAllSalaries", MapElements.into(voids()).via(sum -> {
 //                    LOGGER.info("sumAllSalaries={}", sum);
@@ -111,7 +111,7 @@ public class MySeqXmlGzAggregationBatchJob {
         }
     }
 
-    static class XmlVtdParse extends DoFn<String, Map<String, String>> {
+    static class XmlVtdParse extends DoFn<String, Map<String, Object>> {
         private static final Counter xmlsParsed = Metrics.counter(XmlVtdParse.class.getSimpleName(), "xmls-parsed");
         private VtdXmlParser vtdXmlParser;
 
@@ -128,11 +128,9 @@ public class MySeqXmlGzAggregationBatchJob {
         }
 
         @ProcessElement
-        public void process(@Element String xml, OutputReceiver<Map<String, String>> receiver) throws Exception {
-            Map<String, Object> map = vtdXmlParser.parseXml(xml);
-            Map<String, String> remapped = map.entrySet().stream()
-                    .collect(Collectors.toMap(Map.Entry::getKey, e -> String.valueOf(e.getValue())));
-            receiver.output(remapped);
+        public void process(@Element String xml, OutputReceiver<Map<String, Object>> receiver) throws Exception {
+            Map<String, Object> parsedXmlAsMap = vtdXmlParser.parseXml(xml);
+            receiver.output(parsedXmlAsMap);
             xmlsParsed.inc();
         }
     }

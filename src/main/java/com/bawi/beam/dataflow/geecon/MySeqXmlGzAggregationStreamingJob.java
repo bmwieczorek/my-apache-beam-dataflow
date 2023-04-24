@@ -1,7 +1,6 @@
 package com.bawi.beam.dataflow.geecon;
 
 import com.bawi.VtdXmlParser;
-import com.bawi.beam.dataflow.LogUtils;
 import com.bawi.beam.dataflow.PipelineUtils;
 import com.bawi.io.GzipUtils;
 import com.bawi.parser.impl.StringLengthParser;
@@ -22,17 +21,19 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
-import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import static com.bawi.beam.dataflow.LogUtils.hostname;
 import static com.bawi.beam.dataflow.PipelineUtils.isDataflowRunnerOnClasspath;
 import static com.bawi.beam.dataflow.PipelineUtils.updateArgsWithDataflowRunner;
+import static com.bawi.io.GzipUtils.gunzip;
 import static com.bawi.io.GzipUtils.gzip;
 import static java.lang.Long.parseLong;
+import static java.lang.System.currentTimeMillis;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.StreamSupport.stream;
 import static org.apache.beam.sdk.values.TypeDescriptor.of;
 import static org.apache.beam.sdk.values.TypeDescriptors.*;
-import static org.apache.beam.sdk.values.TypeDescriptors.voids;
 import static org.joda.time.Duration.standardSeconds;
 import static org.joda.time.Instant.now;
 
@@ -117,19 +118,28 @@ public class MySeqXmlGzAggregationStreamingJob {
         }
 
         @ProcessElement
-        public void process(@Element KV<String, Iterable<byte[]>> element, OutputReceiver<KV<String, Long>> receiver) {
-            long allStaffBasicSalarySum = StreamSupport.stream(element.getValue().spliterator(), false)
-                    .map(bytes -> new String(GzipUtils.gunzip(bytes)))
-                    .map(xml -> vtdXmlParser.parseXml(xml))
-                    .map(m -> m.entrySet().stream()
-                            .collect(Collectors.toMap(Map.Entry::getKey, e -> String.valueOf(e.getValue()))))
-                    .map(m -> parseLong(m.get("staff_basic_salary_sum")))
-                    .peek(m -> Metrics.counter("SumAllSalariesPW", element.getKey() + "_" + LogUtils.getLocalHostName()).inc())
-//                                .reduce(0L, Long::sum);
-                    .count();
-            receiver.output(KV.of(element.getKey(), allStaffBasicSalarySum));
+        public void process(@Element KV<String, Iterable<byte[]>> elem, OutputReceiver<KV<String, Long>> receiver) {
+            long salariesSumInXmlsGroup = stream(elem.getValue().spliterator(), false)
+                .map(bytes -> new String(gunzip(bytes)))
+
+                .peek(xml -> Metrics.counter("keyToHostname", elem.getKey() + "_" + hostname()).inc())
+
+                // do not log to avoid: Throttling logger worker. It used up its 30s quota for logs in only ... sec
+                //.peek(xml -> LOGGER.info("keyToHostname {}", element.getKey() + "_" + getHostname()))
+
+                .map(xml -> {
+                    long start = currentTimeMillis();
+                    Map<String, Object> xmlAsMap = vtdXmlParser.parseXml(xml);
+                    Metrics.distribution(VtdXmlParser.class, "elapsedTime").update(currentTimeMillis() - start);
+                    return xmlAsMap;
+                })
+
+                .map(xmlAsMap -> (long) xmlAsMap.get("staff_basic_salary_sum"))
+                .reduce(0L, Long::sum);
+//                    .count();
+            receiver.output(KV.of(elem.getKey(), salariesSumInXmlsGroup));
         }
-    }
+}
 
     public interface MyPipelineOptions extends PipelineOptions {
         @Validation.Required
