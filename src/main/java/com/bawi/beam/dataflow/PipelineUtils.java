@@ -13,8 +13,23 @@ import java.util.stream.Stream;
 public class PipelineUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(PipelineUtils.class);
 
+    public static String[] updateArgs(String[] args, String... additionalArgs) {
+        Set<String> merged = new LinkedHashSet<>();
+        merged.addAll(Arrays.asList(args));
+        merged.addAll(Arrays.asList(additionalArgs));
+        Map<String, String> map = merged.stream().collect(
+                Collectors.toMap(s -> s.substring(0, s.indexOf("=")), s -> s.substring(s.indexOf("=") + 1), (s1, s2) -> s1));
+        String[] strings = map.entrySet().stream().map(e -> e.getKey() + "=" + e.getValue()).toArray(String[]::new);
+        LOGGER.info("Merged args={}", map);
+        return strings;
+    }
+
     public static String[] updateArgsWithDataflowRunner() {
         return updateArgsWithDataflowRunner(new String[]{});
+    }
+
+    public static String[] merge(String[] args, String... additionalArgs) {
+        return updateArgsWithDataflowRunner(args, additionalArgs);
     }
 
     public static String[] updateArgsWithDataflowRunner(String[] args, String... additionalArgs) {
@@ -43,4 +58,15 @@ public class PipelineUtils {
     private static boolean argsMissing(String[] args, String attribute) {
         return Stream.of(args).noneMatch(s -> s.startsWith("--" + attribute + "="));
     }
+
+    public static boolean isDataflowRunnerOnClasspath() {
+        try {
+            Class.forName("org.apache.beam.runners.dataflow.DataflowRunner");
+            return true;
+        } catch (ClassNotFoundException e) {
+            // ignore
+        }
+        return false;
+    }
+
 }

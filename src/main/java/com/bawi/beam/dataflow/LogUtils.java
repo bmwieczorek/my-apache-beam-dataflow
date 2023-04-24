@@ -22,8 +22,12 @@ public class LogUtils {
 //        return String.format("%s|i:%s|n:%s|g:%s|c:%s|u:%s|f:%s|t:%s|m:%s",
 //                localHostAddress, thread.getId(), thread.getName(), thread.getThreadGroup().getName(), Runtime.getRuntime().availableProcessors(), used, free, total, max);
 
-        return String.format("%s|i:%s|n:%s",
-                getLocalHostAddress(), thread.getId(), thread.getName());
+        return String.format("%s|%s", getLocalHostAddress(), thread.getId());
+
+//        return String.format("i:%s", thread.getId());
+
+
+
     }
 
     public static String getLocalHostAddress() {
@@ -31,6 +35,15 @@ public class LogUtils {
             return InetAddress.getLocalHost().getHostAddress();
         } catch (UnknownHostException e) {
             LOGGER.error("Unable to get local host address", e);
+            return null;
+        }
+    }
+
+    public static String getLocalHostName() {
+        try {
+            return InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            LOGGER.error("Unable to get local host name", e);
             return null;
         }
     }
