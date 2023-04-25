@@ -26,14 +26,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.bawi.beam.dataflow.PipelineUtils.isDataflowRunnerOnClasspath;
 import static com.bawi.beam.dataflow.PipelineUtils.updateArgsWithDataflowRunner;
+import static com.bawi.beam.dataflow.geecon.XmlPayload.XML_PAYLOAD;
 import static com.bawi.io.GzipUtils.gunzip;
 import static com.bawi.io.GzipUtils.gzip;
-import static java.lang.Integer.parseInt;
 import static java.util.stream.Collectors.joining;
 import static org.apache.beam.sdk.values.TypeDescriptor.of;
 import static org.apache.beam.sdk.values.TypeDescriptors.*;
@@ -61,8 +60,8 @@ public class MySeqXmlGzAggregationBatchJob {
                                 , "--sequenceLimit=3"
                         );
 
-        byte[] SINGLE_PAYLOAD_GZ = gzip(PAYLOAD);
-        byte[] MULTI_PAYLOAD_GZ = gzip(IntStream.range(0, 1000).boxed().map(i -> PAYLOAD).collect(joining("\n")));
+        byte[] SINGLE_PAYLOAD_GZ = gzip(XML_PAYLOAD);
+        byte[] MULTI_PAYLOAD_GZ = gzip(IntStream.range(0, 1000).boxed().map(i -> XML_PAYLOAD).collect(joining("\n")));
 
         MyPipelineOptions opts = PipelineOptionsFactory.fromArgs(updatedArgs).withValidation().as(MyPipelineOptions.class);
         Pipeline pipeline = Pipeline.create(opts);
@@ -140,41 +139,4 @@ public class MySeqXmlGzAggregationBatchJob {
         long getSequenceLimit();
         void setSequenceLimit(long value);
     }
-
-    private static final String PAYLOAD = "" +
-            "<college id=\"1\">\n" +
-            "    <staff id=\"101\" dep_name=\"Admin\">\n" +
-            "        <employee id=\"101-01\" name=\"ashish\"/>\n" +
-            "        <employee id=\"101-02\" name=\"amit\"/>\n" +
-            "        <employee id=\"101-03\" name=\"nupur\"/>\n" +
-            "        <salary id=\"101-sal\">\n" +
-            "            <basic>20000</basic>\n" +
-            "            <special-allowance>50000</special-allowance>\n" +
-            "            <medical>10000</medical>\n" +
-            "            <provident-fund>10000</provident-fund>\n" +
-            "        </salary>\n" +
-            "    </staff>\n" +
-            "    <staff id=\"102\" dep_name=\"HR\">\n" +
-            "        <employee id=\"102-01\" name=\"shikhar\"/>\n" +
-            "        <employee id=\"102-02\" name=\"sanjay\"/>\n" +
-            "        <employee id=\"102-03\" name=\"ani\"/>\n" +
-            "        <salary id=\"102-sal\">\n" +
-            "            <basic>25000</basic>\n" +
-            "            <special-allowance>60000</special-allowance>\n" +
-            "            <medical>10000</medical>\n" +
-            "            <provident-fund>12000</provident-fund>\n" +
-            "        </salary>\n" +
-            "    </staff>\n" +
-            "    <staff id=\"103\" dep_name=\"IT\">\n" +
-            "        <employee id=\"103-01\" name=\"suman\"/>\n" +
-            "        <employee id=\"103-02\" name=\"salil\"/>\n" +
-            "        <employee id=\"103-03\" name=\"amar\"/>\n" +
-            "        <salary id=\"103-sal\">\n" +
-            "            <basic>35000</basic>\n" +
-            "            <special-allowance>70000</special-allowance>\n" +
-            "            <medical>12000</medical>\n" +
-            "            <provident-fund>15000</provident-fund>\n" +
-            "        </salary>\n" +
-            "    </staff>\n" +
-            "</college>";
 }

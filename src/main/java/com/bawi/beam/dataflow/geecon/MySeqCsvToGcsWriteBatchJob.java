@@ -77,10 +77,12 @@ public class MySeqCsvToGcsWriteBatchJob {
 
         @Validation.Required
         ValueProvider<String> getOutputDir();
+        @SuppressWarnings("unused")
         void setOutputDir(ValueProvider<String> value);
 
         @Validation.Required
         ValueProvider<String> getTempDir();
+        @SuppressWarnings("unused")
         void setTempDir(ValueProvider<String> value);
 
         @Validation.Required
