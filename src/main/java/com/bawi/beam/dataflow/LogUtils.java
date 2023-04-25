@@ -48,6 +48,10 @@ public class LogUtils {
         }
     }
 
+    public static String hostnameAndThreadId() {
+        return hostname() + "_" + Thread.currentThread().getId();
+    }
+
     public static String getLocalHostAddressSpaced() {
         String localHostAddress = getLocalHostAddress();
         return localHostAddress == null ? "" : localHostAddress.replace(".","_");

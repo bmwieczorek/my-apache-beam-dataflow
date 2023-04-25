@@ -1,14 +1,13 @@
 package com.bawi.beam.dataflow;
 
+import org.apache.beam.sdk.metrics.MetricResults;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public class PipelineUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(PipelineUtils.class);
@@ -67,6 +66,18 @@ public class PipelineUtils {
             // ignore
         }
         return false;
+    }
+
+    public static List<String> getDistributions(MetricResults metricResults) {
+        return StreamSupport.stream(metricResults.allMetrics().getDistributions().spliterator(), false)
+                .map(c -> c.getName().getName() + "=" + c.getAttempted())
+                .collect(Collectors.toList());
+    }
+
+    public static List<String> getCounters(MetricResults metricResults) {
+        return StreamSupport.stream(metricResults.allMetrics().getCounters().spliterator(), false)
+                .map(c -> c.getName().getName() + "=" + c.getAttempted())
+                .collect(Collectors.toList());
     }
 
 }
