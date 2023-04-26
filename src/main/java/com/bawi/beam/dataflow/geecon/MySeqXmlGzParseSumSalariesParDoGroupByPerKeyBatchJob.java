@@ -1,6 +1,7 @@
 package com.bawi.beam.dataflow.geecon;
 
 import com.bawi.VtdXmlParser;
+import com.bawi.VtdXmlParser.Entry;
 import com.bawi.beam.dataflow.PipelineUtils;
 import com.bawi.parser.impl.StringLengthParser;
 import com.bawi.parser.impl.SumValuesParser;
@@ -88,12 +89,12 @@ public class MySeqXmlGzParseSumSalariesParDoGroupByPerKeyBatchJob {
 
         @Setup
         public void setup() {
-            List<VtdXmlParser.FieldXpathMappingEntry> mapping = List.of(
-                    new VtdXmlParser.FieldXpathMappingEntry("college_first_staff_dep_name", "staff[1]/@dep_name", String.class),
-                    new VtdXmlParser.FieldXpathMappingEntry("college_first_staff_dep_name_length", "staff[1]/@dep_name", StringLengthParser.class),
-                    new VtdXmlParser.FieldXpathMappingEntry("staff_basic_salary_sum", "staff/salary/basic", SumValuesParser.class),
-                    new VtdXmlParser.FieldXpathMappingEntry("staff_id_attr_sum", "staff/@id", SumValuesParser.class),
-                    new VtdXmlParser.FieldXpathMappingEntry("college_id", "@id", Integer.class)
+            List<Entry> mapping = List.of(
+                    new Entry("college_first_staff_dep_name", "staff[1]/@dep_name", String.class),
+                    new Entry("college_first_staff_dep_name_length", "staff[1]/@dep_name", StringLengthParser.class),
+                    new Entry("staff_basic_salary_sum", "staff/salary/basic", SumValuesParser.class),
+                    new Entry("staff_id_attr_sum", "staff/@id", SumValuesParser.class),
+                    new Entry("college_id", "@id", Integer.class)
             );
             vtdXmlParser = new VtdXmlParser(mapping);
         }
