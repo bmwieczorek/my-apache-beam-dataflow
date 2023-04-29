@@ -190,7 +190,7 @@ public class MyAggregationsTest {
     @Test
     public void testMyCombineWindowGlobally() {
         Pipeline pipeline = Pipeline.create();
-        pipeline.apply(Create.timestamped(
+        PCollection<Integer> pColl = pipeline.apply(Create.timestamped(
                         // W1 [0-5) s
                         TimestampedValue.of(1, Instant.parse("2021-12-16T00:00:00Z")),
                         TimestampedValue.of(2, Instant.parse("2021-12-16T00:00:01Z")),
@@ -200,7 +200,9 @@ public class MyAggregationsTest {
                         TimestampedValue.of(20, Instant.parse("2021-12-16T00:00:06Z"))
                 ))
                 .apply(Combine.globally(Sum.ofIntegers())) // uses by default global window so sum of all elements despite their timestamps
-                .apply(new Log<>()); //
+                .apply(new Log<>());
+
+        PAssert.thatSingleton(pColl).isEqualTo(33);
         pipeline.run().waitUntilFinish();
     }
 
