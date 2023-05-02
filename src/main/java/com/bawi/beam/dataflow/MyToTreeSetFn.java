@@ -9,7 +9,7 @@ import java.util.TreeSet;
 public class MyToTreeSetFn<T extends Comparable<T>> extends Combine.CombineFn<T, MyToTreeSetFn.Accum<T>, TreeSet<T>> {
 
     public static class Accum<T extends Comparable<T>> implements Serializable {
-        private TreeSet<T> objects = new TreeSet<>();
+        private final TreeSet<T> objects = new TreeSet<>();
 
         @Override
         public boolean equals(Object o) {
