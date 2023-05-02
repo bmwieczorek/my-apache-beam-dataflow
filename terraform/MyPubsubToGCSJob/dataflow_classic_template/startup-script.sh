@@ -95,6 +95,7 @@ java -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAI
   --enableStreamingEngine=${ENABLE_STREAMING_ENGINE} \
   --templateLocation="${DATAFLOW_TEMPLATE_GCS_PATH}" 2>&1 | tee -a ${LOG}
 
+#  --workerLogLevelOverrides="{ \"org.apache.beam.sdk.util.WindowTracing\": \"DEBUG\" }" \
 
 #  --workerDiskType="pd-standard" \
 #  --streaming=true \
