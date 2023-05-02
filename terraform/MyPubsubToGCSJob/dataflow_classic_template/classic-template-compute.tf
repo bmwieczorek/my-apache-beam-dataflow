@@ -93,7 +93,7 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
         then
           echo "java failed" && break;
         fi;
-        echo "Waiting for VM to complete: $counter attempt of $max_retry" ; counter=$(expr $counter + 1);
+        echo "Waiting for ${local.instance} VM to complete: $counter attempt of $max_retry" ; counter=$(expr $counter + 1);
       done
       gcloud compute instances get-serial-port-output ${local.instance} --zone ${var.zone} --project ${var.project} | grep startup | grep script | grep -v 'INFO  org.apache.beam.' | grep -v 'WARN  org.apache.beam.' | grep -v 'Speed' | grep -v '\-\-:\-\-:\-\-'
       gcloud compute instances describe --project ${var.project} --zone ${var.zone} ${local.instance} --format='value(metadata.startup-state)'
