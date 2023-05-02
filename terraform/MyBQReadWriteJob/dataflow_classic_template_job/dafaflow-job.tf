@@ -29,14 +29,16 @@ resource "google_dataflow_job" "job" {
 
   provisioner "local-exec" {
     command = <<EOT
-    max_retry=40; for i in $(seq 1 $max_retry); do if [ -z "$(gcloud dataflow jobs list --filter "NAME:${self.name} AND STATE=Running" --format 'value(JOB_ID)' --region ${self.region})" ]; then if [ $i -eq $max_retry ]; then echo "Failed to reach running state within $max_retry retries" && break; fi; echo "Waiting for job to be in running state"; sleep 5; else echo "Running"; break; fi; done
+      max_retry=40; for i in $(seq 1 $max_retry); do if [ -z "$(gcloud dataflow jobs list --region ${self.region} | grep "${self.name}" | grep Running)" ]; then if [ $i -eq $max_retry ]; then echo "Job ${self.name} failed to reach running state within $max_retry retries" && break; fi; echo "Waiting for job ${self.name} to be in running state"; sleep 5; else echo "Job ${self.name} is running"; break; fi; done
     EOT
+#    max_retry=40; for i in $(seq 1 $max_retry); do if [ -z "$(gcloud dataflow jobs list --filter "NAME:${self.name} AND STATE=Running" --format 'value(JOB_ID)' --region ${self.region})" ]; then if [ $i -eq $max_retry ]; then echo "Failed to reach running state within $max_retry retries" && break; fi; echo "Waiting for job to be in running state"; sleep 5; else echo "Running"; break; fi; done
   }
 
   provisioner "local-exec" {
     when    = destroy
     command = <<EOT
-      max_retry=40; counter=1; until ! [ -z "$(gcloud dataflow jobs list --filter "NAME:${self.name} AND (STATE=Cancelling OR STATE=Running)" --format 'value(JOB_ID)' --region "${self.region}")" ] ; do sleep 5; if [ $counter -eq $max_retry ]; then echo "Failed" && break; fi; echo "Wating for job to be cancelled: $counter attempt"; counter=$(expr $counter + 1); done
+      max_retry=40; counter=1; until ! [ -z "$(gcloud dataflow jobs list --region ${self.region} | grep "${self.name}" | grep -e "Cancelling\|Running")" ] ; do sleep 5; if [ $counter -eq $max_retry ]; then echo "Exceeded number of attempts to wait for job ${self.name} to be cancelled" && break; fi; echo "Wating for job ${self.name} to be cancelled: $counter attempt"; counter=$(expr $counter + 1); done
     EOT
+#    max_retry=40; counter=1; until ! [ -z "$(gcloud dataflow jobs list --filter "NAME:${self.name} AND (STATE=Cancelling OR STATE=Running)" --format 'value(JOB_ID)' --region "${self.region}")" ] ; do sleep 5; if [ $counter -eq $max_retry ]; then echo "Failed" && break; fi; echo "Wating for job to be cancelled: $counter attempt"; counter=$(expr $counter + 1); done
   }
 }
