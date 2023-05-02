@@ -22,7 +22,7 @@ public class CustomFilenamePolicy extends FileBasedSink.FilenamePolicy {
     private final ValueProvider<String> outputParentPath;
     private final String filenameSuffix;
 
-    CustomFilenamePolicy(ValueProvider<String> outputParentPath, String filenameSuffix) {
+    public CustomFilenamePolicy(ValueProvider<String> outputParentPath, String filenameSuffix) {
         this.outputParentPath = outputParentPath;
         this.filenameSuffix = filenameSuffix;
     }
