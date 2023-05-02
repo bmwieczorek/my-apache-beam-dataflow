@@ -76,6 +76,9 @@ java -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAI
   --stagingLocation=gs://${BUCKET}/staging \
   --templateLocation="${DATAFLOW_TEMPLATE_GCS_PATH}" 2>&1 | tee -a ${LOG}
 
+# use flexRSGoal when creating a job template as above (requires 2 templates: one with flexrs and one without; passing flexrs at runtime when starting a job has no effect)
+#  --flexRSGoal=COST_OPTIMIZED \
+
 result=$?
 
 echo "Done" | tee -a ${LOG}
