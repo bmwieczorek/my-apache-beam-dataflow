@@ -9,7 +9,12 @@ variable "owner" {
 }
 
 variable "bucket" {
-  description = "Google Cloud bucket"
+  description = "Google Cloud bucket for router logs"
+  type        = string
+}
+
+variable "dataset" {
+  description = "Google BigQuery dataset for router logs"
   type        = string
 }
 
