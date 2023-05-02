@@ -17,6 +17,7 @@ resource "google_dataflow_job" "job" {
   machine_type          = "n1-standard-1"
   parameters = {
     expirationDate = var.expiration_date
+//    flexRSGoal = "COST_OPTIMIZED" // flexRSGoal flag no supported when starting a job (need to be added when creating template)
 //    outputPath         = "gs://${var.bucket}/output"
 //    tempPath           = "gs://${var.bucket}/temp"
   }
