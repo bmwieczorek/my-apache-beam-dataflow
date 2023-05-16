@@ -2,15 +2,17 @@ package com.bawi.beam.dataflow;
 
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
+import org.apache.avro.file.CodecFactory;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.util.Utf8;
-import org.apache.beam.sdk.io.AvroIO;
+import org.apache.beam.sdk.extensions.avro.io.AvroIO;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
+import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.values.PCollection;
 import org.junit.Rule;
@@ -30,16 +32,29 @@ public class ReadAvroFileTest implements Serializable {
     public void test() throws IOException {
         // given - generate file
         Schema schema = SchemaBuilder.record("myRecord").fields().requiredString("name").requiredBytes("body").endRecord();
-        GenericRecord record = new GenericData.Record(schema);
-        record.put("name", "Bob");
-        record.put("body", ByteBuffer.wrap("abc".getBytes()));
-
-        File avroFile = new File("target/myRecord.avro");
+//        String pathname = "target/myRecord-1k.snappy.avro";
+        String pathname = "target/myRecord.snappy.avro";
+        File avroFile = new File(pathname);
         DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
         DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter);
+        dataFileWriter.setCodec(CodecFactory.snappyCodec());
         dataFileWriter.create(schema, avroFile);
-        dataFileWriter.append(record);
+
+//        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 1; i++) {
+            GenericRecord record = new GenericData.Record(schema);
+            record.put("name", "Bob");
+            record.put("body", ByteBuffer.wrap("abc".getBytes()));
+            dataFileWriter.append(record);
+        }
+
         dataFileWriter.close();
+
+//        byte[] bytes = Files.readAllBytes(Path.of(pathname));
+//        byte[] out = new byte[800000];
+//        Snappy.compress(bytes, 0, 8, out, 0);
+//        String pathname2 = "target/myRecord.snappy.avro";
+//        Files.write(Path.of(pathname2), out);
 
         // when - read file
         PCollection<String> pCollection = pipeline.apply(
@@ -53,8 +68,8 @@ public class ReadAvroFileTest implements Serializable {
                         return name.toString() + "," + new String(bytes);
                     }
                 })
-                .from("target/myRecord.avro")
-        );
+                .from(pathname)
+        ).apply(ParDo.of(new MyBundleSizeInterceptor<>("")));
 
         // assert
         PAssert.thatSingleton(pCollection).isEqualTo("Bob,abc");
