@@ -18,7 +18,9 @@ pip3 --use-deprecated legacy-resolver install \
  apache-airflow-backport-providers-apache-beam==2021.3.13 apache-airflow-backport-providers-google==2021.3.3 \
  pytest \
  apache-beam[interactive] \
+ pendulum \
+ jupyter \
  --constraint "${CONSTRAINT_URL}"
 # apache-beam[gcp] \
 
-pip3 install jupyter
+#pip3 install jupyter
