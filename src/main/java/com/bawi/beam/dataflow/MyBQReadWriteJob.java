@@ -8,7 +8,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.avro.util.Utf8;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.coders.AvroGenericCoder;
+import org.apache.beam.sdk.extensions.avro.coders.AvroGenericCoder;
 import org.apache.beam.sdk.coders.DefaultCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
@@ -63,7 +63,14 @@ public class MyBQReadWriteJob {
     public static void main(String[] args) {
 //        System.out.println(MySubscription.SCHEMA);
 //        System.setProperty("java.util.logging.config.file", "src/main/resources/logging.properties");
+        //  bq --location=US mk --dataset bartek_mybqreadwritejob
+        //  bq rm -r -f -d bartek_mybqreadwritejob
 
+        args = PipelineUtils.updateArgsWithDataflowRunner(args
+//                , "--jobName=bartek-mybqreadwritejob-2021-03-03-flexrs",
+//                "--maxNumWorkers=10", "--workerMachineType=n1-standard-2", "--flexRSGoal=COST_OPTIMIZED",
+//                "--expirationDate=2021-03-03", "--tableSpec=bartek_mybqreadwritejob.mysubscription_table"
+        );
         MyBQOptions pipelineOptions = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyBQOptions.class);
 //        DataflowPipelineOptions pipelineOptions =
 //              DataflowRunnerUtils.createDataflowRunnerOptions(PipelineOptionsFactory.fromArgs(args).withValidation().as(MyBQOptions.class), MyBQOptions.class.getSimpleName());
