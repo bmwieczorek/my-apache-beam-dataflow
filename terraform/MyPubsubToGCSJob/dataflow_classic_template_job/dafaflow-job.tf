@@ -26,7 +26,7 @@ resource "google_dataflow_job" "job" {
   on_delete             = "drain"
   ip_configuration      = "WORKER_IP_PRIVATE"
   region                = var.region
-  machine_type          = "n1-standard-1"
+  machine_type          = "n1-standard-2"
   // enable_streaming_engine = true //  enable_streaming_engine not supported by google_dataflow_job streaming engine enables automatically autoscaling
   parameters = {
     output         = "gs://${var.bucket}/output"

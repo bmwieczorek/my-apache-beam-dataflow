@@ -5,7 +5,8 @@ locals {
   subscription                    = "${local.topic}-sub"
   dataset                         = replace(local.job_base_name, "-", "_")
   table                           = "my_table"
-  max_workers                     = 3
+  max_workers                     = 2
+#  number_of_worker_harness_threads = 0
   number_of_worker_harness_threads = 8
   enable_streaming_engine         = true
   dump_heap_on_oom                = true

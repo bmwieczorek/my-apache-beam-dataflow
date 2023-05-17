@@ -38,7 +38,13 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
     "bucket" = var.bucket
     "instance" = local.instance
     "dataflow_jar" = local.dataflow_jar
+
+    # comment when poor network
     "dataflow_jar_gcs_path" = "gs://${var.bucket}/${google_storage_bucket_object.dataflow_jar[0].name}"
+
+    # uncomment when poor network
+    # "dataflow_jar_gcs_path" = "gs://${var.bucket}/compute/${local.dataflow_jar}"
+
     "template_gcs_path" = local.template_gcs_path
     "dataflow_jar_main_class" = var.main_class
     "message_deduplication_enabled" = var.message_deduplication_enabled
