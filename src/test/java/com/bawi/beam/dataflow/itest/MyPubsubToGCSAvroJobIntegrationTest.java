@@ -52,13 +52,14 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
     private static final String MY_MSG_BODY = "myMsgBody";
     private static final String MY_MSG_ATTR_VALUE = "myMsgAttrValue";
     private final boolean dataflow_classic_template_enabled = true;
-    private final boolean generateMessageDuplicates = false;
+    private final boolean generateMessageDuplicates = true;
+    private final boolean dataflowDeduplicationEnabled = true;
     private final boolean isMessageEventTimeIncreasing = true;
     private final boolean skip_wait_on_job_termination = false;
     private final boolean recalculate_template = true;
 
     private final String vars = " -var=\"dataflow_classic_template_enabled=" + dataflow_classic_template_enabled + "\"" +
-            " -var=\"dataflow_message_deduplication_enabled=" + generateMessageDuplicates + "\"" +
+            " -var=\"dataflow_message_deduplication_enabled=" + dataflowDeduplicationEnabled + "\"" +
             " -var=\"dataflow_custom_event_time_timestamp_attribute_enabled=" + true + "\""+ // timestamp_attribute_enabled requires granting service account roles/pubsub.editor at project level
 //                " -var=\"dataflow_custom_event_time_timestamp_attribute_enabled=" + !isMessageEventTimeIncreasing + "\""+
             " -var=\"skip_wait_on_job_termination=" + skip_wait_on_job_termination + "\"" +
@@ -119,7 +120,8 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         List<String> messageIds = sendNPubsubMessagesWithDelay(topic, numMessages, Duration.ofMillis(250), fn);
 
         // then
-        int expectedMessageCount = generateMessageDuplicates ? numMessages / 2 : numMessages;
+        //noinspection ConstantValue
+        int expectedMessageCount = generateMessageDuplicates && dataflowDeduplicationEnabled ? numMessages / 2 : numMessages;
         List<String> avroRecordsAsStrings = waitUpTo5MinsForDataflowJobToWriteAvroFileToGCSBucket(gcsBucket, expectedMessageCount);
 
         LOGGER.info("Content of avro file(s) read from GCS: {}", avroRecordsAsStrings);
@@ -128,7 +130,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
 
         Assert.assertEquals(expectedMessageCount , avroRecordsAsStrings.size());
 
-        int messageIndex = 1;
+        int messageIndex = getFirstMessageIndex(generateMessageDuplicates, 1);
 //        int messageIndex = numMessages;
         String messageId = messageIds.get(messageIndex - 1);
         String regex = "\\{\"" + BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID + "\": " + "\"" + "body=" + MY_MSG_BODY + ":" + messageIndex + ", attributes=\\{" + EVENT_TIME_ATTRIBUTE + "=" + Instant.ofEpochMilli(firstEventTimeMillis) + ", " + MY_MSG_ATTR_NAME + "=" + MY_MSG_ATTR_VALUE + messageIndex + ", " + PUBLISH_TIME_ATTRIBUTE + "=" + "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z" + "}" + ", messageId=" + messageId
@@ -137,10 +139,14 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
         LOGGER.info("regex={}", regex);
         Pattern pattern = Pattern.compile(regex);
 
-        avroRecordsAsStrings.stream().filter(s -> s.contains("myMsgBody:" + messageIndex + ",")).forEach(s -> LOGGER.info("s={}", s));
+        long reaCount = avroRecordsAsStrings.stream()
+                .filter(s -> s.contains(MY_MSG_BODY + ":1,") || s.contains(MY_MSG_BODY + ":2,"))
+                .peek(s -> LOGGER.info("s={}", s))
+                .count();
 
-        Assert.assertTrue(avroRecordsAsStrings.stream().anyMatch(s -> pattern.matcher(s).matches()));
-
+        //noinspection ConstantValue
+        int expectedCount = generateMessageDuplicates && dataflowDeduplicationEnabled ? 1 : 2;
+        Assert.assertEquals(expectedCount, reaCount);
 
 //        String query = "select * from " + get("GCP_PROJECT") + "." + get("GCP_OWNER") + "_" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase() + ".my_table";
 //        long actualMessageCount = waitUpTo10MinsForDataflowJobToPopulateBigQuery(query, expectedMessageCount);
@@ -214,7 +220,8 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
 
                     // values of myMsgAttrName attribute are not unique but duplicated: 0, 2, 2, 4, 4 ...
                     // attrs: M1: myMsgAttrName1=myMsgAttrValue0, M2: myMsgAttrName2=myMsgAttrValue=2, M3: myMsgAttrName3=myMsgAttrValue=2, M4: myMsgAttrName4=myMsgAttrValue=4
-                    String myMsgAttrValue = generateMessageDuplicates ? MY_MSG_ATTR_VALUE + (ii + 1 - ((ii + 1) % 2)) : MY_MSG_ATTR_VALUE + ii;
+//                    String myMsgAttrValue = generateMessageDuplicates ? MY_MSG_ATTR_VALUE + (ii + 1 - ((ii + 1) % 2)) : MY_MSG_ATTR_VALUE + ii;
+                    String myMsgAttrValue = MY_MSG_ATTR_VALUE + getFirstMessageIndex(generateMessageDuplicates, ii);
 
                     long eventTimeMillis = msgIdxToTimestampMillisFn.apply(ii);
 
@@ -224,14 +231,19 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
                         LOGGER.info("Sending PS msg ({} of {}), {}, et={}", ii, numMessages, myMsgAttrValue, Instant.ofEpochMilli(eventTimeMillis).toDateTime());
                     }
 
+                    String body = MY_MSG_BODY + ":" + ii;
                     PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
-                        .setData(ByteString.copyFromUtf8(MY_MSG_BODY + ":" + ii))
+                        .setData(ByteString.copyFromUtf8(body))
                         .putAllAttributes(ImmutableMap.of(
                                 MY_MSG_ATTR_NAME, myMsgAttrValue,
                                 PUBLISH_TIME_ATTRIBUTE, Instant.now().toString(),
                                 EVENT_TIME_ATTRIBUTE, Instant.ofEpochMilli(eventTimeMillis).toString()
                         ))
                         .build();
+
+                    if (ii <= 5) {
+                        LOGGER.info("Sent PS {} msg {} and {}={}", ii, body, MY_MSG_ATTR_NAME, myMsgAttrValue);
+                    }
 
                     ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
                     messageIdFutures.add(messageIdFuture);
@@ -285,6 +297,10 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
 //        LOGGER.info("Sent pubsub message ({} of {}), messageId={}", numMessages, numMessages, lastMessageId);
 //        messageIds.add(lastMessageId);
         return messageIds;
+    }
+
+    private static int getFirstMessageIndex(boolean generateMessageDuplicates, int i) {
+        return generateMessageDuplicates ? (i + 1 - ((i + 1) % 2)) : i;
     }
 
     private String sendMessageToPubsub(String myMsgBody, String myMsgAttrValue, long eventTimeMillis, String topic) throws IOException, InterruptedException, ExecutionException {
