@@ -30,6 +30,33 @@ resource "google_project_iam_binding" "bq_log_writer" {
   ]
 }
 
+resource "null_resource" "bq_ls_dataset" {
+  triggers = {
+    always_run = formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "bq ls ${var.dataset}"
+  }
+
+  depends_on = [google_project_iam_binding.bq_log_writer]
+}
+
+resource "null_resource" "bq_select_table" {
+  triggers = {
+    always_run = formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "bq query --use_legacy_sql=false 'SELECT * FROM `${var.dataset}.dataflow_googleapis_com_job_message_*` WHERE REGEXP_CONTAINS(_TABLE_SUFFIX, \"^[0-9]{8}$\")'"
+  }
+
+  depends_on = [null_resource.bq_ls_dataset]
+}
+
+
 #bq head --selected_fields=timestamp,severity,textPayload,logName,resource.type,resource.labels.job_id,resource.labels.job_name,resource.labels.region,labels.dataflow_googleapis_com_log_type bartek_mybqreadwritejob.dataflow_googleapis_com_job_message_20230501
 #+------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------+---------------------+----------+-----------------------------------------------+
 #|                                      logName                                       |                                                                           resource                                                                            |     textPayload      |      timestamp      | severity |                    labels                     |

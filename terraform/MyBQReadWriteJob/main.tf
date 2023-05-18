@@ -93,7 +93,7 @@ module "logging-sink" {
   project             = var.project
   owner               = var.owner
   bucket              = module.storage.bucket_name
-  dataset             = local.dataset
+  dataset             = module.bigquery.dataset_name
   job                 = local.job
   dataflow_start_time = module.dataflow_classic_template_job.dataflow_start_time
   log_message_pattern = "Worker pool stopped."

@@ -1,49 +1,50 @@
 locals {
-  ts = formatdate("YYYYMMDDhhmmss", timestamp())
+  ts     = formatdate("YYYYMMDDhhmmss", timestamp())
   labels = {
     owner = var.owner
   }
 }
 
 resource "google_bigquery_dataset" "dataset" {
-  project                     = var.project
-  dataset_id                  = var.dataset
-  friendly_name               = "My dataset friendly name"
-  description                 = "My dataset description"
-  labels = local.labels
+  project                    = var.project
+  dataset_id                 = var.dataset
+  friendly_name              = "My dataset friendly name"
+  description                = "My dataset description"
+  delete_contents_on_destroy = true // deletes logging sink table when destroying the dataset
+  labels                     = local.labels
 }
 
 resource "google_bigquery_table" "table" {
-  project    = var.project
-  dataset_id = google_bigquery_dataset.dataset.dataset_id
-  table_id   = var.table
-  labels = local.labels
+  project             = var.project
+  dataset_id          = google_bigquery_dataset.dataset.dataset_id
+  table_id            = var.table
+  labels              = local.labels
   deletion_protection = false
-  schema = file(var.table_schema_file)
-/*
-  schema = <<EOF
-[
-  {
-    "mode": "REQUIRED",
-    "name": "id",
-    "type": "STRING",
-    "description" : "The id"
-  },
-  {
-    "mode": "REQUIRED",
-    "name": "creation_timestamp",
-    "type": "TIMESTAMP",
-    "description" : "The creation timestamp"
-  },
-  {
-    "mode": "REQUIRED",
-    "name": "expiration_date",
-    "type": "DATE",
-    "description" : "The expiration date"
-  }
-]
-EOF
-*/
+  schema              = file(var.table_schema_file)
+  /*
+    schema = <<EOF
+  [
+    {
+      "mode": "REQUIRED",
+      "name": "id",
+      "type": "STRING",
+      "description" : "The id"
+    },
+    {
+      "mode": "REQUIRED",
+      "name": "creation_timestamp",
+      "type": "TIMESTAMP",
+      "description" : "The creation timestamp"
+    },
+    {
+      "mode": "REQUIRED",
+      "name": "expiration_date",
+      "type": "DATE",
+      "description" : "The expiration date"
+    }
+  ]
+  EOF
+  */
 
 }
 
@@ -79,14 +80,14 @@ resource "google_bigquery_job" "bigquery_job" {
     destination_table {
       project_id = var.project
       dataset_id = google_bigquery_table.table.dataset_id
-      table_id = google_bigquery_table.table.table_id
+      table_id   = google_bigquery_table.table.table_id
     }
     write_disposition = "WRITE_TRUNCATE"
   }
 
-//  query {
-//    query = "INSERT INTO ${google_bigquery_dataset.my_dataset.dataset_id}.${google_bigquery_table.my_table.table_id} (id,creation_timestamp, expiration_date, numbers) values(\"abc\",TIMESTAMP(\"2021-03-03 03:03:03+00\"),DATE '2021-03-03',[1,2,3]),(\"def\",CURRENT_TIMESTAMP(),CURRENT_DATE(),[5,6,7])"
-//    create_disposition = ""
-//    write_disposition = ""
-//  }
+  //  query {
+  //    query = "INSERT INTO ${google_bigquery_dataset.my_dataset.dataset_id}.${google_bigquery_table.my_table.table_id} (id,creation_timestamp, expiration_date, numbers) values(\"abc\",TIMESTAMP(\"2021-03-03 03:03:03+00\"),DATE '2021-03-03',[1,2,3]),(\"def\",CURRENT_TIMESTAMP(),CURRENT_DATE(),[5,6,7])"
+  //    create_disposition = ""
+  //    write_disposition = ""
+  //  }
 }
