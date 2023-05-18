@@ -8,12 +8,15 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.avro.util.Utf8;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.extensions.avro.coders.AvroGenericCoder;
 import org.apache.beam.sdk.coders.DefaultCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
+import org.apache.beam.sdk.extensions.avro.coders.AvroGenericCoder;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.SchemaAndRecord;
-import org.apache.beam.sdk.options.*;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.options.Validation;
+import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.values.TypeDescriptor;
@@ -379,6 +382,10 @@ public class MyBQReadWriteJob {
 
             GenericData.Record myRequiredSubRecord = (GenericData.Record) genericRecord.get("myRequiredSubRecord");
             mySubscription.myRequiredSubRecord = MyRequiredSubRecord.fromGenericRecord(myRequiredSubRecord);
+
+            // temporarily logging for log-based distribution extracting values
+            LOGGER.info("myRequiredSubRecord.myRequiredInt: {}", mySubscription.myRequiredSubRecord.myRequiredInt);
+
             List<MyOptionalArraySubRecord> myOptionalArraySubRecords = new ArrayList<>();
             @SuppressWarnings("unchecked")
             GenericData.Array<GenericRecord> myOptionalArraySubGenericRecords = (GenericData.Array<GenericRecord>) genericRecord.get("myOptionalArraySubRecords");
