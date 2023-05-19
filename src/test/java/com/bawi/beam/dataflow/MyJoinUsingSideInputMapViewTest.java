@@ -19,9 +19,9 @@ public class MyJoinUsingSideInputMapViewTest {
                             OutputReceiver<KV<String, Integer>> outputReceiver) {
             String key = element.getKey();
             Integer value = element.getValue();
+            System.out.println(sideInputMap.containsKey("aaa")); // backed by HashMap
             Integer multiplier = sideInputMap.getOrDefault(key, 1);
             KV<String, Integer> kv = KV.of(key, value * multiplier);
-            System.out.println();
             outputReceiver.output(kv);
         }
     }
