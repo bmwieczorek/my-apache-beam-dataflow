@@ -1,5 +1,6 @@
 package com.bawi.beam.dataflow;
 
+import com.bawi.beam.WindowUtils;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.file.CodecFactory;
