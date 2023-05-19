@@ -1,14 +1,12 @@
 package com.bawi.beam.dataflow;
 
 import org.apache.avro.reflect.Nullable;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.RandomStringUtils;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.FileBasedSink;
 import org.apache.beam.sdk.io.GenerateSequence;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.io.fs.ResolveOptions;
 import org.apache.beam.sdk.io.fs.ResourceId;
-import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
@@ -17,7 +15,6 @@ import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.schemas.JavaFieldSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.transforms.windowing.*;
@@ -35,14 +32,9 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Objects;
-import java.util.Random;
-import java.util.UUID;
 
 import static java.lang.System.currentTimeMillis;
-import static java.util.UUID.randomUUID;
-import static org.apache.beam.repackaged.core.org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric;
 import static org.apache.beam.sdk.options.ValueProvider.NestedValueProvider.of;
-import static org.apache.beam.sdk.values.TypeDescriptors.strings;
 
 public class MySeqGenToGCSWriteJob {
     private static final Logger LOGGER = LoggerFactory.getLogger(MySeqGenToGCSWriteJob.class);
@@ -73,6 +65,9 @@ public class MySeqGenToGCSWriteJob {
                     ,"--sequenceLimit=10"
                     ,"--numShards=4"
                 );
+
+//        Pipeline pipeline = Pipeline.create(fromArgs(merge(args,
+//                "--workerMachineType=e2-standard-16","--numShards=128","--sequenceLimit=8000000", ...)
 
         MyPipelineOptions opts = PipelineOptionsFactory.fromArgs(updatedArgs).withValidation().as(MyPipelineOptions.class);
         Pipeline pipeline = Pipeline.create(opts);
@@ -123,7 +118,7 @@ pipeline.apply(GenerateSequence.from(0).to(opts.getSequenceLimit()).withTimestam
                 .withoutSharding().to(NestedValueProvider.of(outputDirectory, path -> path + "mydata.csv"))); // automatically adds gz suffix
 */
 
-        pipeline.run().waitUntilFinish();
+        pipeline.run();
     }
 
     static class GeneratePayload extends DoFn<Long, String> {
