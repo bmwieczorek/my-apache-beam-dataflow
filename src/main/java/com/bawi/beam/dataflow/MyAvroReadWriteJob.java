@@ -2,12 +2,15 @@ package com.bawi.beam.dataflow;
 
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
+import org.apache.avro.file.CodecFactory;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.reflect.Nullable;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.coders.AvroGenericCoder;
-import org.apache.beam.sdk.io.AvroIO;
+import org.apache.beam.sdk.coders.ListCoder;
+import org.apache.beam.sdk.coders.SerializableCoder;
+import org.apache.beam.sdk.extensions.avro.coders.AvroGenericCoder;
+import org.apache.beam.sdk.extensions.avro.io.AvroIO;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Distribution;
 import org.apache.beam.sdk.metrics.Gauge;
@@ -18,14 +21,17 @@ import org.apache.beam.sdk.options.Validation;
 import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.schemas.JavaFieldSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.MapElements;
-import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.TypeDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
+import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class MyAvroReadWriteJob {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyAvroReadWriteJob.class);
@@ -102,14 +108,33 @@ gcloud dataflow jobs run ${JOB} ${GCLOUD_DATAFLOW_RUN_OPTS} \
  */
 
     public static void main(String[] args) {
+        String simpleClassName = MyAvroReadWriteJob.class.getSimpleName().toLowerCase();
+//        args = PipelineUtils.updateArgsWithDataflowRunner(args
+//                , "--simpleClassName=bartek-" + simpleClassName
+//                ,"--output=gs://" + System.getenv("GCP_PROJECT") + "-" + "bartek-" + simpleClassName + "/output/people.snappy.avro"
+//                ,"--input=gs://" + System.getenv("GCP_PROJECT") + "-" + "bartek-" + simpleClassName + "/input/people.snappy.avro"
+//        );
+        args = PipelineUtils.updateArgs(args
+                ,"--output=target/" + simpleClassName + "/output/people.snappy.avro"
+                ,"--input=target/" + simpleClassName + "/input/people.snappy.avro"
+        );
         MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
         Pipeline pipeline = Pipeline.create(options);
 
-/*        pipeline.apply(Create.of(new Person("Bob", 12), new Person("Alice", 19), new Person("Mike", null)))
+        ValueProvider.NestedValueProvider<List<Person>, int[]> nestedValueProvider = ValueProvider.NestedValueProvider.of(
+                ValueProvider.StaticValueProvider.of(new int[]{1, 10}),
+                startStop -> IntStream.rangeClosed(startStop[0], startStop[1]).boxed().map(i -> new Person(UUID.randomUUID().toString(), i)).collect(Collectors.toList()));
+
+        ListCoder<Person> listCoder = ListCoder.of(SerializableCoder.of(Person.class));
+        pipeline.apply(Create.ofProvider(nestedValueProvider, listCoder))
+                .apply(FlatMapElements.into(TypeDescriptor.of(Person.class)).via(iter -> iter))
+
+//        pipeline.apply(Create.of(new Person("Bob", 12), new Person("Alice", 19), new Person("Mike", null)))
                 //.apply(Filter.by(p -> p.age != null && p.age >= 18))
-                .apply(AvroIO.write(Person.class).to(options.getOutput())
+                .apply(AvroIO.write(Person.class).to(options.getInput())
+                        .withCodec(CodecFactory.snappyCodec())
                         .withoutSharding()); // to single file
-        pipeline.run();*/
+        pipeline.run().waitUntilFinish();
 
         ValueProvider<String> inputProvider = options.getInput();
         ValueProvider<String> outputProvider = options.getOutput();
@@ -134,14 +159,14 @@ gcloud dataflow jobs run ${JOB} ${GCLOUD_DATAFLOW_RUN_OPTS} \
                 .setCoder(AvroGenericCoder.of(schema)) // required to explicitly set coder for GenericRecord
                 .apply(AvroIO.writeGenericRecords(schema).to(outputProvider)
                     .withoutSharding());
-        pipeline.run();
+        pipeline.run().waitUntilFinish();
     }
 
     private static class MyToGenericRecordFn extends DoFn<Person, GenericRecord> {
-        private Counter writeCounter = Metrics.counter(MyAvroReadWriteJob.class.getSimpleName(), "my-metrics-write-counter");
-        private String schemaString;
-        private ValueProvider<String> inputProvider;
-        private ValueProvider<String> outputProvider;
+        private final Counter writeCounter = Metrics.counter(MyAvroReadWriteJob.class.getSimpleName(), "my-metrics-write-counter");
+        private final String schemaString;
+        private final ValueProvider<String> inputProvider;
+        private final ValueProvider<String> outputProvider;
         private Schema schema;
 
         public MyToGenericRecordFn(String schemaString, ValueProvider<String> inputProvider, ValueProvider<String> outputProvider) {
@@ -167,7 +192,7 @@ gcloud dataflow jobs run ${JOB} ${GCLOUD_DATAFLOW_RUN_OPTS} \
     }
 
     @DefaultSchema(JavaFieldSchema.class)
-    static class Person {
+    static class Person implements Serializable {
         public String name;
         @Nullable public Integer age;
         Person() { }
