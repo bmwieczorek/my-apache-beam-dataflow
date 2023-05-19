@@ -37,8 +37,10 @@ import static com.bawi.beam.dataflow.PubSubUtils.createTopicAndSubscription;
 import static com.bawi.beam.dataflow.PubSubUtils.deleteSubscriptionAndTopic;
 import static java.lang.Thread.currentThread;
 
-public class MyPubsubRead4ShardsFileIODynamicWriteJob {
+public class MyPubsubRead0Shards60SecsFileIODynamicWriteJob {
     public static void main(String[] args) throws IOException {
+        String simpleClassName = MyPubsubRead0Shards60SecsFileIODynamicWriteJob.class.getSimpleName();
+
         deleteSubscriptionAndTopic(PROJECT, TOPIC_NAME, SUBSCRIPTION_NAME);
         createTopicAndSubscription(PROJECT, TOPIC_NAME, SUBSCRIPTION_NAME);
 
@@ -54,20 +56,20 @@ public class MyPubsubRead4ShardsFileIODynamicWriteJob {
 
 
         String[] readArgs = updateArgsWithDataflowRunner(args,
-                "--jobName=" + OWNER + "-" + MyPubsubRead4ShardsFileIODynamicWriteJob.class.getSimpleName().toLowerCase(),
+                "--jobName=" + OWNER + "-" + simpleClassName.toLowerCase(),
                 "--subscription=" + SUBSCRIPTION,
                 "--numWorkers=2",
                 "--maxNumWorkers=2",
                 "--numberOfWorkerHarnessThreads=4",
                 "--workerMachineType=n1-standard-2",
-                "--output=gs://" + System.getenv("GCP_PROJECT") + "-" + System.getenv("GCP_OWNER") + "/" + MyPubsubRead4ShardsFileIODynamicWriteJob.class.getSimpleName() + "/output",
-                "--temp=gs://" + System.getenv("GCP_PROJECT") + "-" + System.getenv("GCP_OWNER") + "/" + MyPubsubRead4ShardsFileIODynamicWriteJob.class.getSimpleName() + "/temp"
+                "--output=gs://" + System.getenv("GCP_PROJECT") + "-" + System.getenv("GCP_OWNER") + "/" + simpleClassName + "/output",
+                "--temp=gs://" + System.getenv("GCP_PROJECT") + "-" + System.getenv("GCP_OWNER") + "/" + simpleClassName + "/temp"
         );
         MyPipelineOptions readOptions = PipelineOptionsFactory.fromArgs(readArgs).withValidation().as(MyPipelineOptions.class);
         Pipeline readingPipeline = Pipeline.create(readOptions);
 
         readingPipeline.apply(PubsubIO.readMessagesWithAttributesAndMessageId().fromSubscription(readOptions.getSubscription()))
-                .apply(Window.into(FixedWindows.of(Duration.standardSeconds(5))))
+                .apply(Window.into(FixedWindows.of(Duration.standardSeconds(60))))
                 .apply("Log Window", ParDo.of(new DoFn<PubsubMessage,  KV<String, String>>() {
                     @ProcessElement
                     public void process(@Element PubsubMessage e, OutputReceiver<KV<String, String>> receiver, @Timestamp Instant ts, BoundedWindow w, PaneInfo p) {
@@ -86,7 +88,7 @@ public class MyPubsubRead4ShardsFileIODynamicWriteJob {
                     .withNaming(subPath -> new MyFileNaming(subPath, ".txt"))
                     .to(readOptions.getOutput())
                     .withTempDirectory(readOptions.getTemp())
-                    .withNumShards(4)
+                    .withNumShards(0)
                 );
 
         readingPipeline.run().waitUntilFinish();
@@ -94,7 +96,7 @@ public class MyPubsubRead4ShardsFileIODynamicWriteJob {
         deleteSubscriptionAndTopic(PROJECT, TOPIC_NAME, SUBSCRIPTION_NAME);
     }
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MyPubsubRead4ShardsFileIODynamicWriteJob.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MyPubsubRead0Shards60SecsFileIODynamicWriteJob.class);
 
     private static final String PROJECT = System.getenv("GCP_PROJECT");
     private static final String OWNER = System.getenv("GCP_OWNER");
