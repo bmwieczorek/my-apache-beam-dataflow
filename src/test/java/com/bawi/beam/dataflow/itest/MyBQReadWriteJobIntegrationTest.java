@@ -53,7 +53,7 @@ public class MyBQReadWriteJobIntegrationTest {
         Assert.assertEquals("Should match initial row count for pre-loaded data", initialPreLoadedRowCount, totalRows);
 
 //        Process dataflowTemplateJobProcess = runTerraformInfrastructureSetupAsBashProcess("terraform apply -auto-approve -target=module.dataflow_classic_template_job");
-        Process dataflowTemplateJobProcess = runTerraformInfrastructureSetupAsBashProcess("terraform apply -auto-approve -target=module.dataflow_classic_template_job -target=module.dashboards -target=module.alerting -target=module.logging-sink");
+        Process dataflowTemplateJobProcess = runTerraformInfrastructureSetupAsBashProcess("terraform apply -auto-approve -target=module.dataflow_classic_template_job -target=module.dashboards -target=module.alerting");
         logProcess(dataflowTemplateJobProcess);
         int dataflowTemplateJobStatus = dataflowTemplateJobProcess.waitFor();
 
@@ -62,7 +62,7 @@ public class MyBQReadWriteJobIntegrationTest {
         long expectedRowCount = waitUpTo5MinsForDataflowJobToPopulateBiqQuery(query);
         Assert.assertEquals("Dataflow job should create 3 additional rows in BigQuery", (initialPreLoadedRowCount + 3), expectedRowCount);
 
-        int waitMinsBeforeDestroy = 5; // wait for logging-sink stream dataflow worker to emit specific log entry to be streamed to bq
+        int waitMinsBeforeDestroy = 2; // wait for logging-sink stream dataflow worker to emit specific log entry to be streamed to bq
         LOGGER.info("Assertions passed, waiting {} min(s) before deleting resources", waitMinsBeforeDestroy);
         Thread.sleep(waitMinsBeforeDestroy * 60 * 1000);
     }
