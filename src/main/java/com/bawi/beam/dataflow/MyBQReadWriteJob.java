@@ -383,9 +383,6 @@ public class MyBQReadWriteJob {
             GenericData.Record myRequiredSubRecord = (GenericData.Record) genericRecord.get("myRequiredSubRecord");
             mySubscription.myRequiredSubRecord = MyRequiredSubRecord.fromGenericRecord(myRequiredSubRecord);
 
-            // temporarily logging for log-based distribution extracting values
-            LOGGER.info("myRequiredSubRecord.myRequiredInt: {}", mySubscription.myRequiredSubRecord.myRequiredInt);
-
             List<MyOptionalArraySubRecord> myOptionalArraySubRecords = new ArrayList<>();
             @SuppressWarnings("unchecked")
             GenericData.Array<GenericRecord> myOptionalArraySubGenericRecords = (GenericData.Array<GenericRecord>) genericRecord.get("myOptionalArraySubRecords");
