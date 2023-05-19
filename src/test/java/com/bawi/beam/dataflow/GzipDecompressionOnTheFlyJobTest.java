@@ -48,7 +48,7 @@ public class GzipDecompressionOnTheFlyJobTest {
             try (InputStream is = new BufferedInputStream(new GZIPInputStream(new ByteArrayInputStream(gzippedBytes)));
                 SplitInputStream fwdStream = new SplitInputStream(is, "<ABC", "</ABC>")) {
                 byte[] splitBytes;
-                while ((splitBytes = fwdStream.readFwdAsBytes()) != null) {
+                while ((splitBytes = fwdStream.readXmlChunkAsBytes()) != null) {
                     String xml = new String(splitBytes);
                     receiver.output(xml);
                 }
@@ -63,7 +63,7 @@ public class GzipDecompressionOnTheFlyJobTest {
             try (InputStream is = new BufferedInputStream(new ByteArrayInputStream(decompressedBytes));
                  SplitInputStream fwdStream = new SplitInputStream(is, "<ABC", "</ABC>")) {
                 byte[] splitBytes;
-                while ((splitBytes = fwdStream.readFwdAsBytes()) != null) {
+                while ((splitBytes = fwdStream.readXmlChunkAsBytes()) != null) {
                     String xml = new String(splitBytes);
                     receiver.output(xml);
                 }
@@ -106,7 +106,7 @@ public class GzipDecompressionOnTheFlyJobTest {
             this.endTag = endTag.getBytes(StandardCharsets.UTF_8);
         }
 
-        public byte[] readFwdAsBytes() throws IOException {
+        public byte[] readXmlChunkAsBytes() throws IOException {
             ByteArrayOutputStream out = new ByteArrayOutputStream(1024 * 128);
             if (readUntilMatch(startTag, out, true)) {
                 out.write(startTag);
