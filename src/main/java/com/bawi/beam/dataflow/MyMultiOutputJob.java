@@ -29,6 +29,7 @@ public class MyMultiOutputJob {
     }
 
     public static void main(String[] args) {
+        args = PipelineUtils.updateArgs(args, "--evenOutput=target/even.txt", "--oddOutput=target/odd.txt");
         MyOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyOptions.class);
         Pipeline pipeline = Pipeline.create(options);
 
