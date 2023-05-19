@@ -40,8 +40,6 @@ import java.util.TreeMap;
 import java.util.UUID;
 
 import static com.bawi.beam.dataflow.LogUtils.*;
-import static com.bawi.beam.dataflow.MyGCSWriteSAJob.MyFileNaming.windowToNormalizedString;
-import static java.lang.Thread.currentThread;
 
 
 public class MyPubsubToGCSJob {
@@ -365,7 +363,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
         @Override
         public String getFilename(BoundedWindow window, PaneInfo pane, int numShards, int shardIndex, Compression compression) {
-            String normalizedWindow = windowToNormalizedString(window);
+            String normalizedWindow = WindowUtils.windowToNormalizedString(window);
             Instant now = Instant.now();
 //            String path = String.format("%s/%s-w-%s-p-%s-%s-s-%s-of-%s-t-%s-i-%s_%s-%s_%s.%s",
 //                    parentAndFormattedDateTimePath,
@@ -375,7 +373,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
             String path = String.format("%s/p-%s-%s-w-%s-s-%s-of-%s-t-%s-i-%s_%s-%s_%s.%s",
                     parentAndFormattedDateTimePath,
-                    pane.getIndex(), pane.getTiming(), normalizedWindow, shardIndex, numShards, getLocalHostAddressSpaced(), currentThread().getId(),
+                    pane.getIndex(), pane.getTiming(), normalizedWindow, shardIndex, numShards, getLocalHostAddressSpaced(), Thread.currentThread().getId(),
                     FORMATTER_MIN_SECS.print(now), UUID.randomUUID(),
                     this.compression, this.format);
 
@@ -420,6 +418,10 @@ gcloud dataflow flex-template run $APP-$OWNER \
             LOGGER.info("[{}][{}] timestampedPath={}", getIP(), getThread(), timestampedPath);
             outputReceiver.output(KV.of(timestampedPath, record));
         }
+    }
+
+    private static String firstNonNull(String value, String alternative) {
+        return value != null && !value.isEmpty() ? value : alternative;
     }
 
     private static String getIP() {
