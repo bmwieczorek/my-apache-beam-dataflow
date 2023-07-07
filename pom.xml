@@ -9,7 +9,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <beam.version>2.47.0</beam.version> <!-- profiling since 2.33 with service account with roles/cloudprofiler.agent -->
+        <beam.version>2.48.0</beam.version> <!-- profiling since 2.33 with service account with roles/cloudprofiler.agent -->
         <slf4j.version>1.7.36</slf4j.version>
         <kafka.version>1.1.1</kafka.version>
         <auto-service-annotations.version>1.0.1</auto-service-annotations.version>
@@ -209,6 +209,24 @@
             <artifactId>google-cloud-secretmanager</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.google.api.grpc</groupId>
+            <artifactId>proto-google-cloud-storage-v2</artifactId>
+            <version>2.15.1-alpha</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.bawi</groupId>
+            <artifactId>my-vtd-xml</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-slf4j-impl</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
         <!-- testing -->
 
         <dependency>
@@ -227,11 +245,19 @@
             <groupId>com.google.cloud</groupId>
             <artifactId>google-cloud-storage</artifactId>
             <scope>test</scope>
+            <version>2.20.2</version> <!-- hardcode version compatible with storage.list(gcsBucket) instead of version from bom -->
         </dependency>
 
         <dependency>
             <groupId>com.google.cloud</groupId>
             <artifactId>google-cloud-bigquery</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest</artifactId>
+            <version>2.2</version>
             <scope>test</scope>
         </dependency>
 
