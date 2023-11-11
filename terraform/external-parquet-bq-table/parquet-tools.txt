@@ -1,0 +1,169 @@
+java -Dlog4j.configuration=file:$HOME/Downloads/log4j.properties -cp $HOME/Downloads/parquet-tools-1.8.3.jar:$HOME/.m2/repository/org/xerial/snappy/snappy-java/1.1.8.4/snappy-java-1.1.8.4.jar org.apache.parquet.tools.Main --help
+usage: parquet-tools cat [option...] <input>
+where option is one of:
+       --debug     Enable debug output
+    -h,--help      Show this help string
+    -j,--json      Show records in JSON format.
+       --no-color  Disable color output even if supported
+where <input> is the parquet file to print to stdout
+
+usage: parquet-tools head [option...] <input>
+where option is one of:
+       --debug          Enable debug output
+    -h,--help           Show this help string
+    -n,--records <arg>  The number of records to show (default: 5)
+       --no-color       Disable color output even if supported
+where <input> is the parquet file to print to stdout
+
+usage: parquet-tools schema [option...] <input>
+where option is one of:
+    -d,--detailed  Show detailed information about the schema.
+       --debug     Enable debug output
+    -h,--help      Show this help string
+       --no-color  Disable color output even if supported
+where <input> is the parquet file containing the schema to show
+
+usage: parquet-tools meta [option...] <input>
+where option is one of:
+       --debug     Enable debug output
+    -h,--help      Show this help string
+       --no-color  Disable color output even if supported
+where <input> is the parquet file to print to stdout
+
+usage: parquet-tools dump [option...] <input>
+where option is one of:
+    -c,--column <arg>  Dump only the given column, can be specified more than
+                       once
+    -d,--disable-data  Do not dump column data
+       --debug         Enable debug output
+    -h,--help          Show this help string
+    -m,--disable-meta  Do not dump row group and page metadata
+       --no-color      Disable color output even if supported
+where <input> is the parquet file to print to stdout
+
+
+java -Dlog4j.configuration=file:$HOME/Downloads/log4j.properties -cp $HOME/Downloads/parquet-tools-1.8.3.jar:$HOME/.m2/repository/org/xerial/snappy/snappy-java/1.1.8.4/snappy-java-1.1.8.4.jar org.apache.parquet.tools.Main cat --debug myNestedRecord.parquet
+myRequiredInt = 123
+myRequiredString = abc
+myRequiredBoolean = true
+myRequiredBytes = QUJDMTIz
+myBytesDecimal = SVBPgA==
+myRequiredTimestamp = 1699601177192000
+myRequiredDate = 19671
+myRequiredArrayLongs:
+.array = 1
+.array = 2
+.array = 3
+myRequiredSubRecord:
+.myRequiredDouble = 1.0
+.myRequiredBoolean = false
+myOptionalSubRecord:
+.myRequiredFloat = 2.0
+.myRequiredBoolean = true
+myNullableSubRecord:
+.myRequiredLong = 12
+.myRequiredBoolean = false
+myOptionalArraySubRecords:
+.array:
+..myRequiredBoolean = true
+.array:
+..myRequiredBoolean = false
+
+
+java -Dlog4j.configuration=file:$HOME/Downloads/log4j.properties -cp $HOME/Downloads/parquet-tools-1.8.3.jar:$HOME/.m2/repository/org/xerial/snappy/snappy-java/1.1.8.4/snappy-java-1.1.8.4.jar org.apache.parquet.tools.Main cat --j myNestedRecord.parquet | jq
+{
+  "myRequiredInt": 123,
+  "myRequiredString": "abc",
+  "myRequiredBoolean": true,
+  "myRequiredBytes": "QUJDMTIz",
+  "myBytesDecimal": "SVBPgA==",
+  "myRequiredTimestamp": 1699601177192000,
+  "myRequiredDate": 19671,
+  "myRequiredArrayLongs": [
+    1,
+    2,
+    3
+  ],
+  "myRequiredSubRecord": {
+    "myRequiredDouble": 1,
+    "myRequiredBoolean": false
+  },
+  "myOptionalSubRecord": {
+    "myRequiredFloat": 2,
+    "myRequiredBoolean": true
+  },
+  "myNullableSubRecord": {
+    "myRequiredLong": 12,
+    "myRequiredBoolean": false
+  },
+  "myOptionalArraySubRecords": [
+    {
+      "myRequiredBoolean": true
+    },
+    {
+      "myRequiredBoolean": false
+    }
+  ]
+}
+
+
+
+java -Dlog4j.configuration=file:$HOME/Downloads/log4j.properties -cp $HOME/Downloads/parquet-tools-1.8.3.jar:$HOME/.m2/repository/org/xerial/snappy/snappy-java/1.1.8.4/snappy-java-1.1.8.4.jar org.apache.parquet.tools.Main meta myNestedRecord.parquet
+file:                      file:/Users/me/dev/my-apache-beam-dataflow/terraform/external-parquet-bq-table/myNestedRecord.parquet
+creator:                   parquet-mr version 1.12.0 (build db75a6815f2ba1d1ee89d1a90aeb296f1f3a8f20)
+extra:                     parquet.avro.schema = {"type":"record","name":"myRecordName","fields":[{"name":"myRequiredInt","type":"int"},{"name":"myRequiredString","type":"string"},{"name":"myOptionalString","type":["null","string"],"default":null},{"name":"myNullableString","type":["string","null"],"default":"myNullableStringDefaultValue"},{"name":"myRequiredBoolean","type":"boolean"},{"name":"myRequiredBytes","type":"bytes"},{"name":"myBytesDecimal","type":{"type":"bytes","logicalType":"decimal","precision":38,"scale":9}},{"name":"myRequiredTimestamp","type":{"type":"long","logicalType":"timestamp-micros"}},{"name":"myOptionalTimestamp","type":["null",{"type":"long","logicalType":"timestamp-micros"}],"default":null},{"name":"myRequiredDate","type":{"type":"int","logicalType":"date"},"doc":"Expiration date field"},{"name":"myRequiredArrayLongs","type":{"type":"array","items":"long"}},{"name":"myRequiredSubRecord","type":{"type":"record","name":"myRequiredSubRecordType","fields":[{"name":"myRequiredDouble","type":"double"},{"name":"myRequiredBoolean","type":"boolean"}]}},{"name":"myOptionalSubRecord","type":["null",{"type":"record","name":"myOptionalSubRecordType","fields":[{"name":"myRequiredFloat","type":"float"},{"name":"myRequiredBoolean","type":"boolean"}]}],"default":null},{"name":"myNullableSubRecord","type":[{"type":"record","name":"myNullableSubRecordType","fields":[{"name":"myRequiredLong","type":"long"},{"name":"myRequiredBoolean","type":"boolean"}]},"null"]},{"name":"myOptionalArraySubRecords","type":[{"type":"array","items":{"type":"record","name":"myOptionalArraySubRecord","fields":[{"name":"myRequiredBoolean","type":"boolean"}]}},"null"]}]}
+extra:                     writer.model.name = avro
+
+file schema:               myRecordName
+--------------------------------------------------------------------------------
+myRequiredInt:             REQUIRED INT32 R:0 D:0
+myRequiredString:          REQUIRED BINARY O:UTF8 R:0 D:0
+myOptionalString:          OPTIONAL BINARY O:UTF8 R:0 D:1
+myNullableString:          OPTIONAL BINARY O:UTF8 R:0 D:1
+myRequiredBoolean:         REQUIRED BOOLEAN R:0 D:0
+myRequiredBytes:           REQUIRED BINARY R:0 D:0
+myBytesDecimal:            REQUIRED BINARY O:DECIMAL R:0 D:0
+myRequiredTimestamp:       REQUIRED INT64 O:TIMESTAMP_MICROS R:0 D:0
+myOptionalTimestamp:       OPTIONAL INT64 O:TIMESTAMP_MICROS R:0 D:1
+myRequiredDate:            REQUIRED INT32 O:DATE R:0 D:0
+myRequiredArrayLongs:      REQUIRED F:1
+.array:                    REPEATED INT64 R:1 D:1
+myRequiredSubRecord:       REQUIRED F:2
+.myRequiredDouble:         REQUIRED DOUBLE R:0 D:0
+.myRequiredBoolean:        REQUIRED BOOLEAN R:0 D:0
+myOptionalSubRecord:       OPTIONAL F:2
+.myRequiredFloat:          REQUIRED FLOAT R:0 D:1
+.myRequiredBoolean:        REQUIRED BOOLEAN R:0 D:1
+myNullableSubRecord:       OPTIONAL F:2
+.myRequiredLong:           REQUIRED INT64 R:0 D:1
+.myRequiredBoolean:        REQUIRED BOOLEAN R:0 D:1
+myOptionalArraySubRecords: OPTIONAL F:1
+.array:                    REPEATED F:1
+..myRequiredBoolean:       REQUIRED BOOLEAN R:1 D:2
+
+row group 1:               RC:1 TS:570 OFFSET:4
+--------------------------------------------------------------------------------
+myRequiredInt:              INT32 SNAPPY DO:0 FPO:4 SZ:29/27/0.93 VC:1 ENC:BIT_PACKED,PLAIN
+myRequiredString:           BINARY SNAPPY DO:0 FPO:33 SZ:32/30/0.94 VC:1 ENC:BIT_PACKED,PLAIN
+myOptionalString:           BINARY SNAPPY DO:0 FPO:65 SZ:31/29/0.94 VC:1 ENC:RLE,BIT_PACKED,PLAIN
+myNullableString:           BINARY SNAPPY DO:0 FPO:96 SZ:31/29/0.94 VC:1 ENC:RLE,BIT_PACKED,PLAIN
+myRequiredBoolean:          BOOLEAN SNAPPY DO:0 FPO:127 SZ:26/24/0.92 VC:1 ENC:BIT_PACKED,PLAIN
+myRequiredBytes:            BINARY SNAPPY DO:0 FPO:153 SZ:35/33/0.94 VC:1 ENC:BIT_PACKED,PLAIN
+myBytesDecimal:             BINARY SNAPPY DO:0 FPO:188 SZ:33/31/0.94 VC:1 ENC:BIT_PACKED,PLAIN
+myRequiredTimestamp:        INT64 SNAPPY DO:0 FPO:221 SZ:33/31/0.94 VC:1 ENC:BIT_PACKED,PLAIN
+myOptionalTimestamp:        INT64 SNAPPY DO:0 FPO:254 SZ:31/29/0.94 VC:1 ENC:RLE,BIT_PACKED,PLAIN
+myRequiredDate:             INT32 SNAPPY DO:0 FPO:285 SZ:29/27/0.93 VC:1 ENC:BIT_PACKED,PLAIN
+myRequiredArrayLongs:
+.array:                     INT64 SNAPPY DO:0 FPO:314 SZ:54/59/1.09 VC:3 ENC:RLE,PLAIN
+myRequiredSubRecord:
+.myRequiredDouble:          DOUBLE SNAPPY DO:0 FPO:368 SZ:33/31/0.94 VC:1 ENC:BIT_PACKED,PLAIN
+.myRequiredBoolean:         BOOLEAN SNAPPY DO:0 FPO:401 SZ:25/23/0.92 VC:1 ENC:BIT_PACKED,PLAIN
+myOptionalSubRecord:
+.myRequiredFloat:           FLOAT SNAPPY DO:0 FPO:426 SZ:35/33/0.94 VC:1 ENC:RLE,BIT_PACKED,PLAIN
+.myRequiredBoolean:         BOOLEAN SNAPPY DO:0 FPO:461 SZ:32/30/0.94 VC:1 ENC:RLE,BIT_PACKED,PLAIN
+myNullableSubRecord:
+.myRequiredLong:            INT64 SNAPPY DO:0 FPO:493 SZ:39/37/0.95 VC:1 ENC:RLE,BIT_PACKED,PLAIN
+.myRequiredBoolean:         BOOLEAN SNAPPY DO:0 FPO:532 SZ:32/30/0.94 VC:1 ENC:RLE,BIT_PACKED,PLAIN
+myOptionalArraySubRecords:
+.array:
+..myRequiredBoolean:        BOOLEAN SNAPPY DO:0 FPO:564 SZ:39/37/0.95 VC:2 ENC:RLE,PLAIN

@@ -1,0 +1,20 @@
+me@MacBook:~/dev/my-apache-beam-dataflow/terraform/external-parquet-bq-table$ terraform apply -auto-approve
+google_bigquery_dataset.dataset: Refreshing state... [id=projects/my-project-123/datasets/bartek_external_table]
+google_storage_bucket.bucket: Creating...
+google_storage_bucket.bucket: Creation complete after 2s [id=my-project-123-bartek-external-table]
+google_storage_bucket_object.parquet_file2: Creating...
+google_storage_bucket_object.parquet_file1: Creating...
+google_storage_bucket_object.parquet_file1: Creation complete after 0s [id=my-project-123-bartek-external-table-year=2023/month=01/day=01/hour=00/myNestedRecord.parquet]
+google_storage_bucket_object.parquet_file2: Creation complete after 0s [id=my-project-123-bartek-external-table-year=2023/month=01/day=01/hour=01/myNestedRecord.parquet]
+google_bigquery_table.external_table: Creating...
+google_bigquery_table.external_table: Creation complete after 2s [id=projects/my-project-123/datasets/bartek_external_table/tables/external_table]
+null_resource.bq_select_table: Creating...
+null_resource.bq_select_table: Provisioning with 'local-exec'...
+null_resource.bq_select_table (local-exec): Executing: ["/bin/sh" "-c" "bq query --use_legacy_sql=false 'SELECT * FROM `bartek_external_table.external_table` LIMIT 1'"]
+
+
++---------------+------------------+------------------+------------------+-------------------+-----------------+----------------+---------------------+---------------------+----------------+----------------------+--------------------------------------------------------+------------------------------------------------------+-----------------------------------------------------+--------------------------------------------------------------+------+-------+-----+------+
+| myRequiredInt | myRequiredString | myOptionalString | myNullableString | myRequiredBoolean | myRequiredBytes | myBytesDecimal | myRequiredTimestamp | myOptionalTimestamp | myRequiredDate | myRequiredArrayLongs |                  myRequiredSubRecord                   |                 myOptionalSubRecord                  |                 myNullableSubRecord                 |                  myOptionalArraySubRecords                   | year | month | day | hour |
++---------------+------------------+------------------+------------------+-------------------+-----------------+----------------+---------------------+---------------------+----------------+----------------------+--------------------------------------------------------+------------------------------------------------------+-----------------------------------------------------+--------------------------------------------------------------+------+-------+-----+------+
+|           123 | abc              | NULL             | NULL             |              true |        QUJDMTIz |           1.23 | 2023-11-10 07:26:17 |                NULL |     2023-11-10 |        ["1","2","3"] | {"myRequiredDouble":"1.0","myRequiredBoolean":"false"} | {"myRequiredFloat":"2.0","myRequiredBoolean":"true"} | {"myRequiredLong":"12","myRequiredBoolean":"false"} | [{"myRequiredBoolean":"true"},{"myRequiredBoolean":"false"}] | 2023 | 01    | 01  | 00   |
++---------------+------------------+------------------+------------------+-------------------+-----------------+----------------+---------------------+---------------------+----------------+----------------------+--------------------------------------------------------+------------------------------------------------------+-----------------------------------------------------+--------------------------------------------------------------+------+-------+-----+------+
