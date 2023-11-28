@@ -66,7 +66,7 @@ echo "Java OpenJDK installation status: completed"
 
 gcloud compute instances add-metadata --zone ${ZONE} ${INSTANCE} --metadata=startup-state="(3/3) Creating dataflow template"
 
-gsutil cp "${DATAFLOW_JAR_GCS_PATH}" . 2>&1 | tee -a ${LOG}
+gsutil -o GSUtil:check_hashes=never cp "${DATAFLOW_JAR_GCS_PATH}" . 2>&1 | tee -a ${LOG}
 JAVA_DATAFLOW_RUN_OPTS="--project=$PROJECT --region=$REGION --serviceAccount=$SERVICE_ACCOUNT --usePublicIps=false"
 echo "Creating template $DATAFLOW_TEMPLATE_GCS_PATH" | tee -a ${LOG}
 java -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAIN_CLASS} \
