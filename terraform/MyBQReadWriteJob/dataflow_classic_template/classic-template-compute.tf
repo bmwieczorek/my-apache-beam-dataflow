@@ -6,10 +6,22 @@ locals {
   subnetwork_name_last_element = split("/", var.subnetwork)[length(split("/", var.subnetwork)) - 1]
 }
 
-resource "google_storage_bucket_object" "dataflow_jar" {
-  name   = "compute/${local.dataflow_jar}"
-  source = var.dataflow_jar_local_path
-  bucket = var.bucket
+# comment when poor network
+#resource "google_storage_bucket_object" "dataflow_jar" {
+#  name   = "compute/${local.dataflow_jar}"
+#  source = var.dataflow_jar_local_path
+#  bucket = var.bucket
+#}
+
+# uncomment when poor network
+resource "null_resource" "gsutil_upload_dataflow_jar" {
+  triggers = {
+    always_run = formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())
+  }
+
+  provisioner "local-exec" {
+    command = "gsutil -o GSUtil:parallel_composite_upload_threshold=150M cp ${var.dataflow_jar_local_path} gs://${var.bucket}/compute/${local.dataflow_jar}"
+  }
 }
 
 resource "google_storage_bucket_object" "startup_script" {
@@ -35,7 +47,13 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
     "bucket" = var.bucket
     "instance" = local.instance
     "dataflow_jar" = local.dataflow_jar
-    "dataflow_jar_gcs_path" = "gs://${var.bucket}/${google_storage_bucket_object.dataflow_jar.name}"
+
+    # comment when poor network
+#    "dataflow_jar_gcs_path" = "gs://${var.bucket}/${google_storage_bucket_object.dataflow_jar.name}"
+
+    # uncomment when poor network
+    "dataflow_jar_gcs_path" = "gs://${var.bucket}/compute/${local.dataflow_jar}"
+
     "template_gcs_path" = local.template_gcs_path
     "dataflow_jar_main_class" = var.main_class
     "table_spec" = var.table_spec
@@ -88,5 +106,8 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
       gcloud compute instances describe --project ${var.project} --zone ${var.zone} ${local.instance} --format='value(metadata.startup-state)'
     EOT
   }
+
+  # uncomment when poor network
+  depends_on = [ null_resource.gsutil_upload_dataflow_jar ]
 }
 
