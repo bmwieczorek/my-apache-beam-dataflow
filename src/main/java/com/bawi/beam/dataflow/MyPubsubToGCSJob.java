@@ -7,12 +7,15 @@ import org.apache.avro.file.CodecFactory;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.extensions.avro.coders.AvroGenericCoder;
 import org.apache.beam.sdk.coders.KvCoder;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
+import org.apache.beam.sdk.extensions.avro.coders.AvroGenericCoder;
 import org.apache.beam.sdk.extensions.avro.io.AvroIO;
 import org.apache.beam.sdk.io.Compression;
+import org.apache.beam.sdk.io.FileBasedSink;
 import org.apache.beam.sdk.io.FileIO;
+import org.apache.beam.sdk.io.fs.ResolveOptions;
+import org.apache.beam.sdk.io.fs.ResourceId;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubMessage;
 import org.apache.beam.sdk.metrics.Distribution;
@@ -37,8 +40,11 @@ import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.NumberFormat;
+import java.util.List;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.bawi.beam.dataflow.LogUtils.*;
 
@@ -182,12 +188,14 @@ gcloud dataflow flex-template run $APP-$OWNER \
                     .apply("AfterConcatBodyAttrAndMsgIdFn", ParDo.of(new MyBundleSizeInterceptor<>("AfterConcatBodyAttrAndMsgIdFn")))
     /*
                     .apply(AvroIO.writeGenericRecords(SCHEMA).withWindowedWrites()
+                            //.to(output)
                             //.to(options.getOutput())
                             .to(new FileBasedSink.FilenamePolicy() {
 
                                 @Override
                                 public ResourceId windowedFilename(int shardNumber, int numShards, BoundedWindow window, PaneInfo paneInfo, FileBasedSink.OutputFileHints outputFileHints) {
-                                    ResourceId resource = FileBasedSink.convertToFileResourceIfPossible(output);
+                                    // ResourceId resource = FileBasedSink.convertToFileResourceIfPossible(output);
+                                    ResourceId resource = FileBasedSink.convertToFileResourceIfPossible(output.get());
                                     IntervalWindow intervalWindow = (IntervalWindow) window;
                                     String parentDirectoryPath = resource.isDirectory() ? "" : firstNonNull(resource.getFilename(), "");
                                     String suggestedFilenameSuffix = outputFileHints.getSuggestedFilenameSuffix();
@@ -209,7 +217,8 @@ gcloud dataflow flex-template run $APP-$OWNER \
                                     throw new UnsupportedOperationException("Unsupported.");
                                 }
                             })
-                            .withTempDirectory(FileBasedSink.convertToFileResourceIfPossible(output).getCurrentDirectory())
+                            // .withTempDirectory(FileBasedSink.convertToFileResourceIfPossible(output).getCurrentDirectory())
+                            .withTempDirectory(ValueProvider.NestedValueProvider.of(temp, t -> FileBasedSink.convertToFileResourceIfPossible(t).getCurrentDirectory()))
                             .withNumShards(2));
 */
                     .apply(ParDo.of(new ToTimestampedPathKV(options.getOutput())))
