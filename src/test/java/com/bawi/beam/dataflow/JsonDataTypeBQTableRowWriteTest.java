@@ -1,8 +1,6 @@
 package com.bawi.beam.dataflow;
 
 import com.google.api.services.bigquery.model.TableRow;
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
