@@ -13,6 +13,13 @@ class MyPipelineOptions(PipelineOptions):
                                            help='Output table in format project.dataset.table')
 
 
+class MyDoFn(beam.DoFn):
+    def process(self, element, **kwargs):
+        parsed_data = json.loads(element)
+        logging.info("INFO loading JSON data from %s to %s", element, type(parsed_data))
+        yield parsed_data
+
+
 def run():
     """Main entry point"""
     pipeline_options = PipelineOptions()
@@ -23,11 +30,13 @@ def run():
         # lines = p | 'ReadJSON' >> beam.io.ReadFromText("sample_input__00.json")
         # noinspection PyUnresolvedReferences
         lines = p | 'CreateJsonStrings' >> beam.Create([
-            '{"user_id": "id1", "event_properties": {"myStrProp1": "myVal1", "myIntProp": 10}}',
-            '{"user_id": "id2", "event_properties": {"myStrProp2": "myVal2", "myIntProp": 20}}'
+            '{"user_id": "id1", "event_properties": {"myStrProp1": "myVal1", "myIntProp": 1000}}',
+            '{"user_id": "id2", "event_properties": {"myStrProp2": "myVal2", "myIntProp": 2000}}'
         ])
         # noinspection PyUnresolvedReferences
-        processed = lines | 'LoadToJson' >> beam.Map(lambda line: json.loads(line))
+        # processed = lines | 'LoadToJson' >> beam.Map(lambda line: json.loads(line))
+        # noinspection PyTypeChecker
+        processed = lines | 'LoadToJson' >> beam.ParDo(MyDoFn())
         processed | 'WriteToBigQuery' >> beam.io.WriteToBigQuery(
             table=my_pipeline_options.output_table,
             method=beam.io.WriteToBigQuery.Method.FILE_LOADS,
@@ -43,8 +52,8 @@ if __name__ == '__main__':
 
 # direct runner
 # python3 src/main/python/beam/my_simple_json_to_bq_job.py \
-#  --temp_location="gs://${GCP_PROJECT}-${GCP_OWNER}/python-tmp" \
-#  --output_table="${GCP_PROJECT}.bartek_person.my_json_table4"
+#  --temp_location "gs://${GCP_PROJECT}-${GCP_OWNER}/python-tmp" \
+#  --output_table "${GCP_PROJECT}.bartek_person.my_json_table4"
 
 # dataflow runner
 # python3 src/main/python/beam/my_simple_json_to_bq_job.py \
