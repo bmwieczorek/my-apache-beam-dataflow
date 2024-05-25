@@ -29,7 +29,7 @@ def run():
         # noinspection PyUnresolvedReferences
         processed = lines | 'LoadToJson' >> beam.Map(lambda line: json.loads(line))
         processed | 'WriteToBigQuery' >> beam.io.WriteToBigQuery(
-            table="sab-dev-dap-data-pipeline-3013.bartek_person.my_json_table4",
+            table=my_pipeline_options.output_table,
             method=beam.io.WriteToBigQuery.Method.FILE_LOADS,
             create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED,
             write_disposition=beam.io.BigQueryDisposition.WRITE_TRUNCATE,
