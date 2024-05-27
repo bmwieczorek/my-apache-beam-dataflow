@@ -26,16 +26,17 @@ import java.io.IOException;
 import java.io.Serializable;
 
 public class JsonDataTypeBQAvroJsonWriteTest implements Serializable {
-    static String project = System.getenv("GCP_PROJECT");
 
     @Test
     public void test() throws IOException {
+        String project = System.getenv("GCP_PROJECT");
         String owner = System.getenv("GCP_OWNER");
         String dataset = owner + "_" + "dataset";
         String table = "my_json_table";
         String gcsTempLocation = "gs://" + project + "_" + owner + "/temp";
 
-        writePipeline
+        // writing
+        writingPipeline
             .apply(Create.of(
                     """
                     {"user_id": "id1", "event_properties": {"myStrProp1": "myVal1", "myIntProp1": 10}}
@@ -74,8 +75,10 @@ public class JsonDataTypeBQAvroJsonWriteTest implements Serializable {
 
         PipelineOptions options = TestPipeline.testingPipelineOptions();
         options.setTempLocation(gcsTempLocation);
-        writePipeline.run(options).waitUntilFinish();
+        writingPipeline.run(options).waitUntilFinish();
 
+
+        // Reading
 
         BigQueryOptions bigQueryOptions = TestPipeline.testingPipelineOptions().as(BigQueryOptions.class);
         bigQueryOptions.setProject(project);
@@ -85,7 +88,7 @@ public class JsonDataTypeBQAvroJsonWriteTest implements Serializable {
                 "SELECT user_id, event_properties FROM %s.%s.%s WHERE SAFE.INT64(event_properties.myIntProp1) = %d",
                 project, dataset, table, 10);
 
-        PCollection<String> retrievedRecordsUserIds = readPipeline.apply(BigQueryIO.read(SchemaAndRecord::getRecord)
+        PCollection<String> retrievedRecordsUserIds = readingPipeline.apply(BigQueryIO.read(SchemaAndRecord::getRecord)
                         .fromQuery(query)
                         .usingStandardSql() // required, otherwise invalidQuery - needs to be below .fromQuery
                         .withCoder(AvroGenericCoder.of(AVRO_SCHEMA))
@@ -94,7 +97,7 @@ public class JsonDataTypeBQAvroJsonWriteTest implements Serializable {
 
         PAssert.that(retrievedRecordsUserIds).containsInAnyOrder("id1");
 
-        readPipeline.run(bigQueryOptions).waitUntilFinish();
+        readingPipeline.run(bigQueryOptions).waitUntilFinish();
     }
 
     private static final Gson GSON = new Gson();
@@ -122,8 +125,8 @@ public class JsonDataTypeBQAvroJsonWriteTest implements Serializable {
             """;
 
     @Rule
-    public final transient TestPipeline writePipeline = TestPipeline.create();
+    public final transient TestPipeline writingPipeline = TestPipeline.create();
 
     @Rule
-    public final transient TestPipeline readPipeline = TestPipeline.create();
+    public final transient TestPipeline readingPipeline = TestPipeline.create();
 }
