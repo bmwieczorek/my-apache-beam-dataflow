@@ -2,7 +2,7 @@ import json
 import logging
 
 import apache_beam as beam
-from apache_beam.io.gcp.bigquery_tools import FileFormat
+from apache_beam.io.gcp.bigquery_tools import FileFormat, parse_table_schema_from_json
 from apache_beam.options.pipeline_options import PipelineOptions
 
 
@@ -25,6 +25,15 @@ def run():
     pipeline_options = PipelineOptions()
     my_pipeline_options = pipeline_options.view_as(MyPipelineOptions)
 
+    # json type needs to be lower case
+    bq_json_schema_string = """{
+        "fields": [
+            {"name": "user_id", "type": "STRING"},
+            {"name": "event_properties", "type": "json"}
+        ]
+    }"""
+    bq_table_schema = parse_table_schema_from_json(bq_json_schema_string)
+
     # The pipeline will be run on exiting the with block.
     with beam.Pipeline(options=my_pipeline_options) as p:
         # lines = p | 'ReadJSON' >> beam.io.ReadFromText("sample_input__00.json")
@@ -39,6 +48,7 @@ def run():
         processed = lines | 'LoadToJson' >> beam.ParDo(MyDoFn())
         processed | 'WriteToBigQuery' >> beam.io.WriteToBigQuery(
             table=my_pipeline_options.output_table,
+            schema=bq_table_schema,
             method=beam.io.WriteToBigQuery.Method.FILE_LOADS,
             create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED,
             write_disposition=beam.io.BigQueryDisposition.WRITE_TRUNCATE,
