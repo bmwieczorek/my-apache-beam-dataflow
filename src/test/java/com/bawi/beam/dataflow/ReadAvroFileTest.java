@@ -131,7 +131,7 @@ public class ReadAvroFileTest implements Serializable {
                         })
                         // with FilenamePolicy use either .to(output) or .withTempDirectory() to determine directory with temp files
 //                        .to(output)
-//                        .withTempDirectory(ValueProvider.NestedValueProvider.of(temp, FileBasedSink::convertToFileResourceIfPossible))
+                        .withTempDirectory(ValueProvider.NestedValueProvider.of(temp, FileBasedSink::convertToFileResourceIfPossible))
                     );
 
         pipeline.run().waitUntilFinish();
