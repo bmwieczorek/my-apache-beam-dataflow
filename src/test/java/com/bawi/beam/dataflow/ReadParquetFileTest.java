@@ -1,10 +1,10 @@
 package com.bawi.beam.dataflow;
 
+import org.apache.avro.LogicalTypes;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.LogicalTypes;
 import org.apache.avro.util.Utf8;
 import org.apache.beam.sdk.io.parquet.ParquetIO;
 import org.apache.beam.sdk.testing.PAssert;
@@ -48,10 +48,12 @@ public class ReadParquetFileTest implements Serializable {
         File file = new File(path.toUri().getPath());
         deleteIfPresent(file);
 
+        Configuration conf = new Configuration();
+        conf.setBoolean("parquet.avro.write-old-list-structure", false); // used for record.put("myRequiredArrayNullableInts", Arrays.asList(1, null, 3));
         try (ParquetWriter<GenericData.Record> writer =
-             AvroParquetWriter.<GenericData.Record>builder(HadoopOutputFile.fromPath(path, new Configuration()))
+             AvroParquetWriter.<GenericData.Record>builder(HadoopOutputFile.fromPath(path, new Configuration(conf)))
                      .withSchema(INTPUT_SCHEMA)
-                     .withConf(new Configuration())
+                     .withConf(conf)
                      .withCompressionCodec(CompressionCodecName.SNAPPY)
                      .build()) {
 
@@ -59,6 +61,7 @@ public class ReadParquetFileTest implements Serializable {
         }
 
         // when - read parquet file
+        //noinspection Convert2Lambda
         PCollection<String> pCollection = pipeline.apply(
             ParquetIO
                 .parseGenericRecords(new SerializableFunction<GenericRecord, String>() { // need anonymous type to infer output type
@@ -68,7 +71,8 @@ public class ReadParquetFileTest implements Serializable {
                         ByteBuffer byteBuffer = (ByteBuffer) genericRecord.get("myRequiredBytes");
                         byte[] bytes = byteBuffer.array();
                         String value = name.toString() + "," + new String(bytes);
-                        LOGGER.info("value={}", value);
+                        Object myRequiredArrayNullableInts = genericRecord.get("myRequiredArrayNullableInts");
+                        LOGGER.info("value={}, myRequiredArrayNullableInts={}", value, myRequiredArrayNullableInts);
                         return value;
                     }
                 })
@@ -81,7 +85,7 @@ public class ReadParquetFileTest implements Serializable {
         // assert
         PAssert.thatSingleton(pCollection).isEqualTo("abc,ABC123");
         pipeline.run().waitUntilFinish();
-        deleteIfPresent(file);
+//        deleteIfPresent(file);
     }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReadParquetFileTest.class);
@@ -104,6 +108,7 @@ public class ReadParquetFileTest implements Serializable {
                     .name("myOptionalTimestamp").type().optional().type(TIMESTAMP_MICROS_LOGICAL_TYPE)
                     .name("myRequiredDate").doc("Expiration date field").type(DATE_LOGICAL_TYPE).noDefault()
                     .name("myRequiredArrayLongs").type().array().items().longType().noDefault()
+                    .name("myRequiredArrayNullableInts").type().array().items().nullable().longType().noDefault()
                     .name("myRequiredSubRecord").type(SchemaBuilder.record("myRequiredSubRecordType").fields().requiredDouble("myRequiredDouble").requiredBoolean("myRequiredBoolean").endRecord()).noDefault()
                     .name("myOptionalSubRecord").type().optional().record("myOptionalSubRecordType").fields().requiredFloat("myRequiredFloat").requiredBoolean("myRequiredBoolean").endRecord()
                     .name("myNullableSubRecord").type().nullable().record("myNullableSubRecordType").fields().requiredLong("myRequiredLong").requiredBoolean("myRequiredBoolean").endRecord().noDefault()
@@ -114,7 +119,7 @@ public class ReadParquetFileTest implements Serializable {
                             .fields().requiredBoolean("myRequiredString").optionalString("myOptionalString").endRecord()).noDefault()
                     .endRecord();
 
-    private static GenericData.Record createGenericRecord(Schema schema) {
+    private static GenericData.Record createGenericRecord(@SuppressWarnings("SameParameterValue") Schema schema) {
         GenericData.Record record = new GenericData.Record(schema);
         record.put("myRequiredInt", 123);
         record.put("myRequiredString", "abc");
@@ -124,6 +129,7 @@ public class ReadParquetFileTest implements Serializable {
         record.put("myRequiredTimestamp", System.currentTimeMillis() * 1000); // needs to be timestamp_micros (not timestamp_millis)
         record.put("myRequiredDate", (int) new Date(System.currentTimeMillis()).toLocalDate().toEpochDay());
         record.put("myRequiredArrayLongs", Arrays.asList(1L, 2L, 3L));
+        record.put("myRequiredArrayNullableInts", Arrays.asList(1, null, 3)); // requires conf.setBoolean("parquet.avro.write-old-list-structure", false);
         Schema myRequiredSubRecordSchema = schema.getField("myRequiredSubRecord").schema();
         GenericRecord myRequiredSubRecord = new GenericData.Record(myRequiredSubRecordSchema);
         myRequiredSubRecord.put("myRequiredDouble", 1.0d);
@@ -157,7 +163,7 @@ public class ReadParquetFileTest implements Serializable {
         return schema;
     }
 
-    private static ByteBuffer doubleToByteBuffer(double d) {
+    private static ByteBuffer doubleToByteBuffer(@SuppressWarnings("SameParameterValue") double d) {
         BigDecimal bigDecimal = BigDecimal.valueOf(d).setScale(9, RoundingMode.UNNECESSARY);
         BigInteger bigInteger = bigDecimal.unscaledValue();
         return ByteBuffer.wrap(bigInteger.toByteArray());
