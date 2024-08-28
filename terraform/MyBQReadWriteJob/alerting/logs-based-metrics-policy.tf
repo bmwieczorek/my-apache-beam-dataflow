@@ -9,6 +9,7 @@ resource "google_logging_metric" "logs_based_metric" {
 }
 
 resource "google_monitoring_alert_policy" "logs_based_metric_policy" {
+  depends_on = [time_sleep.wait_180_seconds]
   project      = var.project
   display_name = "${var.job} did not created 3 log entries in last 15 min for '${var.logs_based_metrics_message_pattern}' pattern policy"
   enabled      = true
