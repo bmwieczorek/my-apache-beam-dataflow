@@ -40,3 +40,8 @@ variable "owner" {
   description = "Google resource owner"
   type        = string
 }
+
+variable "service_account" {
+  description = "Google Cloud service account email"
+  type        = string
+}

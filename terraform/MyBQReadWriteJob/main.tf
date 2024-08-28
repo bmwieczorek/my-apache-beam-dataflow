@@ -30,6 +30,7 @@ module "bigquery" {
   bucket              = module.storage.bucket_name
   dataset             = local.dataset
   table_schema_file   = "../../target/MyBQReadWriteJob.json"
+  service_account     = var.service_account
 }
 
 module "dataflow_classic_template" {
