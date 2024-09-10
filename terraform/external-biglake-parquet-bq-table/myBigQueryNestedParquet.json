@@ -1,0 +1,154 @@
+[
+    {
+      "mode": "REQUIRED",
+      "name": "myRequiredInt",
+      "type": "INTEGER"
+    },
+    {
+      "mode": "REQUIRED",
+      "name": "myRequiredString",
+      "type": "STRING"
+    },
+    {
+      "mode": "NULLABLE",
+      "name": "myOptionalString",
+      "type": "STRING"
+    },
+    {
+      "mode": "NULLABLE",
+      "name": "myNullableString",
+      "type": "STRING"
+    },
+    {
+      "mode": "REQUIRED",
+      "name": "myRequiredBoolean",
+      "type": "BOOLEAN"
+    },
+    {
+      "mode": "REQUIRED",
+      "name": "myRequiredBytes",
+      "type": "BYTES"
+    },
+    {
+      "mode": "REQUIRED",
+      "name": "myBytesDecimal",
+      "type": "NUMERIC"
+    },
+    {
+      "mode": "REQUIRED",
+      "name": "myRequiredTimestamp",
+      "type": "TIMESTAMP"
+    },
+    {
+      "mode": "NULLABLE",
+      "name": "myOptionalTimestamp",
+      "type": "TIMESTAMP"
+    },
+    {
+      "description": "Expiration date field",
+      "mode": "REQUIRED",
+      "name": "myRequiredDate",
+      "type": "DATE"
+    },
+    {
+      "description": "My required datetime field",
+      "mode": "REQUIRED",
+      "name": "myRequiredDateTime",
+      "type": "DATETIME"
+    },
+    {
+      "mode": "REPEATED",
+      "name": "myRequiredArrayLongs",
+      "type": "INTEGER"
+    },
+    {
+      "mode": "REPEATED",
+      "name": "myRequiredArrayNullableInts",
+      "type": "INTEGER"
+    },
+    {
+      "fields": [
+        {
+          "mode": "REQUIRED",
+          "name": "myRequiredDouble",
+          "type": "FLOAT"
+        },
+        {
+          "mode": "REQUIRED",
+          "name": "myRequiredBoolean",
+          "type": "BOOLEAN"
+        }
+      ],
+      "mode": "REQUIRED",
+      "name": "myRequiredSubRecord",
+      "type": "RECORD"
+    },
+    {
+      "fields": [
+        {
+          "mode": "REQUIRED",
+          "name": "myRequiredFloat",
+          "type": "FLOAT"
+        },
+        {
+          "mode": "REQUIRED",
+          "name": "myRequiredBoolean",
+          "type": "BOOLEAN"
+        }
+      ],
+      "mode": "NULLABLE",
+      "name": "myOptionalSubRecord",
+      "type": "RECORD"
+    },
+    {
+      "fields": [
+        {
+          "mode": "REQUIRED",
+          "name": "myRequiredLong",
+          "type": "INTEGER"
+        },
+        {
+          "mode": "REQUIRED",
+          "name": "myRequiredBoolean",
+          "type": "BOOLEAN"
+        }
+      ],
+      "mode": "NULLABLE",
+      "name": "myNullableSubRecord",
+      "type": "RECORD"
+    },
+    {
+      "fields": [
+        {
+          "mode": "REQUIRED",
+          "name": "myRequiredBoolean",
+          "type": "BOOLEAN"
+        },
+        {
+          "mode": "NULLABLE",
+          "name": "myOptionalBoolean",
+          "type": "STRING"
+        }
+      ],
+      "mode": "REPEATED",
+      "name": "myOptionalArraySubRecords",
+      "type": "RECORD"
+    },
+    {
+      "fields": [
+        {
+          "mode": "REQUIRED",
+          "name": "myRequiredString",
+          "type": "BOOLEAN"
+        },
+        {
+          "mode": "NULLABLE",
+          "name": "myOptionalString",
+          "type": "STRING"
+        }
+      ],
+      "mode": "REPEATED",
+      "name": "myNullableArraySubRecords",
+      "type": "RECORD"
+    }
+  ]
