@@ -31,13 +31,13 @@ import static org.apache.beam.sdk.values.TypeDescriptors.strings;
 import static org.joda.time.Duration.standardSeconds;
 import static org.joda.time.Instant.now;
 
-public class MySeqXmlGzJobUtils {
+public class MyGzippedXmlJobUtils {
 
     public static String distribute(Long n) {
         return List.of("US", "US", "PL", "US", "MT", "US", "US", "PL", "US", "US").get((int) (n % 10));
     }
 
-    public static class GunzipParseGroupedXmls extends DoFn<KV<String, Iterable<byte[]>>, KV<String, Long>> {
+    public static class GunzipParseSalarySumGroupedXmls extends DoFn<KV<String, Iterable<byte[]>>, KV<String, Long>> {
         private VtdXmlParser vtdXmlParser;
 
         @Setup

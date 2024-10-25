@@ -1,7 +1,7 @@
 package com.bawi.beam.dataflow.geecon;
 
 import com.bawi.beam.dataflow.PipelineUtils;
-import com.bawi.beam.dataflow.geecon.MySeqXmlGzJobUtils.GunzipParseGroupedXmls;
+import com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.GunzipParseSalarySumGroupedXmls;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.*;
@@ -16,15 +16,15 @@ import java.util.Random;
 
 import static com.bawi.beam.dataflow.PipelineUtils.isDataflowRunnerOnClasspath;
 import static com.bawi.beam.dataflow.PipelineUtils.updateArgsWithDataflowRunner;
-import static com.bawi.beam.dataflow.geecon.MySeqXmlGzJobUtils.GenGzippedXmls;
-import static com.bawi.beam.dataflow.geecon.MySeqXmlGzJobUtils.MyPipelineOptions;
+import static com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.GenGzippedXmls;
+import static com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.MyPipelineOptions;
 import static org.apache.beam.sdk.values.TypeDescriptors.*;
 import static org.joda.time.Duration.standardSeconds;
 
-public class MyGzippedXmlSeqGBKWithRandomKeySuffixAggregateStreamingJob {
+public class MyGzippedXmlSeqGBKWithRandomKeySuffixGunzipParseSumStreamingJob {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MyGzippedXmlSeqGBKWithRandomKeySuffixAggregateStreamingJob.class);
-    private static final String JOB_NAME = "bartek-" + MyGzippedXmlSeqGBKWithRandomKeySuffixAggregateStreamingJob.class.getSimpleName().toLowerCase();
+    private static final Logger LOGGER = LoggerFactory.getLogger(MyGzippedXmlSeqGBKWithRandomKeySuffixGunzipParseSumStreamingJob.class);
+    private static final String JOB_NAME = "bartek-" + MyGzippedXmlSeqGBKWithRandomKeySuffixGunzipParseSumStreamingJob.class.getSimpleName().toLowerCase();
 
     public static void main(String[] args) throws IOException {
         String[] updatedArgs = isDataflowRunnerOnClasspath() ?
@@ -57,7 +57,7 @@ public class MyGzippedXmlSeqGBKWithRandomKeySuffixAggregateStreamingJob {
 
                 .apply(GroupByKey.create()) // new stage
 
-                .apply("GunzipParsXmlSalSumGrp",ParDo.of(new GunzipParseGroupedXmls()))
+                .apply("GunzipParsXmlSalSumGrp",ParDo.of(new GunzipParseSalarySumGroupedXmls()))
 
                 .apply("RemoveKeyRandomSuffix", MapElements.into(kvs(strings(), longs())).via(kv -> {String originalKey = kv.getKey().substring(0, kv.getKey().indexOf("/"));return KV.of(originalKey, kv.getValue());}))
 
