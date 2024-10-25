@@ -16,7 +16,7 @@ import java.util.Random;
 
 import static com.bawi.beam.dataflow.PipelineUtils.isDataflowRunnerOnClasspath;
 import static com.bawi.beam.dataflow.PipelineUtils.updateArgsWithDataflowRunner;
-import static com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.GenGzippedXmls;
+import static com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.ParallelGzippedXmlSequence;
 import static com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.MyPipelineOptions;
 import static org.apache.beam.sdk.values.TypeDescriptors.*;
 import static org.joda.time.Duration.standardSeconds;
@@ -43,7 +43,7 @@ public class MyGzippedXmlSeqGBKWithRandomKeySuffixGunzipParseSumStreamingJob {
         MyPipelineOptions opts = PipelineOptionsFactory.fromArgs(updatedArgs).withValidation().as(MyPipelineOptions.class);
         Pipeline pipeline = Pipeline.create(opts);
 
-        pipeline.apply("ParSeqOfGzippedXmls",  new GenGzippedXmls(opts.getSequenceRate()))
+        pipeline.apply("ParSeqOfGzippedXmls",  new ParallelGzippedXmlSequence(opts.getSequenceRate()))
                 .apply("Window10secs",         Window.into(FixedWindows.of(standardSeconds(10))))
 
                 .apply("AddKeyRandomSuffix",   ParDo.of(new DoFn<KV<String, byte[]>, KV<String, byte[]>>() {

@@ -83,7 +83,7 @@ public class MyGzippedXmlJobUtils {
         void setSequenceRate(long value);
     }
 
-    public static class GenGzippedXmls extends PTransform<PBegin, PCollection<KV<String, byte[]>>> {
+    public static class ParallelGzippedXmlSequence extends PTransform<PBegin, PCollection<KV<String, byte[]>>> {
         byte[] SINGLE_PAYLOAD_GZ;
         {
             try {
@@ -95,7 +95,7 @@ public class MyGzippedXmlJobUtils {
 
         private final long sequenceRate;
 
-        public GenGzippedXmls(long sequenceRate) {
+        public ParallelGzippedXmlSequence(long sequenceRate) {
             this.sequenceRate = sequenceRate;
         }
 

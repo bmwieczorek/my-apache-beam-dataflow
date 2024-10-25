@@ -1,7 +1,7 @@
 package com.bawi.beam.dataflow.geecon;
 
 import com.bawi.beam.dataflow.PipelineUtils;
-import com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.GenGzippedXmls;
+import com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.ParallelGzippedXmlSequence;
 import com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.GunzipParseSalarySumGroupedXmls;
 import com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.MyPipelineOptions;
 import org.apache.beam.sdk.Pipeline;
@@ -43,7 +43,7 @@ public class MyGzippedXmlSeqGBKGunzipParseSumStreamingJob {
         MyPipelineOptions opts = PipelineOptionsFactory.fromArgs(updatedArgs).withValidation().as(MyPipelineOptions.class);
         Pipeline pipeline = Pipeline.create(opts);
 
-        pipeline.apply("ParSeqOfGzippedXmls",  new GenGzippedXmls(opts.getSequenceRate()))
+        pipeline.apply("ParSeqOfGzippedXmls",  new ParallelGzippedXmlSequence(opts.getSequenceRate()))
                 .apply("Window10secs",         Window.into(FixedWindows.of(standardSeconds(10))))
 
                 .apply(GroupByKey.create()) // new stage
