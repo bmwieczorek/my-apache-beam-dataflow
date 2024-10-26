@@ -43,6 +43,10 @@ echo "DUMP_HEAP_ON_OOM=$DUMP_HEAP_ON_OOM" | tee -a ${LOG}
 
 gcloud compute instances add-metadata --zone ${ZONE} ${INSTANCE} --metadata=startup-state="(1/3) Checking Java ..."
 
+echo "Checking Java ... "
+which java | tee -a ${LOG}
+java -version 2>&1 | tee -a ${LOG}
+
 #echo "Removing existing openjdk installation:" | tee -a ${LOG}
 #rpm -qa | grep openjdk | xargs sudo yum -y remove
 #
@@ -58,15 +62,15 @@ gcloud compute instances add-metadata --zone ${ZONE} ${INSTANCE} --metadata=star
 #export JAVA_HOME=/opt/jdk-${openjdkVersion}
 #export PATH=$JAVA_HOME/bin:$PATH
 
-max_retry=10
-counter=1
-until which java
-do sleep $((counter*10))
-  [[ counter -eq $max_retry ]] && echo "Java OpenJDK installation status: failed" &&  gcloud compute instances add-metadata --zone ${ZONE} ${INSTANCE} --metadata=startup-state="(2/3) Java OpenJDK installation status: failed" && exit 1
-  echo "Trying to install java-11-openjdk-devel: $counter attempt"
-  sudo yum install java-11-openjdk-devel -y 2>&1
-  ((counter++))
-done
+#max_retry=10
+#counter=1
+#until which java
+#do sleep $((counter*10))
+#  [[ counter -eq $max_retry ]] && echo "Java OpenJDK installation status: failed" &&  gcloud compute instances add-metadata --zone ${ZONE} ${INSTANCE} --metadata=startup-state="(2/3) Java OpenJDK installation status: failed" && exit 1
+#  echo "Trying to install java-11-openjdk-devel: $counter attempt"
+#  sudo yum install java-11-openjdk-devel -y 2>&1
+#  ((counter++))
+#done
 
 which java | tee -a ${LOG}
 java -version 2>&1 | tee -a ${LOG}
@@ -74,7 +78,7 @@ echo "Java OpenJDK installation status: completed"
 
 gcloud compute instances add-metadata --zone ${ZONE} ${INSTANCE} --metadata=startup-state="(3/3) Creating dataflow template"
 
-gsutil cp "${DATAFLOW_JAR_GCS_PATH}" . 2>&1 | tee -a ${LOG}
+gsutil -o GSUtil:check_hashes=never cp "${DATAFLOW_JAR_GCS_PATH}" . 2>&1 | tee -a ${LOG}
 JAVA_DATAFLOW_RUN_OPTS="--project=$PROJECT --region=$REGION --serviceAccount=$SERVICE_ACCOUNT --usePublicIps=false"
 echo "Creating template $DATAFLOW_TEMPLATE_GCS_PATH" | tee -a ${LOG}
 
