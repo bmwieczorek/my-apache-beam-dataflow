@@ -42,5 +42,11 @@ with DAG(dag_id='bartek_exception_branch_dag',
 # echo "Current local date time: $(date '+%Y-%m-%dT%H:%M:%S%z')" && \
 # echo "Current UTC   date time: $(date -u '+%Y-%m-%dT%H:%M:%S%z')" && \
 # cat bartek_exception_branch_dag.py | \
+
+# mac terminal
 # sed "s/_SCHEDULE_INTERVAL_/$(date -u -v +3M '+%M %H %d') * */" | \
 # sed "s/_START_DATE_/$(date -u -v -1m -v +3M +%Y-%m-%dT%H:%M:00)/"
+
+# ubuntu
+# sed "s/_SCHEDULE_INTERVAL_/$(date -u -d '+3min' '+%M %H %d') * */" | \
+# sed "s/_START_DATE_/$(date -u -d '-1month+3min' +%Y-%m-%dT%H:%M:00)/"
