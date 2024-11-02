@@ -165,7 +165,7 @@ public class MyGzippedXmlJobUtils {
         public PCollection<KV<String, byte[]>> expand(PBegin input) {
             return input.apply("ParallelBoundedSequence", GenerateSequence.from(0).to(sequenceLimit).withTimestampFn(i -> now()))
                     .apply("ToRedistributedXmlGz", MapElements.into(kvs(strings(), of(byte[].class)))
-                            .via(n -> KV.of(distribute(n), SINGLE_XML_PAYLOAD_GZ)));
+                            .via(n -> KV.of(distribute(n), xmlGzBytes)));
         }
     }
 
