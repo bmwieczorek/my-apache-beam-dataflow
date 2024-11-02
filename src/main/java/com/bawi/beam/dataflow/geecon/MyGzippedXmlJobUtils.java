@@ -2,7 +2,6 @@ package com.bawi.beam.dataflow.geecon;
 
 import com.bawi.VtdXmlParser;
 import com.bawi.VtdXmlParser.Entry;
-import com.bawi.beam.dataflow.geecon.xmlgzbatch.MySeqSingleXmlGzAggregationBatchJob;
 import com.bawi.io.SplitInputStream;
 import com.bawi.parser.StringLengthParser;
 import com.bawi.parser.SumValuesParser;
