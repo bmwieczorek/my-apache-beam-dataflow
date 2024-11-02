@@ -35,7 +35,7 @@ MySeqSingleXmlGzAggregationBatchJob {
                                 , "--numWorkers=1"
                                 , "--maxNumWorkers=2"
                                 , "--workerMachineType=t2d-standard-4"
-                                , "--sequenceLimit=5000000"
+                                , "--sequenceLimit=50000000"
                         ) : PipelineUtils.updateArgs(args, "--sequenceLimit=5000");
 
         MyPipelineOptions opts = PipelineOptionsFactory.fromArgs(updatedArgs).withValidation().as(MyPipelineOptions.class);
@@ -47,7 +47,7 @@ MySeqSingleXmlGzAggregationBatchJob {
                 .apply("ToString", MapElements.into(strings()).via(String::new))
 
                 .apply("XmlVtdParse", ParDo.of(new XmlVtdParse()))
-                .apply("SumSalariesPerXml", MapElements.into(longs())
+                .apply("GetSumSalariesPerXml", MapElements.into(longs())
                         .via(xmlAsMap -> Long.parseLong(xmlAsMap.get("staff_basic_salary_sum"))))
                 .apply("SumAllSalaries", Sum.longsGlobally().withoutDefaults())
 
