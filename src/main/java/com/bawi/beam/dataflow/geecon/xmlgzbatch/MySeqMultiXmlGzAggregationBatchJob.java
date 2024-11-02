@@ -40,8 +40,8 @@ public class MySeqMultiXmlGzAggregationBatchJob {
         MyPipelineOptions opts = PipelineOptionsFactory.fromArgs(updatedArgs).withValidation().as(MyPipelineOptions.class);
         Pipeline pipeline = Pipeline.create(opts);
 
-        pipeline.apply("ParSeqOfMultiXmlsGz", new ParallelGzippedXmlBoundedSequence(opts.getSequenceLimit(), MULTI_XML_PAYLOAD_GZ))
-
+        pipeline.apply("ParSeqOfMultiXmlsGz", new ParallelGzippedXmlBoundedSequence(opts.getSequenceLimit(),
+                                                                        MULTI_XML_PAYLOAD_GZ))
                 .apply("GunzipXml", MapElements.into(of(byte[].class)).via(GzipUtils::gunzip))
                 .apply("SplitMultiXmlToStrings", ParDo.of(new SplitMultiXml("<college", "</college>")))
 
