@@ -96,6 +96,25 @@ public class MyGzippedXmlJobUtils {
         }
     }
 
+    public static class XmlVtdParseSumSalaries extends DoFn<String, Long> {
+        private static final Counter xmlsParsed = Metrics.counter(XmlVtdParse.class.getSimpleName(), "xmls-parsed");
+        private VtdXmlParser vtdXmlParser;
+
+        @Setup
+        public void setup() {
+            List<Entry> mappingEntries = mappingEntries();
+            vtdXmlParser = new VtdXmlParser(mappingEntries);
+        }
+
+        @ProcessElement
+        public void process(@Element String xml, OutputReceiver<Long> outputReceiver) throws Exception {
+            Map<String, Object> xmlAsMap = vtdXmlParser.parseXml(xml);
+            xmlsParsed.inc();
+            long staffBasicSalarySum = (long) (int) xmlAsMap.get("staff_basic_salary_sum");
+            outputReceiver.output(staffBasicSalarySum);
+        }
+    }
+
     public static class GunzipParseSalarySumGroupedXmls extends DoFn<KV<String, Iterable<byte[]>>, KV<String, Long>> {
         private VtdXmlParser vtdXmlParser;
 

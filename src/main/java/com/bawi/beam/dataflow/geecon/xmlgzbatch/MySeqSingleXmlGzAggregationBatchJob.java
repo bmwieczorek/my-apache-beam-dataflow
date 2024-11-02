@@ -3,13 +3,14 @@ package com.bawi.beam.dataflow.geecon.xmlgzbatch;
 import com.bawi.beam.dataflow.MyConsoleIO;
 import com.bawi.beam.dataflow.PipelineUtils;
 import com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.ParallelGzippedXmlBoundedSequence;
-import com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.XmlVtdParse;
+import com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.XmlVtdParseSumSalaries;
 import com.bawi.io.GzipUtils;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.Validation;
+import org.apache.beam.sdk.transforms.Combine;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.Sum;
@@ -19,11 +20,9 @@ import java.io.IOException;
 import static com.bawi.beam.dataflow.PipelineUtils.*;
 import static com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.SINGLE_XML_PAYLOAD_GZ;
 import static org.apache.beam.sdk.values.TypeDescriptor.of;
-import static org.apache.beam.sdk.values.TypeDescriptors.longs;
 import static org.apache.beam.sdk.values.TypeDescriptors.strings;
 
-public class
-MySeqSingleXmlGzAggregationBatchJob {
+public class MySeqSingleXmlGzAggregationBatchJob {
 
     private static final String JOB_NAME = getJobNameWithOwner(MySeqSingleXmlGzAggregationBatchJob.class);
 
@@ -31,11 +30,11 @@ MySeqSingleXmlGzAggregationBatchJob {
 
         String[] updatedArgs = isDataflowRunnerOnClasspath() ?
                         updateArgsWithDataflowRunner(args
-                                , "--jobName=" + JOB_NAME + "--5000000seq--single-xml-gz--t2dst4"
+                                , "--jobName=" + JOB_NAME + "--50000000seq--single-xml-gz--t2dst4"
                                 , "--numWorkers=1"
                                 , "--maxNumWorkers=2"
                                 , "--workerMachineType=t2d-standard-4"
-                                , "--sequenceLimit=50000000"
+                                , "--sequenceLimit=" + 50 * 1000 * 1000
                         ) : PipelineUtils.updateArgs(args, "--sequenceLimit=5000");
 
         MyPipelineOptions opts = PipelineOptionsFactory.fromArgs(updatedArgs).withValidation().as(MyPipelineOptions.class);
@@ -46,12 +45,11 @@ MySeqSingleXmlGzAggregationBatchJob {
                 .apply("GunzipXml", MapElements.into(of(byte[].class)).via(GzipUtils::gunzip))
                 .apply("ToString", MapElements.into(strings()).via(String::new))
 
-                .apply("XmlVtdParse", ParDo.of(new XmlVtdParse()))
-                .apply("GetSumSalariesPerXml", MapElements.into(longs())
-                        .via(xmlAsMap -> Long.parseLong(xmlAsMap.get("staff_basic_salary_sum"))))
-                .apply("SumAllSalaries", Sum.longsGlobally().withoutDefaults())
+                .apply("XmlVtdParseSumSalaries", ParDo.of(new XmlVtdParseSumSalaries()))
 
-                .apply(MyConsoleIO.write());
+                .apply("Combine.globally(Sum)", Combine.globally(Sum.ofLongs()).withoutDefaults())
+
+                .apply("LogGlobalSalariesSum", MyConsoleIO.write());
 
         PipelineResult pipelineResult = pipeline.run();
         pipelineResult.waitUntilFinish();
