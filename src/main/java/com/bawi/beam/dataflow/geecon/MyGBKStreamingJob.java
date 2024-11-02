@@ -18,10 +18,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.bawi.beam.dataflow.PipelineUtils.*;
+import static com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.distribute;
 import static java.util.stream.StreamSupport.stream;
 import static org.apache.beam.sdk.values.TypeDescriptors.*;
 import static org.joda.time.Duration.standardSeconds;
@@ -84,10 +84,6 @@ public class MyGBKStreamingJob {
                 }));
 
         pipeline.run();
-    }
-
-    private static String distribute(Long n) {
-        return List.of("US", "US", "PL", "US", "MT", "US", "US", "PL", "US", "US").get((int) (n % 10));
     }
 
     public interface MyPipelineOptions extends PipelineOptions {
