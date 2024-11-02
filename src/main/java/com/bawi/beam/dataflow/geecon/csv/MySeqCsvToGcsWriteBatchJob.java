@@ -1,21 +1,18 @@
-package com.bawi.beam.dataflow.geecon;
+package com.bawi.beam.dataflow.geecon.csv;
 
+import com.bawi.beam.dataflow.geecon.CustomFilenamePolicy;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.FileBasedSink;
 import org.apache.beam.sdk.io.GenerateSequence;
 import org.apache.beam.sdk.io.TextIO;
-import org.apache.beam.sdk.io.fs.ResourceId;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.Validation;
 import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.MapElements;
-import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.joda.time.Instant;
 
 import static com.bawi.beam.dataflow.PipelineUtils.*;
-import static org.apache.beam.repackaged.core.org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric;
 import static org.apache.beam.sdk.options.PipelineOptionsFactory.fromArgs;
-import static org.apache.beam.sdk.options.ValueProvider.NestedValueProvider.of;
 import static org.apache.beam.sdk.values.TypeDescriptor.of;
 
 public class MySeqCsvToGcsWriteBatchJob {
@@ -64,7 +61,7 @@ public class MySeqCsvToGcsWriteBatchJob {
                 .apply(TextIO.write()
 //                        .withWindowedWrites() // single vs multi region to generate small files
                         .to(new CustomFilenamePolicy(opts.getOutputDir(), ".csv"))
-                        .withTempDirectory(of(opts.getTempDir(), convertToFileResource()))
+                        .withTempDirectory(ValueProvider.NestedValueProvider.of(opts.getTempDir(), FileBasedSink::convertToFileResourceIfPossible))
                         .withNumShards(opts.getNumShards()));
 
         pipeline.run().waitUntilFinish();
@@ -94,7 +91,4 @@ public class MySeqCsvToGcsWriteBatchJob {
         void setNumShards(int value);
     }
 
-    private static SerializableFunction<String, ResourceId> convertToFileResource() {
-        return FileBasedSink::convertToFileResourceIfPossible;
-    }
 }
