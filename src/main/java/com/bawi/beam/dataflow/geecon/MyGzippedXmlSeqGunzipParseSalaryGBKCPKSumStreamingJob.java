@@ -4,7 +4,7 @@ import com.bawi.VtdXmlParser;
 import com.bawi.VtdXmlParser.Entry;
 import com.bawi.beam.dataflow.PipelineUtils;
 import com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.MyPipelineOptions;
-import com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.ParallelGzippedXmlSequence;
+import com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.ParallelRedistributedGzippedXmlUnboundedSequence;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
@@ -49,7 +49,7 @@ public class MyGzippedXmlSeqGunzipParseSalaryGBKCPKSumStreamingJob {
         MyPipelineOptions opts = PipelineOptionsFactory.fromArgs(updatedArgs).withValidation().as(MyPipelineOptions.class);
         Pipeline pipeline = Pipeline.create(opts);
 
-        pipeline.apply("ParSeqOfGzippedXmls",  new ParallelGzippedXmlSequence(opts.getSequenceRate()))
+        pipeline.apply("ParSeqOfGzippedXmls",  new ParallelRedistributedGzippedXmlUnboundedSequence(opts.getSequenceRate()))
                 .apply("Window10secs",         Window.into(FixedWindows.of(standardSeconds(10))))
 
                 .apply("GunzipParseXmlSalary",    ParDo.of(new GunzipParseXmlSalary()))
@@ -67,7 +67,7 @@ public class MyGzippedXmlSeqGunzipParseSalaryGBKCPKSumStreamingJob {
 
         @Setup
         public void setup() {
-            List<Entry> mappingEntries = MyGzippedXmlJobUtils.GunzipParseSalarySumGroupedXmls.mappingEntries();
+            List<Entry> mappingEntries = MyGzippedXmlJobUtils.mappingEntries();
             vtdXmlParser = new VtdXmlParser(mappingEntries);
         }
 
