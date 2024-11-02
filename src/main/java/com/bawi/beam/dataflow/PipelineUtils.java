@@ -4,12 +4,18 @@ import org.apache.beam.sdk.metrics.MetricResults;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static java.util.Optional.ofNullable;
+
 public class PipelineUtils {
+    public static final String OWNER = ofNullable(System.getenv("GCP_OWNER")).orElse((System.getenv("user")));
+
     private static final Logger LOGGER = LoggerFactory.getLogger(PipelineUtils.class);
 
     public static String[] updateArgs(String[] args, String... additionalArgs) {
@@ -78,6 +84,15 @@ public class PipelineUtils {
         return StreamSupport.stream(metricResults.allMetrics().getCounters().spliterator(), false)
                 .map(c -> c.getName().getName() + "=" + c.getAttempted())
                 .collect(Collectors.toList());
+    }
+
+    public static String getHostname() {
+        try {
+            return InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            LOGGER.error("Unable to get local host name", e);
+            return null;
+        }
     }
 
 }
