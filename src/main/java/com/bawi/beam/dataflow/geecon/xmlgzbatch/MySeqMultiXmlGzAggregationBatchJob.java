@@ -33,7 +33,7 @@ public class MySeqMultiXmlGzAggregationBatchJob {
                         , "--jobName=" + JOB_NAME + "--5000seq--1000-multi-xml-gz--t2dst4"
                         , "--numWorkers=1"
                         , "--maxNumWorkers=2"
-                        , "--workerMachineType=t2-standard-4"
+                        , "--workerMachineType=t2d-standard-4"
                         , "--sequenceLimit=5000000"
                 ) : PipelineUtils.updateArgs(args, "--sequenceLimit=5");
 
