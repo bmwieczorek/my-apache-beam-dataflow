@@ -11,8 +11,9 @@ from apache_beam.testing.util import equal_to
 
 # based on https://github.com/apache/beam/blob/master/sdks/python/apache_beam/examples/wordcount.py
 # pip install pytest apache-beam[gcp]
-# python3 src/main/python/my_pipeline_test.py
-# python3 -m pytest src/main/python/my_pipeline_test.py -o log_cli=true -v --junit-xml=target/TEST-results.xml
+# python3 src/main/python/beam/my_pipeline_test.py
+# python3 -m pytest src/main/python/beam/my_pipeline_test.py -o log_cli=true -v --junit-xml=target/TEST-results.xml
+
 
 def inner_join(element: Tuple[str, Dict[str, List[int]]]) -> List[Dict[str, Union[str, int]]]:
     key = element[0]
