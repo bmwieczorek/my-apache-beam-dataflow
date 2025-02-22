@@ -72,7 +72,7 @@ public class SerializationTest {
         assertTrue(serializeWithNotSerExMsg(new MyInnerSerializable()).endsWith("SerializationTest"));
 
 
-        assertTrue(serializeWithNotSerExMsg(((Function<String, String>) s -> s)).contains("SerializationTest$$Lambda$"));
+        assertTrue(serializeWithNotSerExMsg(((Function<String, String>) s -> s)).contains("SerializationTest$$Lambda"));
 
         // in lambda - MyNonSerializable class
                                   serialize(s -> { print(staticMyNonSerializable); return s; });
