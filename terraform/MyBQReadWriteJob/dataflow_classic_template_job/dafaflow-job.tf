@@ -19,10 +19,12 @@ resource "google_dataflow_job" "job" {
     expirationDate = var.expiration_date
     tableSpec = var.table_spec
 //    flexRSGoal = "COST_OPTIMIZED" // flexRSGoal flag no supported when starting a job (need to be added when creating template)
-//    outputPath         = "gs://${var.bucket}/output"
-//    tempPath           = "gs://${var.bucket}/temp"
+    outputPath         = "gs://${var.bucket}/output"
+    tempPath           = "gs://${var.bucket}/temp"
+    diskSizeGb         = 200
+    workerDiskType     = "compute.googleapis.com/projects/sab-eda-01-8302/zones/us-central1-b/diskTypes/pd-ssd"
   }
-  additional_experiments = ["enable_stackdriver_agent_metrics"]
+  additional_experiments = ["disable_runner_v2","shuffle_mode=appliance","enable_stackdriver_agent_metrics"]
   labels = {
     owner   = var.owner
     dataflow_template = "classic"
