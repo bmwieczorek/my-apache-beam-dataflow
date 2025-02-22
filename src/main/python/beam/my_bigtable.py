@@ -17,7 +17,7 @@ import datetime
 # python3 src/main/python/beam/my_pipeline.py --project ${GCP_PROJECT} \
 # --region ${GCP_REGION} --runner DataflowRunner \
 # --temp_location gs://${GCP_PROJECT}-${GCP_OWNER}/python-tmp/ \
-# --service_account_email=${GCP_SERVICE_ACCOUNT} --no_use_public_ips
+# --service_account_email=  ${GCP_SERVICE_ACCOUNT} --no_use_public_ips --subnetwork ${GCP_SUBNETWORK}
 
 
 def run(argv=None):
