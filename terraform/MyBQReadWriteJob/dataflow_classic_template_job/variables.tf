@@ -49,6 +49,11 @@ variable "expiration_date" {
   type        = string
 }
 
+variable "table_spec" {
+  description = "Dataflow table spec param in project.dataset.table format"
+  type        = string
+}
+
 variable "template_gcs_path" {
   description = "Google dataflow template gcs path"
   type        = string

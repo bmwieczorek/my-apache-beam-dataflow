@@ -41,7 +41,9 @@ module "dataflow_classic_template" {
   owner               = var.owner
   bucket              = module.storage.bucket_name
   main_class          = "com.bawi.beam.dataflow.MyBQReadWriteJob"
-  table_spec          = "${local.dataset}.${local.table}"
+#  comment hardcoding table_spec in template as passed dynamically at template execution
+#   table_spec          = "${local.dataset}.${local.table}"
+  query_temp_dataset  = local.dataset
   job                 = local.job
   network             = var.network
 //  network             = data.google_compute_network.network.self_link
@@ -67,6 +69,7 @@ module "dataflow_classic_template_job" {
   template_gcs_path   = module.dataflow_classic_template.template_gcs_path
   job                 = local.job
   expiration_date     = "2021-03-03"
+  table_spec          = "${local.dataset}.${local.table}"
 }
 
 module "dashboards" {
