@@ -19,6 +19,18 @@
   },
   {
     "mode": "NULLABLE",
+    "name": "my_time",
+    "type": "TIME",
+    "description" : "My time field"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "my_datetime",
+    "type": "DATETIME",
+    "description" : "My datetime field"
+  },
+  {
+    "mode": "NULLABLE",
     "name": "my_numeric",
     "type": "NUMERIC"
   },
