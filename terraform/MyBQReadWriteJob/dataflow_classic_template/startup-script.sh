@@ -38,34 +38,39 @@ echo "WAIT_SECS_BEFORE_VM_DELETE=$WAIT_SECS_BEFORE_VM_DELETE" | tee -a ${LOG}
 
 gcloud compute instances add-metadata --zone ${ZONE} ${INSTANCE} --metadata=startup-state="(1/3) Checking Java ..."
 
-echo "Removing existing openjdk installation:" | tee -a ${LOG}
-rpm -qa | grep openjdk | xargs sudo yum -y remove
+which java | tee -a ${LOG}
+java -version 2>&1 | tee -a ${LOG}
+echo "Java OpenJDK status: installed"
 
-openjdkVersion=17.0.2
-echo "Installing openjdk ${openjdkVersion}:" | tee -a ${LOG}
+#echo "Removing existing openjdk installation:" | tee -a ${LOG}
+#rpm -qa | grep openjdk | xargs sudo yum -y remove
+
+#openjdkVersion=17.0.2
+#echo "Installing openjdk ${openjdkVersion}:" | tee -a ${LOG}
 
 #sudo yum-config-manager --enable rhui-rhel*
 #sudo yum update -y
 
-gsutil cp gs://${PROJECT}-${OWNER}/openjdk-${openjdkVersion}_linux-x64_bin.tar.gz .
-tar xzf openjdk-${openjdkVersion}_linux-x64_bin.tar.gz
-sudo mv jdk-${openjdkVersion} /opt/
-export JAVA_HOME=/opt/jdk-${openjdkVersion}
-export PATH=$JAVA_HOME/bin:$PATH
+#gsutil cp gs://${PROJECT}-${OWNER}/openjdk-${openjdkVersion}_linux-x64_bin.tar.gz .
+#tar xzf openjdk-${openjdkVersion}_linux-x64_bin.tar.gz
+#sudo mv jdk-${openjdkVersion} /opt/
+#export JAVA_HOME=/opt/jdk-${openjdkVersion}
+#export PATH=$JAVA_HOME/bin:$PATH
 
-max_retry=10
-counter=1
-until which java
-do sleep $((counter*10))
-  [[ counter -eq $max_retry ]] && echo "Java OpenJDK installation status: failed" &&  gcloud compute instances add-metadata --zone ${ZONE} ${INSTANCE} --metadata=startup-state="(2/3) Java OpenJDK installation status: failed" && exit 1
-  echo "Trying to install java-11-openjdk-devel: $counter attempt"
-  sudo yum install java-11-openjdk-devel -y 2>&1
-  ((counter++))
-done
+#max_retry=10
+#counter=1
+#until which java
+#do sleep $((counter*10))
+#  [[ counter -eq $max_retry ]] && echo "Java OpenJDK installation status: failed" &&  gcloud compute instances add-metadata --zone ${ZONE} ${INSTANCE} --metadata=startup-state="(2/3) Java OpenJDK installation status: failed" && exit 1
+#  echo "Trying to install java-11-openjdk-devel: $counter attempt"
+#  sudo yum install java-11-openjdk-devel -y 2>&1
+#  ((counter++))
+#done
 
-which java | tee -a ${LOG}
-java -version 2>&1 | tee -a ${LOG}
-echo "Java OpenJDK installation status: completed"
+#which java | tee -a ${LOG}
+#java -version 2>&1 | tee -a ${LOG}
+##echo "Java OpenJDK installation status: completed"
+#echo "Java OpenJDK status: installed"
 
 gcloud compute instances add-metadata --zone ${ZONE} ${INSTANCE} --metadata=startup-state="(3/3) Creating dataflow template"
 
