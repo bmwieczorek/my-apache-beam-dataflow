@@ -1,6 +1,6 @@
 package com.bawi.io;
 
-import org.apache.commons.compress.utils.IOUtils;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,11 +14,14 @@ import java.util.zip.GZIPOutputStream;
 public class GzipUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(GzipUtils.class);
 
-    public static byte[] gzip(String s) throws IOException {
+    public static byte[] gzip(String s) {
         byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
         ByteArrayOutputStream byteStream = new ByteArrayOutputStream(bytes.length);
         try (GZIPOutputStream gzipOutputStream = new GZIPOutputStream(byteStream)) {
             gzipOutputStream.write(bytes);
+        } catch (IOException e) {
+            LOGGER.error("Failed to gzip", e);
+            throw new RuntimeException(e);
         }
         return byteStream.toByteArray();
     }
