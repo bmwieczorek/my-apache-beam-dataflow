@@ -23,6 +23,22 @@
       "doc": "Expiration date field"
     },
     {
+      "name" : "my_datetime",
+      "type" : {
+        "type" : "long",
+        "logicalType" : "local-timestamp-micros"
+      },
+      "doc" : "My datetime field"
+    },
+    {
+      "name" : "my_time",
+      "type" : {
+        "type" : "long",
+        "logicalType" : "time-micros"
+      },
+      "doc" : "My time field"
+    },
+    {
       "name": "my_numeric",
       "type": [
         {
