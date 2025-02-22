@@ -24,8 +24,11 @@ DATAFLOW_JAR_GCS_PATH=$(curl http://metadata.google.internal/computeMetadata/v1/
 echo "DATAFLOW_JAR_GCS_PATH=$DATAFLOW_JAR_GCS_PATH" | tee -a ${LOG}
 DATAFLOW_JAR_MAIN_CLASS=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/dataflow_jar_main_class -H "Metadata-Flavor: Google")
 echo "DATAFLOW_JAR_MAIN_CLASS=$DATAFLOW_JAR_MAIN_CLASS" | tee -a ${LOG}
-TABLE_SPEC=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/table_spec -H "Metadata-Flavor: Google")
-echo "TABLE_SPEC=$TABLE_SPEC" | tee -a ${LOG}
+#  comment hardcoding table_spec in template as passed dynamically at template execution
+#TABLE_SPEC=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/table_spec -H "Metadata-Flavor: Google")
+#echo "TABLE_SPEC=$TABLE_SPEC" | tee -a ${LOG}
+QUERY_TEMP_DATASET=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/query_temp_dataset -H "Metadata-Flavor: Google")
+echo "QUERY_TEMP_DATASET=$QUERY_TEMP_DATASET" | tee -a ${LOG}
 WAIT_SECS_BEFORE_VM_DELETE=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/wait_secs_before_delete -H "Metadata-Flavor: Google")
 echo "WAIT_SECS_BEFORE_VM_DELETE=$WAIT_SECS_BEFORE_VM_DELETE" | tee -a ${LOG}
 
@@ -72,9 +75,15 @@ echo "Creating template $DATAFLOW_TEMPLATE_GCS_PATH" | tee -a ${LOG}
 java -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAIN_CLASS} \
   ${JAVA_DATAFLOW_RUN_OPTS} \
   --runner=DataflowRunner \
-  --tableSpec=${TABLE_SPEC} \
+  --queryTempDataset=${QUERY_TEMP_DATASET} \
   --stagingLocation=gs://${BUCKET}/staging \
+  --sdkHarnessLogLevelOverrides="{ \"com.sabre.dna.vbp.calc.weights.WeightsValidator\": \"WARN\" }" \
+  --diskSizeGb=100 \
+  --workerDiskType="compute.googleapis.com/projects/${PROJECT}/zones/us-central1-f/diskTypes/pd-ssd" \
   --templateLocation="${DATAFLOW_TEMPLATE_GCS_PATH}" 2>&1 | tee -a ${LOG}
+
+#  comment hardcoding table_spec in template as passed dynamically at template execution
+#  --tableSpec=${TABLE_SPEC} \
 
 # use flexRSGoal when creating a job template as above (requires 2 templates: one with flexrs and one without; passing flexrs at runtime when starting a job has no effect)
 #  --flexRSGoal=COST_OPTIMIZED \

@@ -55,8 +55,14 @@ variable "main_class" {
   type        = string
 }
 
-variable "table_spec" {
-  description = "BigQuery table spec"
+#  comment hardcoding table_spec in template as passed dynamically at template execution
+# variable "table_spec" {
+#   description = "BigQuery table spec"
+#   type        = string
+# }
+
+variable "query_temp_dataset" {
+  description = "Google dataflow query temp dataset used as intermediate location for reading data from BQ"
   type        = string
 }
 

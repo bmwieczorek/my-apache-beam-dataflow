@@ -56,7 +56,9 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
 
     "template_gcs_path" = local.template_gcs_path
     "dataflow_jar_main_class" = var.main_class
-    "table_spec" = var.table_spec
+#  comment hardcoding table_spec in template as passed dynamically at template execution
+#     "table_spec" = var.table_spec
+    "query_temp_dataset" = var.query_temp_dataset
     "wait_secs_before_delete" = 300
   }
   labels = {
