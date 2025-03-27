@@ -32,8 +32,8 @@ WAIT_SECS_BEFORE_VM_DELETE=$(curl http://metadata.google.internal/computeMetadat
 echo "WAIT_SECS_BEFORE_VM_DELETE=$WAIT_SECS_BEFORE_VM_DELETE" | tee -a ${LOG}
 NUMBER_OF_WORKER_HARNESS_THREADS=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/number_of_worker_harness_threads -H "Metadata-Flavor: Google")
 echo "NUMBER_OF_WORKER_HARNESS_THREADS=$NUMBER_OF_WORKER_HARNESS_THREADS" | tee -a ${LOG}
-ENABLE_STREAMING_ENGINE=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/enable_streaming_engine -H "Metadata-Flavor: Google")
-echo "ENABLE_STREAMING_ENGINE=$ENABLE_STREAMING_ENGINE" | tee -a ${LOG}
+#ENABLE_STREAMING_ENGINE=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/enable_streaming_engine -H "Metadata-Flavor: Google")
+#echo "ENABLE_STREAMING_ENGINE=$ENABLE_STREAMING_ENGINE" | tee -a ${LOG}
 DUMP_HEAP_ON_OOM=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/dump_heap_on_oom -H "Metadata-Flavor: Google")
 echo "DUMP_HEAP_ON_OOM=$DUMP_HEAP_ON_OOM" | tee -a ${LOG}
 
@@ -97,8 +97,9 @@ java -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAI
   --diskSizeGb=200 \
   --windowSecs=60 \
   --autoscalingAlgorithm=THROUGHPUT_BASED \
-  --enableStreamingEngine=${ENABLE_STREAMING_ENGINE} \
   --templateLocation="${DATAFLOW_TEMPLATE_GCS_PATH}" 2>&1 | tee -a ${LOG}
+
+#  --enableStreamingEngine=${ENABLE_STREAMING_ENGINE} \  // passed to dataflow_classic_template_job when starting a job (it is also possible at template generation)
 
 #  --workerLogLevelOverrides="{ \"org.apache.beam.sdk.util.WindowTracing\": \"DEBUG\" }" \
 

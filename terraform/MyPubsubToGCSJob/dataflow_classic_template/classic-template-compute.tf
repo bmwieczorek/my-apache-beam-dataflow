@@ -52,7 +52,7 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
     "wait_secs_before_delete" = 300
     // Worker harness starting with
     "number_of_worker_harness_threads" = var.number_of_worker_harness_threads
-    "enable_streaming_engine" = var.enable_streaming_engine
+    # "enable_streaming_engine" = var.enable_streaming_engine # moved to dataflow_classic_template_job to pass it when starting a job
     "dump_heap_on_oom" = var.dump_heap_on_oom
   }
   labels = {

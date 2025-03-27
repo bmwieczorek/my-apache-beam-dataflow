@@ -7,7 +7,7 @@ locals {
     enable_streaming_engine          = var.enable_streaming_engine
     dump_heap_on_oom                 = var.dump_heap_on_oom
   }
-  experiments_labels = { for s in var.experiments: "additional_experiments${index(var.experiments, s)}" => replace(s, "=", "--")}
+  experiments_labels = { for s in var.experiments: "additional_experiments${index(var.experiments, s)}" => replace(lower(s), "=", "--")}
   labels = merge(local.static_labels, local.experiments_labels)
 }
 
@@ -28,7 +28,7 @@ resource "google_dataflow_job" "job" {
   region                = var.region
   machine_type          = "t2d-standard-1"
   # machine_type          = "t2a-standard-1" // Error: googleapi: Error 400: (53b95b6524a15203): The workflow could not be created. Causes: (53b95b6524a154d8): The workflow could not be created because portable pipelines using Apache Beam 2.63.0 must use Dataflow Runner V2, but Dataflow Runner V2 is disabled by one or more of the following experiments [disable_runner_v2, disable_prime_runner_v2, disable_prime_streaming_engine]. To create the workflow, enable Dataflow Runner V2., badRequest
-  // enable_streaming_engine = true //  enable_streaming_engine not supported by google_dataflow_job streaming engine enables automatically autoscaling
+  enable_streaming_engine = var.enable_streaming_engine
   parameters = {
     output         = "gs://${var.bucket}/output"
     temp           = "gs://${var.bucket}/temp"
