@@ -103,6 +103,8 @@ java -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAI
 
 #  --workerLogLevelOverrides="{ \"org.apache.beam.sdk.util.WindowTracing\": \"DEBUG\" }" \
 
+#  --gcpTempLocation="gs://${BUCKET}/gcpTempLocation" \
+
 #  --workerDiskType="pd-standard" \
 #  --streaming=true \
 #  --profilingAgentConfiguration="{ \"APICurated\" : true }" \
