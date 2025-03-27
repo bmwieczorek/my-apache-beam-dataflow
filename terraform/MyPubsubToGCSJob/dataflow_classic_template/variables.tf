@@ -88,3 +88,8 @@ variable "dataflow_classic_template_enabled" {
   description = "If dataflow classic template enabled, otherwise flex template enabled"
   type        = bool
 }
+
+variable "poor_network_copy_dataflow_jar_via_gsutil" {
+  description = "In case of poor network, copy dataflow jar via gsutil"
+  type        = bool
+}

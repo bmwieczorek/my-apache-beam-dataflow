@@ -6,11 +6,24 @@ locals {
   subnetwork_name_last_element = split("/", var.subnetwork)[length(split("/", var.subnetwork)) - 1]
 }
 
+# good network - use terraform to copy dataflow jar
 resource "google_storage_bucket_object" "dataflow_jar" {
-  count  = var.dataflow_classic_template_enabled ? 1 : 0
-  name   = "compute/${local.dataflow_jar}"
-  source = var.dataflow_jar_local_path
-  bucket = var.bucket
+ count  = var.dataflow_classic_template_enabled && !var.poor_network_copy_dataflow_jar_via_gsutil ? 1 : 0
+ name   = "compute/${local.dataflow_jar}"
+ source = var.dataflow_jar_local_path
+ bucket = var.bucket
+}
+
+# poor network - copy dataflow jar to using gsutil
+resource "null_resource" "gsutil_upload_dataflow_jar" {
+  count = var.poor_network_copy_dataflow_jar_via_gsutil ? 1 : 0
+  triggers = {
+    always_run = formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())
+  }
+
+  provisioner "local-exec" {
+    command = "gsutil -o GSUtil:parallel_composite_upload_threshold=150M cp ${var.dataflow_jar_local_path} gs://${var.bucket}/compute/${local.dataflow_jar}"
+  }
 }
 
 resource "google_storage_bucket_object" "startup_script" {
@@ -38,13 +51,7 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
     "bucket" = var.bucket
     "instance" = local.instance
     "dataflow_jar" = local.dataflow_jar
-
-    # comment when poor network
-    "dataflow_jar_gcs_path" = "gs://${var.bucket}/${google_storage_bucket_object.dataflow_jar[0].name}"
-
-    # uncomment when poor network
-    # "dataflow_jar_gcs_path" = "gs://${var.bucket}/compute/${local.dataflow_jar}"
-
+    "dataflow_jar_gcs_path" = var.poor_network_copy_dataflow_jar_via_gsutil ? "gs://${var.bucket}/compute/${local.dataflow_jar}" : "gs://${var.bucket}/${google_storage_bucket_object.dataflow_jar[0].name}"
     "template_gcs_path" = local.template_gcs_path
     "dataflow_jar_main_class" = var.main_class
     "message_deduplication_enabled" = var.message_deduplication_enabled
@@ -105,4 +112,6 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
       gcloud compute instances describe --project ${var.project} --zone ${var.zone} ${local.instance} --format='value(metadata.startup-state)'
     EOT
   }
+
+  depends_on = [ null_resource.gsutil_upload_dataflow_jar, google_storage_bucket_object.dataflow_jar ]
 }

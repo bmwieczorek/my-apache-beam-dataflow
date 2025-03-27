@@ -58,6 +58,7 @@ module "dataflow_classic_template" {
   number_of_worker_harness_threads  = local.number_of_worker_harness_threads
   enable_streaming_engine           = local.enable_streaming_engine
   dump_heap_on_oom                  = local.dump_heap_on_oom
+  poor_network_copy_dataflow_jar_via_gsutil = false
 }
 
 module "dataflow_classic_template_job" {
