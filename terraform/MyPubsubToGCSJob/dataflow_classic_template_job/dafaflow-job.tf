@@ -37,6 +37,7 @@ resource "google_dataflow_job" "job" {
   //    saveHeapDumpsToGcsPath = var.save_heap_dumps_to_gcs_path            // Error: googleapi: Error 400: The workflow could not be created. Causes: Found unexpected parameters:
   //    numberOfWorkerHarnessThreads = var.number_of_worker_harness_threads // Error: syncing pod ... skipping: failed to "StartContainer" for "java-streaming" with CrashLoopBackOff
   //    profilingAgentConfiguration="{ \"APICurated\" : true }"             // Error: googleapi: Error 400: The workflow could not be created. Causes: Found unexpected parameters: ['profilingAgentConfiguration'
+   // windowSecs     = 120  // not used as pipeline graph allows only static primitives; windowsSec can only can be passed at pipeline template generation
   }
 
 //  additional_experiments = ["enable_stackdriver_agent_metrics","enable_google_cloud_profiler","enable_google_cloud_heap_sampling"]

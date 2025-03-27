@@ -95,6 +95,7 @@ java -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAI
   --numberOfWorkerHarnessThreads=${NUMBER_OF_WORKER_HARNESS_THREADS} \
   --numWorkers=1 \
   --diskSizeGb=200 \
+  --windowSecs=60 \
   --autoscalingAlgorithm=THROUGHPUT_BASED \
   --enableStreamingEngine=${ENABLE_STREAMING_ENGINE} \
   --templateLocation="${DATAFLOW_TEMPLATE_GCS_PATH}" 2>&1 | tee -a ${LOG}
@@ -105,6 +106,7 @@ java -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAI
 #  --streaming=true \
 #  --profilingAgentConfiguration="{ \"APICurated\" : true }" \
 
+#  static pipeline options only can be set in while template generation --windowSecs=60 IntervalWindow: [2025-03-25T17:12:00.000Z..2025-03-25T17:13:00.000Z); note: value set asa param in resource "google_dataflow_job" "job" is not used
 
 # add maxNumWorkers here to determine number of consumers for KafkaIO read
 #  --maxNumWorkers=2 \
