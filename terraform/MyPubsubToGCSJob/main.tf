@@ -8,12 +8,14 @@ locals {
   max_workers                     = 2
   number_of_worker_harness_threads = 0
 #   number_of_worker_harness_threads = 8
+  num_shards                      = 13
+  auto_sharding_enabled           = false
   enable_streaming_engine         = true
   dump_heap_on_oom                = true
   labels = {
     owner = var.owner
   }
-  experiments                     = ["enable_stackdriver_agent_metrics", "enable_google_cloud_profiler", "enable_google_cloud_heap_sampling", "enable_streaming_engine_resource_based_billing", "disable_runner_v2", "disableStringSetMetrics"]
+  experiments                     = ["enable_stackdriver_agent_metrics", "enable_google_cloud_profiler", "enable_google_cloud_heap_sampling",  "disable_runner_v2", "disableStringSetMetrics"]
   jar_version                     = element(regex("(\\d+(\\.\\d+){0,2}(-SNAPSHOT)?)", basename(tolist(fileset(path.module, "../../target/my-*.jar"))[0])),0)
   ts                              = formatdate("YYYY_MM_DD__hh_mm_ss", timestamp())
   job_name_suffix                 =  ""
@@ -46,6 +48,8 @@ module "dataflow_classic_template" {
   main_class                        = "com.bawi.beam.dataflow.MyPubsubToGCSJob"
   message_deduplication_enabled     = var.dataflow_message_deduplication_enabled
   custom_event_time_timestamp_attribute_enabled = var.dataflow_custom_event_time_timestamp_attribute_enabled
+  custom_event_time_timestamp_attribute = var.dataflow_custom_event_time_timestamp_attribute
+  auto_sharding_enabled             = local.auto_sharding_enabled
   job_base_name                     = local.job_base_name
   network                           = var.network
 //  network             = data.google_compute_network.network.self_link
@@ -73,6 +77,7 @@ module "dataflow_classic_template_job" {
   subnetwork                        = var.subnetwork == "default" ? null : var.subnetwork
   service_account                   = var.service_account
   template_gcs_path                 = var.recalculate_template ? module.dataflow_classic_template.template_gcs_path : "gs://${local.bucket}/templates/${local.job_base_name}-template"
+  num_shards                        = local.num_shards
   table_spec                        = "${google_bigquery_table.table.dataset_id}.${google_bigquery_table.table.table_id}"
   job_name                          = "${local.job_base_name}${local.job_name_suffix}"
   subscription                      = google_pubsub_subscription.my_subscription.id

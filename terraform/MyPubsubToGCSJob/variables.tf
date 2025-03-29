@@ -60,6 +60,11 @@ variable "dataflow_custom_event_time_timestamp_attribute_enabled" {
   type        = bool
 }
 
+variable "dataflow_custom_event_time_timestamp_attribute" {
+  description = "Custom attribute as timestamp attribute"
+  type        = string
+}
+
 variable "notification_email" {
   description = "Notification email"
   type        = string

@@ -79,6 +79,16 @@ variable "custom_event_time_timestamp_attribute_enabled" {
   type        = bool
 }
 
+variable "custom_event_time_timestamp_attribute" {
+  description = "Custom attribute as timestamp attribute used for reading"
+  type        = string
+}
+
+variable "auto_sharding_enabled" {
+  description = "If dataflow should use auto sharding for FileIO.write"
+  type        = bool
+}
+
 variable "owner" {
   description = "Google resource owner"
   type        = string

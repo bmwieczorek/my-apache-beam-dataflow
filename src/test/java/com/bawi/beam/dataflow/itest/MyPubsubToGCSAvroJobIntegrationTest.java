@@ -61,6 +61,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
     private final String vars = " -var=\"dataflow_classic_template_enabled=" + dataflow_classic_template_enabled + "\"" +
             " -var=\"dataflow_message_deduplication_enabled=" + dataflowDeduplicationEnabled + "\"" +
             " -var=\"dataflow_custom_event_time_timestamp_attribute_enabled=" + true + "\""+ // timestamp_attribute_enabled requires granting service account roles/pubsub.editor at project level
+            " -var=\"dataflow_custom_event_time_timestamp_attribute=" + EVENT_TIME_ATTRIBUTE + "\"" +
 //                " -var=\"dataflow_custom_event_time_timestamp_attribute_enabled=" + !isMessageEventTimeIncreasing + "\""+
             " -var=\"skip_wait_on_job_termination=" + skip_wait_on_job_termination + "\"" +
             " -var=\"recalculate_template=" + recalculate_template + "\"";
@@ -82,7 +83,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
     }
 
     @Test
-    public void testE2E() throws IOException, InterruptedException, ExecutionException {
+    public void testE2E() throws IOException, InterruptedException {
         Assert.assertNotNull("Expected Google Project ID to be set as env variable", get("GCP_PROJECT"));
         Assert.assertNotNull("Expected Google Project resource owner to be set as env variable", get("GCP_OWNER"));
         LOGGER.info("Read env variables: GCP_PROJECT={}, GCP_OWNER={}", get("GCP_PROJECT"), get("GCP_OWNER"));

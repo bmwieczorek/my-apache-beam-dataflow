@@ -12,10 +12,7 @@ import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.extensions.avro.coders.AvroGenericCoder;
 import org.apache.beam.sdk.extensions.avro.io.AvroIO;
 import org.apache.beam.sdk.io.Compression;
-import org.apache.beam.sdk.io.FileBasedSink;
 import org.apache.beam.sdk.io.FileIO;
-import org.apache.beam.sdk.io.fs.ResolveOptions;
-import org.apache.beam.sdk.io.fs.ResourceId;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubMessage;
 import org.apache.beam.sdk.metrics.Distribution;
@@ -29,6 +26,7 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.windowing.*;
 import org.apache.beam.sdk.values.KV;
+import org.apache.beam.sdk.values.PCollection;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
@@ -40,11 +38,8 @@ import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.NumberFormat;
-import java.util.List;
 import java.util.TreeMap;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static com.bawi.beam.dataflow.LogUtils.*;
 
@@ -79,7 +74,19 @@ public class MyPubsubToGCSJob {
         boolean getCustomEventTimeTimestampAttributeEnabled();
         void setCustomEventTimeTimestampAttributeEnabled(boolean value);
 
+        @Validation.Required
+        int getWindowSecs();
+        void setWindowSecs(int windowSecs);
 
+        String getTimestampAttribute();
+        void setTimestampAttribute(String timestampAttribute);
+
+        ValueProvider<Integer> getNumShards();
+        void setNumShards(ValueProvider<Integer> numShards);
+
+        @Validation.Required
+        boolean getAutoShardingEnabled();
+        void setAutoShardingEnabled(boolean autoShardingEnabled);
 
     // DataflowPipelineOptions
 //        String getTemplateLocation();
@@ -157,20 +164,21 @@ gcloud dataflow flex-template run $APP-$OWNER \
         }
 
         if (options.getCustomEventTimeTimestampAttributeEnabled()) {
-            LOGGER.info("Custom event time timestamp attribute enabled based on {}", EVENT_TIME_ATTRIBUTE);
-            read = read.withTimestampAttribute(EVENT_TIME_ATTRIBUTE);
+            LOGGER.info("Read with custom timestamp attribute enabled based on {}", options.getTimestampAttribute());
+            read = read.withTimestampAttribute(options.getTimestampAttribute());
         }
 
+//        when static primitive backed in pipeline template
 //        myMsgAttrName2idAttribute:/org.apache.beam.sdk.io.gcp.pubsub.PubsubIO$Read2
 //        beam:display_data:labelled:v1
 //        Timestamp Attribute et2timestampAttribute:/org.apache.beam.sdk.io.gcp.pubsub.PubsubIO$Read2
 //        beam:display_data:labelled:v1
 
-            readingPipeline
-                    .apply(read)
-                    .apply("AfterPubSub", ParDo.of(new MyBundleSizeInterceptor<>("AfterPubSub")))
-                    .apply(Window
-                            .<PubsubMessage>into(FixedWindows.of(Duration.standardSeconds(60)))
+        PCollection<KV<String, GenericRecord>> transformedKV = readingPipeline
+                .apply(read)
+                .apply("AfterPubSub", ParDo.of(new MyBundleSizeInterceptor<>("AfterPubSub")))
+                .apply(Window
+                            .<PubsubMessage>into(FixedWindows.of(Duration.standardSeconds(options.getWindowSecs())))
 
 //                            .triggering(Repeatedly.forever(
 //                                    AfterFirst.of(
@@ -223,16 +231,23 @@ gcloud dataflow flex-template run $APP-$OWNER \
 */
                     .apply(ParDo.of(new ToTimestampedPathKV(options.getOutput())))
                     .setCoder(KvCoder.of(StringUtf8Coder.of(), AvroGenericCoder.of(SCHEMA)))
-                    .apply(ParDo.of(new MyBundleSizeInterceptor<>("ToTimestampedPathKV")))
+                    .apply(ParDo.of(new MyBundleSizeInterceptor<>("ToTimestampedPathKV")));
 
-                    .apply(FileIO.<String, KV<String, GenericRecord>>writeDynamic()
-                                    .by(KV::getKey)
-                                    .via(Contextful.fn(KV::getValue), AvroIO.<GenericRecord>sink(SCHEMA).withCodec(CodecFactory.fromString("snappy")))
-                                    .withDestinationCoder(StringUtf8Coder.of())
-                                    .withNaming(path -> new CustomWriteFileNaming(path, "snappy", "avro"))
-                                    .to(output)
-                                    .withTempDirectory(temp)
-                                    .withNumShards(0));
+        FileIO.Write<String, KV<String, GenericRecord>> fileIOWrite = FileIO.<String, KV<String, GenericRecord>>writeDynamic()
+                .by(KV::getKey)
+                .via(Contextful.fn(KV::getValue), AvroIO.<GenericRecord>sink(SCHEMA).withCodec(CodecFactory.fromString("snappy")))
+                .withDestinationCoder(StringUtf8Coder.of())
+                .withNaming(path -> new CustomWriteFileNaming(path, "snappy", "avro"))
+                .to(output)
+                .withTempDirectory(temp);
+
+        LOGGER.info("autoShardingEnabled: {}", options.getAutoShardingEnabled());
+        FileIO.Write<String, KV<String, GenericRecord>> fileIOWriteSharded = options.getAutoShardingEnabled() ?
+                fileIOWrite.withAutoSharding() :
+//                fileIOWrite.withNumShards(0);
+                fileIOWrite.withNumShards(options.getNumShards());
+
+        transformedKV.apply(fileIOWriteSharded);
 
 /*
 
@@ -375,15 +390,19 @@ gcloud dataflow flex-template run $APP-$OWNER \
         public String getFilename(BoundedWindow window, PaneInfo pane, int numShards, int shardIndex, Compression compression) {
             String normalizedWindow = WindowUtils.windowToNormalizedString(window);
             Instant now = Instant.now();
-//            String path = String.format("%s/%s-w-%s-p-%s-%s-s-%s-of-%s-t-%s-i-%s_%s-%s_%s.%s",
-//                    parentAndFormattedDateTimePath,
-//                    FORMATTER_MIN_SECS.print(now), normalizedWindow, pane.getIndex(), pane.getTiming(), shardIndex, numShards, getLocalHostAddressSpaced(), currentThread().getId(),
-//                    replace(now), UUID.randomUUID(),
-//                    this.compression, this.format);
-
-            String path = String.format("%s/p-%s-%s-w-%s-s-%s-of-%s-t-%s-i-%s_%s-%s_%s.%s",
+            String path = String.format("%s" +
+                            "/p-%s-%s-w-%s" +
+                            "-s-%s-of-%s" +
+                            "-t-%s" +
+                            "-i-%s" +
+                            "-m_%s" +
+                            "-u-%s" +
+                            "_%s.%s",
                     parentAndFormattedDateTimePath,
-                    pane.getIndex(), pane.getTiming(), normalizedWindow, shardIndex, numShards, getLocalHostAddressSpaced(), Thread.currentThread().getId(),
+                    pane.getIndex(), pane.getTiming(), normalizedWindow,
+                    shardIndex, numShards,
+                    Thread.currentThread().getId(),
+                    getLocalHostAddressSpaced(),
                     FORMATTER_MIN_SECS.print(now), UUID.randomUUID(),
                     this.compression, this.format);
 

@@ -49,6 +49,11 @@ variable "max_workers" {
   type        = number
 }
 
+variable "num_shards" {
+  description = "Number of shards for the Dataflow job FileIO.write"
+  type        = number
+}
+
 variable "template_gcs_path" {
   description = "Google dataflow template gcs path"
   type        = string

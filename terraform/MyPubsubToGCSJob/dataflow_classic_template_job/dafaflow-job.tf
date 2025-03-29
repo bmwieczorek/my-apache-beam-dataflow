@@ -32,6 +32,7 @@ resource "google_dataflow_job" "job" {
   parameters = {
     output         = "gs://${var.bucket}/output"
     temp           = "gs://${var.bucket}/temp"
+    numShards      = var.num_shards
     tableSpec      = var.table_spec
     subscription   = var.subscription
   //    dumpHeapOnOOM = var.dump_heap_on_oom                                // Error: googleapi: Error 400: The workflow could not be created. Causes: Found unexpected parameters: ['dumpHeapOnOOM'
