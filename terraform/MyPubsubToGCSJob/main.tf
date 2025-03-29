@@ -8,7 +8,7 @@ locals {
   max_workers                     = 2
   number_of_worker_harness_threads = 0
 #   number_of_worker_harness_threads = 8
-  num_shards                      = 13
+  num_shards                      = 8
   auto_sharding_enabled           = false
   enable_streaming_engine         = true
   dump_heap_on_oom                = true
