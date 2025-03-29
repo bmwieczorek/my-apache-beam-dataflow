@@ -15,7 +15,7 @@ locals {
   labels = {
     owner = var.owner
   }
-  experiments                     = ["enable_stackdriver_agent_metrics", "enable_google_cloud_profiler", "enable_google_cloud_heap_sampling",  "disable_runner_v2", "disableStringSetMetrics"]
+  experiments                     = ["enable_stackdriver_agent_metrics", "enable_google_cloud_profiler", "enable_google_cloud_heap_sampling", "enable_streaming_engine_resource_based_billing", "disable_runner_v2", "disableStringSetMetrics"]
   jar_version                     = element(regex("(\\d+(\\.\\d+){0,2}(-SNAPSHOT)?)", basename(tolist(fileset(path.module, "../../target/my-*.jar"))[0])),0)
   ts                              = formatdate("YYYY_MM_DD__hh_mm_ss", timestamp())
   job_name_suffix                 =  ""
