@@ -1,5 +1,6 @@
 package com.bawi.beam.dataflow;
 
+import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.metrics.MetricResults;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +18,10 @@ public class PipelineUtils {
     public static final String OWNER = ofNullable(System.getenv("GCP_OWNER")).orElse((System.getenv("user")));
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PipelineUtils.class);
+
+    public static String getJobNameWithOwner(Class<?> clazz) {
+        return OWNER + "-" + clazz.getSimpleName().toLowerCase();
+    }
 
     public static String[] updateArgs(String[] args, String... additionalArgs) {
         Set<String> merged = new LinkedHashSet<>();
@@ -92,6 +97,14 @@ public class PipelineUtils {
         } catch (UnknownHostException e) {
             LOGGER.error("Unable to get local host name", e);
             return null;
+        }
+    }
+
+    public static void logMetrics(PipelineResult result) {
+        if (result.getClass().getSimpleName().equals("DataflowPipelineJob") || result.getClass().getSimpleName().equals("DirectPipelineResult")) {
+            result.waitUntilFinish();
+            LOGGER.info("counters={}", getCounters(result.metrics()));
+            LOGGER.info("distributions={}", getDistributions(result.metrics()));
         }
     }
 
