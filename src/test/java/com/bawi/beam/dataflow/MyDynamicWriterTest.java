@@ -6,10 +6,10 @@ import org.apache.avro.file.CodecFactory;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.coders.AvroCoder;
+import org.apache.beam.sdk.extensions.avro.coders.AvroCoder;
 import org.apache.beam.sdk.coders.KvCoder;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
-import org.apache.beam.sdk.io.AvroIO;
+import org.apache.beam.sdk.extensions.avro.io.AvroIO;
 import org.apache.beam.sdk.io.Compression;
 import org.apache.beam.sdk.io.FileIO;
 import org.apache.beam.sdk.transforms.Contextful;
@@ -36,7 +36,7 @@ public class MyDynamicWriterTest {
             .endRecord();
 
     static class MyFileNaming implements FileIO.Write.FileNaming {
-        private String path;
+        private final String path;
 
         public MyFileNaming(String path) {
             this.path = path;
