@@ -6,9 +6,9 @@ import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.coders.AvroGenericCoder;
 import org.apache.beam.sdk.coders.ListCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
+import org.apache.beam.sdk.extensions.avro.coders.AvroGenericCoder;
 import org.apache.beam.sdk.io.gcp.bigquery.AvroWriteRequest;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.options.*;
@@ -22,7 +22,6 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -183,9 +182,7 @@ java -agentpath:/opt/cprof/profiler_java_agent.so=-cprof_service=myoomjob,-cprof
 //    }
 
     private static String format(long value) {
-        NumberFormat numberFormat = NumberFormat.getInstance();
-        numberFormat.setGroupingUsed(true);
-        return numberFormat.format(value);
+        return LogUtils.format(value);
     }
 
     private static int createBigArrayList(int limit) {
