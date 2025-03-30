@@ -9,29 +9,41 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <beam.version>2.48.0</beam.version> <!-- profiling since 2.33 with service account with roles/cloudprofiler.agent -->
-        <slf4j.version>1.7.36</slf4j.version>
+        <!-- versions not actively developed like slf4j and junit upgraded to newest -->
+        <!-- versions highly vulnerable like hadoop-common upgrade to latest compatible passing dataflow e2e tests -->
+        <!-- versions transitively downgraded by non beam dependencies like commons-codec upgrade to newer version recommend by beam -->
+        <!-- versions not directly specified by beam like google-cloud-bigquery upgrade to version specified in beam's com.google.cloud/libraries-bom -->
+
+        <!-- https://github.com/apache/beam/blob/release-2.63.0/buildSrc/src/main/groovy/org/apache/beam/gradle/BeamModulePlugin.groovy -->
+<!--        mvn dependency:tree -Dverbose-->
+        <!--         google_cloud_platform_libraries_bom         : "com.google.cloud:libraries-bom:26.45.0" -->
+        <!--         https://mvnrepository.com/artifact/com.google.cloud/libraries-bom/26.45.0 -->
+        <beam.version>2.63.0</beam.version> <!-- profiling since 2.33 with service account with roles/cloudprofiler.agent -->
+        <slf4j.version>1.7.36</slf4j.version> <!-- newest version 1.7.36 -->
         <kafka.version>1.1.1</kafka.version>
         <auto-service-annotations.version>1.0.1</auto-service-annotations.version>
-        <log4j-api.version>2.19.0</log4j-api.version>
+        <log4j-api.version>2.20.0</log4j-api.version>
 
         <flume.version>1.9.0</flume.version>
-        <avro.version>1.7.5</avro.version> <!-- org.apache.avro.SchemaBuilder available since 1.7.5 -->
-        <hadoop.version>2.10.2</hadoop.version> <!-- https://github.com/apache/beam/blob/release-2.43.0/buildSrc/src/main/groovy/org/apache/beam/gradle/BeamModulePlugin.groovy -->
+        <avro.version>1.11.4</avro.version> <!-- org.apache.avro.SchemaBuilder available since 1.7.5 -->
+        <parquet.version>1.14.2</parquet.version>
+        <hadoop.version>3.4.1</hadoop.version> <!-- newest without security issue, beam uses old vulnerable 2.10.2 -->
 
-        <!-- upgrade commons-codec to fix missing class org.apache.commons.codec.net.PercentCodec -->
-        <commons-codec.version>1.15</commons-codec.version>
+        <!-- upgrade to >= 1.15 commons-codec to fix missing class org.apache.commons.codec.net.PercentCodec -->
+        <commons-codec.version>1.17.1</commons-codec.version> <!-- explicitly upgrade to 1.17.0 used by beam-->
 
         <!-- testing -->
-        <junit.version>4.13.2</junit.version>
-        <google-cloud-bigquery.version>2.19.1</google-cloud-bigquery.version>
+        <junit.version>4.13.2</junit.version> <!-- newest version 4.13.2 -->
+        <hamcrest.version>2.2</hamcrest.version> <!-- newest version 2.2 -->
+        <google-cloud-bigquery.version>2.46.0</google-cloud-bigquery.version> <!-- beam sets it via https://mvnrepository.com/artifact/com.google.cloud/libraries-bom/26.53.0 -->
+        <google-cloud-storage.version>2.47.0</google-cloud-storage.version> <!-- https://mvnrepository.com/artifact/com.google.cloud/libraries-bom/26.53.0 -> https://mvnrepository.com/artifact/com.google.cloud/google-cloud-storage-bom/2.38.0 -->
 
-        <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
-        <maven-exec-plugin.version>3.1.0</maven-exec-plugin.version>
-        <maven-shade-plugin.version>3.4.1</maven-shade-plugin.version>
-        <maven-surefire-plugin.version>3.1.0</maven-surefire-plugin.version>
-        <jib-maven-plugin.version>3.3.2</jib-maven-plugin.version>
-        <maven-enforcer-plugin.version>3.3.0</maven-enforcer-plugin.version>
+        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+        <maven-exec-plugin.version>3.5.0</maven-exec-plugin.version>
+        <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
+        <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
+        <jib-maven-plugin.version>3.4.4</jib-maven-plugin.version>
+        <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
     </properties>
 
     <build>
@@ -41,11 +53,12 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <source>11</source>
-                    <target>11</target>
+                    <source>17</source>
+                    <target>17</target>
 
                     <!-- show compilation error when mvn compile -->
-                    <forceJavacCompilerUse>true</forceJavacCompilerUse>
+<!--                    <forceJavacCompilerUse>true</forceJavacCompilerUse>-->
+                    <forceLegacyJavacApi>true</forceLegacyJavacApi>
 
                     <!-- used for @AutoService(JvmInitializer.class) -->
                     <annotationProcessorPaths>
@@ -83,7 +96,6 @@
             </plugin>
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>${maven-surefire-plugin.version}</version>
                 <configuration>
                     <excludes>
                         <exclude>**/*IntegrationTest</exclude>
@@ -106,12 +118,9 @@
         <pluginManagement>
             <plugins>
                 <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>exec-maven-plugin</artifactId>
-                    <version>${maven-exec-plugin.version}</version>
-                    <configuration>
-                        <cleanupDaemonThreads>false</cleanupDaemonThreads>
-                    </configuration>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven-surefire-plugin.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -142,6 +151,17 @@
             <artifactId>beam-sdks-java-io-google-cloud-platform</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.apache.beam</groupId>
+            <artifactId>beam-sdks-java-io-jdbc</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.2</version>
+        </dependency>
+
         <!-- required for org.apache.beam.sdk.io.gcp.pubsub class KafkaIO -->
         <dependency>
             <groupId>org.apache.beam</groupId>
@@ -165,10 +185,10 @@
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
             <version>${hadoop.version}</version>
-            <scope>runtime</scope>
+<!--            <scope>runtime</scope>-->
         </dependency>
 
-        <!-- required for ParquetIO.read requiring runtime org.apache.hadoop.mapreduce.lib.input.FileInputFormat -->
+        <!-- required for ParquetIO.read/write requiring runtime org.apache.hadoop.mapreduce.lib.input.FileInputFormat -->
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-mapreduce-client-core</artifactId>
@@ -209,11 +229,11 @@
             <artifactId>google-cloud-secretmanager</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>com.google.api.grpc</groupId>
-            <artifactId>proto-google-cloud-storage-v2</artifactId>
-            <version>2.15.1-alpha</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.google.api.grpc</groupId>-->
+<!--            <artifactId>proto-google-cloud-storage-v2</artifactId>-->
+<!--            <version>2.15.1-alpha</version>-->
+<!--        </dependency>-->
 
         <dependency>
             <groupId>com.bawi</groupId>
@@ -225,6 +245,24 @@
                     <artifactId>log4j-slf4j-impl</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.parquet</groupId>
+            <artifactId>parquet-avro</artifactId>
+            <version>${parquet.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.parquet</groupId>
+            <artifactId>parquet-hadoop</artifactId>
+            <version>${parquet.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.parquet</groupId>
+            <artifactId>parquet-common</artifactId>
+            <version>${parquet.version}</version>
         </dependency>
 
         <!-- testing -->
@@ -241,12 +279,19 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>com.google.cloud</groupId>
-            <artifactId>google-cloud-storage</artifactId>
-            <scope>test</scope>
-            <version>2.20.2</version> <!-- hardcode version compatible with storage.list(gcsBucket) instead of version from bom -->
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.google.cloud</groupId>-->
+<!--            <artifactId>google-cloud-storage</artifactId>-->
+<!--            <version>${google-cloud-storage.version}</version>-->
+<!--            &lt;!&ndash; <version>2.20.2</version>  &ndash;&gt; &lt;!&ndash; hardcode version compatible with storage.list(gcsBucket) instead of version from bom &ndash;&gt;-->
+<!--            <scope>test</scope>-->
+<!--            <exclusions>-->
+<!--                <exclusion>-->
+<!--                    <groupId>com.google.apis</groupId>-->
+<!--                    <artifactId>google-api-services-storage</artifactId>-->
+<!--                </exclusion>-->
+<!--            </exclusions>-->
+<!--        </dependency>-->
 
         <dependency>
             <groupId>com.google.cloud</groupId>
@@ -257,8 +302,8 @@
         <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest</artifactId>
-            <version>2.2</version>
-            <scope>test</scope>
+            <version>${hamcrest.version}</version>
+<!--            <scope>test</scope>--> <!-- required by beam to build a template -->
         </dependency>
 
     </dependencies>
@@ -275,7 +320,8 @@
                 <dependency>
                     <groupId>org.apache.beam</groupId>
                     <artifactId>beam-runners-google-cloud-dataflow-java</artifactId>
-                    <scope>runtime</scope>
+                    <!-- temporarily changed to compile to allow logging pipeline options -->
+<!--                    <scope>runtime</scope>-->
                 </dependency>
             </dependencies>
         </profile>
@@ -362,7 +408,6 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-enforcer-plugin</artifactId>
-                        <version>${maven-enforcer-plugin.version}</version>
                         <executions>
                             <execution>
                                 <id>enforce-property</id>
@@ -386,7 +431,6 @@
                     <plugin>
                         <groupId>com.google.cloud.tools</groupId>
                         <artifactId>jib-maven-plugin</artifactId>
-                        <version>${jib-maven-plugin.version}</version>
                         <configuration>
                             <from>
                                 <image>gcr.io/dataflow-templates-base/java11-template-launcher-base:latest</image>
@@ -440,7 +484,6 @@
                 <plugins>
                     <plugin>
                         <artifactId>maven-surefire-plugin</artifactId>
-                        <version>${maven-surefire-plugin.version}</version>
                         <executions>
                             <execution>
                                 <phase>integration-test</phase>
@@ -490,6 +533,30 @@
                 <groupId>com.google.auto.service</groupId>
                 <artifactId>auto-service-annotations</artifactId>
                 <version>${auto-service-annotations.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.parquet</groupId>
+                <artifactId>parquet-avro</artifactId>
+                <version>${parquet.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.parquet</groupId>
+                <artifactId>parquet-hadoop</artifactId>
+                <version>${parquet.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.parquet</groupId>
+                <artifactId>parquet-common</artifactId>
+                <version>${parquet.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.parquet</groupId>
+                <artifactId>parquet-column</artifactId>
+                <version>${parquet.version}</version>
             </dependency>
 
             <!-- explicitly upgrade commons-codec to fix missing class org.apache.commons.codec.net.PercentCodec -->
