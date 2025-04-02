@@ -43,7 +43,8 @@ public class JsonDataTypeBQTableRowWriteTest implements Serializable {
                 }
             }))
             .apply(BigQueryIO.writeTableRows()
-                    .to("project:dataset.table")
+                    //.to("project:dataset.table")
+                    .to(System.getenv("GCP_PROJECT") + ":" + System.getenv("GCP_OWNER") + "_person.my_json_table7")
                     .withJsonSchema(
                             """
                             {

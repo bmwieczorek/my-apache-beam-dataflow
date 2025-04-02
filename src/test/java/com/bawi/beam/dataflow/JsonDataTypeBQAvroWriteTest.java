@@ -60,7 +60,8 @@ public class JsonDataTypeBQAvroWriteTest implements Serializable {
             .apply(BigQueryIO.<GenericRecord>write()
                     .withAvroFormatFunction(AvroWriteRequest::getElement)
                     .withAvroSchemaFactory(qTableSchema -> AVRO_SCHEMA)
-                    .to("project:dataset.table")
+                    //.to("project:dataset.table")
+                    .to(System.getenv("GCP_PROJECT") + ":" + System.getenv("GCP_OWNER") + "_person.my_json_table")
                     .withJsonSchema(
                             """
                             {

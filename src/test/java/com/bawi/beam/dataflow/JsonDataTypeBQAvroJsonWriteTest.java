@@ -33,7 +33,7 @@ public class JsonDataTypeBQAvroJsonWriteTest implements Serializable {
         String owner = System.getenv("GCP_OWNER");
         String dataset = owner + "_" + "dataset";
         String table = "my_json_table";
-        String gcsTempLocation = "gs://" + project + "_" + owner + "/temp";
+        String gcsTempLocation = "gs://" + project + "-" + owner + "/temp";
 
         // writing
         writingPipeline
