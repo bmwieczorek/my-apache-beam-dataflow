@@ -99,7 +99,9 @@ public class AvroToBigQuerySchemaConverter {
             case LONG:
                 return LogicalTypes.timestampMillis().equals(logicalType) || LogicalTypes.timestampMicros().equals(logicalType) ?
                         "TIMESTAMP" :
-                        LogicalTypes.timeMicros().equals(logicalType) || LogicalTypes.timeMillis().equals(logicalType) ?
+                        LogicalTypes.localTimestampMillis().equals(logicalType) || LogicalTypes.localTimestampMicros().equals(logicalType) ?
+                            "DATETIME" :
+                            LogicalTypes.timeMicros().equals(logicalType) || LogicalTypes.timeMillis().equals(logicalType) ?
                                 "TIME" :
                                 "INTEGER";
             case BOOLEAN:
@@ -123,9 +125,11 @@ public class AvroToBigQuerySchemaConverter {
 //                case RECORD -> "RECORD";
 //                case INT -> LogicalTypes.date().equals(logicalType)
 //                        ? "DATE" : "INTEGER";
-//                case LONG -> LogicalTypes.timestampMillis().equals(logicalType) || LogicalTypes.timestampMicros()
-//                        .equals(logicalType)
-//                        ? "TIMESTAMP" : "INTEGER";
+//                case LONG -> LogicalTypes.timestampMillis().equals(logicalType) || LogicalTypes.timestampMicros().equals(logicalType) ?
+//                                 "TIMESTAMP" :
+//                                 LogicalTypes.localTimestampMillis().equals(logicalType) || LogicalTypes.localTimestampMicros().equals(logicalType) ?
+//                                     "DATETIME" :
+//                                     "INTEGER";
 //                case BOOLEAN -> "BOOLEAN";
 //                case FLOAT, DOUBLE -> "FLOAT";
 //                case BYTES -> logicalType instanceof LogicalTypes.Decimal ? "NUMERIC" : "BYTES";
