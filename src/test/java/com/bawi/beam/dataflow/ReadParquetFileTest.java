@@ -16,7 +16,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.parquet.avro.AvroParquetWriter;
 import org.apache.parquet.hadoop.ParquetWriter;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
-import org.apache.parquet.hadoop.util.HadoopOutputFile;
+import org.apache.parquet.io.LocalOutputFile;
 import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -28,7 +28,12 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Paths;
 import java.sql.Date;
 import java.util.Arrays;
 import java.util.List;
@@ -39,19 +44,28 @@ public class ReadParquetFileTest implements Serializable {
     public final transient TestPipeline pipeline = TestPipeline.create();
 
     @Test
-    public void test() throws IOException {
+    public void test() throws IOException, URISyntaxException {
+        // for Windows only - avoid warning: org.apache.hadoop.util.Shell:746 - Did not find winutils.exe, java.io.FileNotFoundException: HADOOP_HOME and hadoop.home.dir are unset
+        System.setProperty("hadoop.home.dir", Paths.get("src/test/resources/hadoop-3.0.0").toFile().getAbsolutePath());
+
         // given - generate parquet file
         LOGGER.info(INTPUT_SCHEMA.toString(true));
         GenericData.Record record = createGenericRecord(INTPUT_SCHEMA);
 
-        Path path = new Path("target/myNestedRecord.parquet");
+        String fileRelativePath = "target/myNestedRecord.parquet";
+        Path path = new Path(fileRelativePath);
         File file = new File(path.toUri().getPath());
         deleteIfPresent(file);
 
         Configuration conf = new Configuration();
         conf.setBoolean("parquet.avro.write-old-list-structure", false); // used for record.put("myRequiredArrayNullableInts", Arrays.asList(1, null, 3));
+
+        FileSystem fs = FileSystems.getFileSystem(new URI("file", null, "/", null, null));
+        java.nio.file.Path nioOutputPath = fs.getPath(fileRelativePath);
+        LocalOutputFile outputFile = new LocalOutputFile(nioOutputPath);
+
         try (ParquetWriter<GenericData.Record> writer =
-             AvroParquetWriter.<GenericData.Record>builder(HadoopOutputFile.fromPath(path, new Configuration(conf)))
+             AvroParquetWriter.<GenericData.Record>builder(outputFile)
                      .withSchema(INTPUT_SCHEMA)
                      .withConf(conf)
                      .withCompressionCodec(CompressionCodecName.SNAPPY)
@@ -76,7 +90,7 @@ public class ReadParquetFileTest implements Serializable {
                         return value;
                     }
                 })
-                .from("target/myNestedRecord.parquet")
+                .from(fileRelativePath)
         );
 
 //        pCollection.apply("MyConsoleIO1", MyConsoleIO.write());
