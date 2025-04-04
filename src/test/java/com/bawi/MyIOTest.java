@@ -14,12 +14,19 @@ public class MyIOTest {
 
     @Test
     public void test() throws IOException {
+        // given
         LOGGER.info("my.system.property={}", System.getProperty("my.system.property"));
         LOGGER.info("my.env.variable={}", System.getenv("my.env.variable"));
         String text = "Hello World";
         String fileRelativePath = "target/myFile.txt";
-        Files.write(Path.of(fileRelativePath), text.getBytes());
-        String actual = new String(Files.readAllBytes(Path.of(fileRelativePath)));
+
+        // when
+        Path path = Path.of(fileRelativePath);
+        Files.write(path, text.getBytes());
+        String actual = new String(Files.readAllBytes(path));
+
+        // then
+        LOGGER.info("text={}", actual);
         Assert.assertEquals(text, actual);
     }
 }
