@@ -451,9 +451,23 @@ public class MyBQReadWriteJob {
 
             record.put("myRequiredSubRecord", myRequiredSubRecord.toGenericRecord());
 
+//            if (myOptionalArraySubRecords != null) {
+//                List<GenericRecord> genericRecords = new ArrayList<>();
+//                for (MyOptionalArraySubRecord myOptionalArraySubRecord : myOptionalArraySubRecords) {
+//                    genericRecords.add(myOptionalArraySubRecord.toGenericRecord());
+//                }
+//
+//                Schema myOptionalArraySubRecordsSchema = unwrapUnion(SCHEMA.getField("myOptionalArraySubRecords").schema());
+//                GenericData.Array<GenericRecord> myOptionalArraySubRecords = new GenericData.Array<>(myOptionalArraySubRecordsSchema, genericRecords);
+//
+//                record.put("myOptionalArraySubRecords", myOptionalArraySubRecords);
+//            }
+
             List<GenericRecord> genericRecords = new ArrayList<>();
-            for (MyOptionalArraySubRecord myOptionalArraySubRecord : myOptionalArraySubRecords) {
-                genericRecords.add(myOptionalArraySubRecord.toGenericRecord());
+            if (myOptionalArraySubRecords != null) {
+                for (MyOptionalArraySubRecord myOptionalArraySubRecord : myOptionalArraySubRecords) {
+                    genericRecords.add(myOptionalArraySubRecord.toGenericRecord());
+                }
             }
 
             Schema myOptionalArraySubRecordsSchema = unwrapUnion(SCHEMA.getField("myOptionalArraySubRecords").schema());
@@ -476,25 +490,28 @@ public class MyBQReadWriteJob {
             MySubscription mySubscription = new MySubscription();
             mySubscription.id = asString(genericRecord.get("id"));
             mySubscription.creationTimestamp = (Long) genericRecord.get("creation_timestamp");
+            LOGGER.info("MySubscription.fromGenericRecord creationTimestamp={}", mySubscription.creationTimestamp); // 1614769871000000
+
             mySubscription.expirationDate = (Integer) genericRecord.get("expiration_date");
+            LOGGER.info("MySubscription.fromGenericRecord expirationDate={}", mySubscription.expirationDate); // 18689
 
             long myTimeMicros = (Long) genericRecord.get("my_time");
-            LOGGER.info("MySubscription.fromGenericRecord myTimeMicros={}", myTimeMicros);
+            LOGGER.info("MySubscription.fromGenericRecord myTimeMicros={}", myTimeMicros); // myTimeMicros=43932123000
             String formatedTime = LocalTime.ofNanoOfDay(myTimeMicros * 1000).format(TIME_FORMATTER);
-            LOGGER.info("MySubscription.fromGenericRecord formatedTime={}", formatedTime);
+            LOGGER.info("MySubscription.fromGenericRecord formatedTime={}", formatedTime); // formatedTime=12:12:12.123000
             LocalTime parsedLocalTime = LocalTime.parse(formatedTime);
-            LOGGER.info("MySubscription.fromGenericRecord parsedLocalTime={}", parsedLocalTime);
+            LOGGER.info("MySubscription.fromGenericRecord parsedLocalTime={}", parsedLocalTime); // parsedLocalTime=12:12:12.123
             mySubscription.myTime = parsedLocalTime;
 
-            String myDatetime = asString(genericRecord.get("my_datetime")); // Dataflow drops millis and micros when returning string
-            LOGGER.info("MySubscription.fromGenericRecord myDatetime={}", myDatetime);
+            String myDatetime = asString(genericRecord.get("my_datetime"));
+            LOGGER.info("MySubscription.fromGenericRecord myDatetime={}", myDatetime); // myDatetime=2021-03-03T12:12:12.123
             LocalDateTime parsedMyDatetime = LocalDateTime.parse(myDatetime, DATETIME_FORMATTER); // or use parsing from org.apache.beam.sdk.io.gcp.bigquery.BigQueryAvroUtils
-            LOGGER.info("MySubscription.fromGenericRecord parsedMyDatetime={}", parsedMyDatetime);
+            LOGGER.info("MySubscription.fromGenericRecord parsedMyDatetime={}", parsedMyDatetime); // parsedMyDatetime=2021-03-03T12:12:12.123
             mySubscription.myDateTime = parsedMyDatetime;
 
             BigDecimal myNumeric = getBigDecimal(genericRecord, "my_numeric");
             mySubscription.myNumeric = myNumeric;
-            LOGGER.info("MySubscription.fromGenericRecord myNumeric={}", myNumeric);
+            LOGGER.info("MySubscription.fromGenericRecord myNumeric={}", myNumeric); // myNumeric=0.123456789
 
             @SuppressWarnings("unchecked")
             List<Long> numbers = (List<Long>) genericRecord.get("numbers");
@@ -503,11 +520,23 @@ public class MyBQReadWriteJob {
             GenericData.Record myRequiredSubRecord = (GenericData.Record) genericRecord.get("myRequiredSubRecord");
             mySubscription.myRequiredSubRecord = MyRequiredSubRecord.fromGenericRecord(myRequiredSubRecord);
 
+//            @SuppressWarnings("unchecked")
+//            GenericData.Array<GenericRecord> myOptionalArraySubGenericRecords = (GenericData.Array<GenericRecord>) genericRecord.get("myOptionalArraySubRecords");
+//            if (myOptionalArraySubGenericRecords != null) {
+//                List<MyOptionalArraySubRecord> myOptionalArraySubRecords = new ArrayList<>();
+//                for (GenericRecord myOptionalArraySubGenericRecord : myOptionalArraySubGenericRecords) {
+//                    myOptionalArraySubRecords.add(MyOptionalArraySubRecord.fromGenericRecord(myOptionalArraySubGenericRecord));
+//                }
+//                mySubscription.myOptionalArraySubRecords = myOptionalArraySubRecords;
+//            }
+
             List<MyOptionalArraySubRecord> myOptionalArraySubRecords = new ArrayList<>();
             @SuppressWarnings("unchecked")
             GenericData.Array<GenericRecord> myOptionalArraySubGenericRecords = (GenericData.Array<GenericRecord>) genericRecord.get("myOptionalArraySubRecords");
-            for (GenericRecord myOptionalArraySubGenericRecord : myOptionalArraySubGenericRecords) {
-                myOptionalArraySubRecords.add(MyOptionalArraySubRecord.fromGenericRecord(myOptionalArraySubGenericRecord));
+            if (myOptionalArraySubGenericRecords != null) {
+                for (GenericRecord myOptionalArraySubGenericRecord : myOptionalArraySubGenericRecords) {
+                    myOptionalArraySubRecords.add(MyOptionalArraySubRecord.fromGenericRecord(myOptionalArraySubGenericRecord));
+                }
             }
             mySubscription.myOptionalArraySubRecords = myOptionalArraySubRecords;
 
@@ -515,7 +544,7 @@ public class MyBQReadWriteJob {
             return mySubscription;
         }
 
-        private static BigDecimal getBigDecimal(GenericRecord genericRecord, @SuppressWarnings("SameParameterValue") String fieldName) {
+        public static BigDecimal getBigDecimal(GenericRecord genericRecord, @SuppressWarnings("SameParameterValue") String fieldName) {
             Schema myNumericSchema = genericRecord.getSchema().getField(fieldName).schema();
             LogicalTypes.Decimal myNumericSchemaLogicalType = (LogicalTypes.Decimal) unwrapUnion(myNumericSchema).getLogicalType();
             int scale = myNumericSchemaLogicalType.getScale();
