@@ -76,7 +76,8 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
 
     @After
     public void cleanUpAfter() throws IOException, InterruptedException {
-        Process process = runBashProcess("terraform init && terraform destroy -auto-approve -target=module.dataflow_classic_template_job " + vars);
+        // Process process = runBashProcess("terraform init && terraform destroy -auto-approve -target=module.dataflow_classic_template_job " + vars);
+        Process process = runBashProcess("terraform init && terraform destroy -auto-approve " + vars);
         logProcess(process);
         int statusCode = process.waitFor();
         Assert.assertEquals("init and destroy process should exit terraform with 0 statusCode code", 0, statusCode);
