@@ -70,6 +70,8 @@ public class MyBQReadWriteJobIntegrationTest {
     @Before
     @After
     public void cleanUp() throws IOException, InterruptedException {
+        runMvnAsBashProcess("env");
+        // System.exit(1);
         Process destroyProcess = runTerraformInfrastructureSetupAsBashProcess("terraform init && terraform destroy -auto-approve");
         logProcess(destroyProcess);
         int destroyStatus = destroyProcess.waitFor();
@@ -80,7 +82,7 @@ public class MyBQReadWriteJobIntegrationTest {
     private Process runMvnAsBashProcess(String cmd) throws IOException {
         ProcessBuilder processBuilder = new ProcessBuilder();
         processBuilder.inheritIO();
-        processBuilder.command("bash", "-c", cmd);
+        processBuilder.command("bash", "-c", "test -f ~/.profile && source ~/.profile || true && " + cmd);
         return processBuilder.start();
     }
 
@@ -116,7 +118,7 @@ public class MyBQReadWriteJobIntegrationTest {
         processBuilder.directory(new File("terraform/MyBQReadWriteJob"));
 //        processBuilder.command("./run-terraform.sh");
         //processBuilder.command("bash", "-c", "ls -la");
-        processBuilder.command("bash", "-c", cmd);
+        processBuilder.command("bash", "-c", "test -f ~/.profile && source ~/.profile || true && " + cmd);
         return processBuilder.start();
     }
 
