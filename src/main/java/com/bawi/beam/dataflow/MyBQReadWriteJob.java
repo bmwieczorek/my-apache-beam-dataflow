@@ -191,6 +191,7 @@ public class MyBQReadWriteJob {
                         .withMethod(BigQueryIO.Write.Method.FILE_LOADS)
 //                        .withCustomGcsTempLocation(options.getCustomGcsTempLocation()) // optional
                         .useAvroLogicalTypes()
+//                        .withAutoSharding() // only for unbounded collections
                         .withSchema(AvroToBigQuerySchemaConverter.convert(MySubscription.SCHEMA))
                         .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
                         .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED));
