@@ -68,6 +68,7 @@ public class MyPubsubToGCSAvroJobIntegrationTest {
 
     @Before
     public void cleanUp() throws IOException, InterruptedException {
+        runMvnAsBashProcess("env");
         Process process = runBashProcess("terraform init && terraform destroy -auto-approve " + vars);
         logProcess(process);
         int statusCode = process.waitFor();
