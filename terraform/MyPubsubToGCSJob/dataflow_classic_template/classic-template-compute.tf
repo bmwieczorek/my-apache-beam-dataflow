@@ -3,32 +3,34 @@ locals {
   template_gcs_path = "gs://${var.bucket}/templates/${var.job_base_name}-template"
   dataflow_jar     = basename(var.dataflow_jar_local_path)
   startup_script_local_path = "${path.module}/startup-script.sh"
+  startup_script_gcs_path   = "compute/startup-script.sh"
+  dataflow_jar_gcs_path     = "compute/${local.dataflow_jar}"
   subnetwork_name_last_element = split("/", var.subnetwork)[length(split("/", var.subnetwork)) - 1]
 }
 
 # good network - use terraform to copy dataflow jar
 resource "google_storage_bucket_object" "dataflow_jar" {
  count  = var.dataflow_classic_template_enabled && !var.poor_network_copy_dataflow_jar_via_gsutil ? 1 : 0
- name   = "compute/${local.dataflow_jar}"
+ name   = local.dataflow_jar_gcs_path
  source = var.dataflow_jar_local_path
  bucket = var.bucket
 }
 
 # poor network - copy dataflow jar to using gsutil
 resource "null_resource" "gsutil_upload_dataflow_jar" {
-  count = var.poor_network_copy_dataflow_jar_via_gsutil ? 1 : 0
+  count = var.dataflow_classic_template_enabled && var.poor_network_copy_dataflow_jar_via_gsutil ? 1 : 0
   triggers = {
     always_run = formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())
   }
 
   provisioner "local-exec" {
-    command = "gsutil -o GSUtil:parallel_composite_upload_threshold=150M cp ${var.dataflow_jar_local_path} gs://${var.bucket}/compute/${local.dataflow_jar}"
+    command = "gsutil -o GSUtil:parallel_composite_upload_threshold=150M cp ${var.dataflow_jar_local_path} gs://${var.bucket}/${local.dataflow_jar_gcs_path}"
   }
 }
 
 resource "google_storage_bucket_object" "startup_script" {
   count  = var.dataflow_classic_template_enabled ? 1 : 0
-  name   = "compute/startup-script.sh"
+  name   = local.startup_script_gcs_path
   source = local.startup_script_local_path
   bucket = var.bucket
 }
@@ -42,7 +44,7 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
   tags = ["default-uscentral1"]
   metadata = {
     "enable-oslogin" = "TRUE"
-    "startup-script-url" = "gs://${var.bucket}/${google_storage_bucket_object.startup_script[0].name}"
+    "startup-script-url" = "gs://${var.bucket}/${local.startup_script_gcs_path}"
     "project" = var.project
     "zone" = var.zone
     "region" = var.region
@@ -51,7 +53,7 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
     "bucket" = var.bucket
     "instance" = local.instance
     "dataflow_jar" = local.dataflow_jar
-    "dataflow_jar_gcs_path" = var.poor_network_copy_dataflow_jar_via_gsutil ? "gs://${var.bucket}/compute/${local.dataflow_jar}" : "gs://${var.bucket}/${google_storage_bucket_object.dataflow_jar[0].name}"
+    "dataflow_jar_gcs_path" = "gs://${var.bucket}/${local.dataflow_jar_gcs_path}"
     "template_gcs_path" = local.template_gcs_path
     "dataflow_jar_main_class" = var.main_class
     "message_deduplication_enabled" = var.message_deduplication_enabled
@@ -115,5 +117,5 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
     EOT
   }
 
-  depends_on = [ null_resource.gsutil_upload_dataflow_jar, google_storage_bucket_object.dataflow_jar ]
+  depends_on = [ google_storage_bucket_object.startup_script, null_resource.gsutil_upload_dataflow_jar, google_storage_bucket_object.dataflow_jar ]
 }
