@@ -47,8 +47,8 @@ import java.util.stream.StreamSupport;
 
 import static com.bawi.beam.dataflow.MyPubsubToGCSJob.*;
 
-public class MyPubsubToGCSAvroJobIntegrationTest {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MyPubsubToGCSAvroJobIntegrationTest.class);
+public class MyPubsubToGCSJobIntegrationTest {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MyPubsubToGCSJobIntegrationTest.class);
     private static final String MY_MSG_BODY = "myMsgBody";
     private static final String MY_MSG_ATTR_VALUE = "myMsgAttrValue";
     private final boolean dataflow_classic_template_enabled = true;
