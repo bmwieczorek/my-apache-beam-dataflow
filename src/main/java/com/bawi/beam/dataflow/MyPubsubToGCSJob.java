@@ -394,6 +394,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
                             "/p-%s-%s-w-%s" +
                             "-s-%s-of-%s" +
                             "-t-%s" +
+                            "-n-%s" +
                             "-i-%s" +
                             "-m_%s" +
                             "-u-%s" +
@@ -402,6 +403,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
                     pane.getIndex(), pane.getTiming(), normalizedWindow,
                     shardIndex, numShards,
                     Thread.currentThread().getId(),
+                    Thread.currentThread().getName(),
                     getLocalHostAddressSpaced(),
                     FORMATTER_MIN_SECS.print(now), UUID.randomUUID(),
                     this.compression, this.format);
