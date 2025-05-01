@@ -8,9 +8,19 @@ locals {
   max_workers                     = 2
   number_of_worker_harness_threads = 0
 #   number_of_worker_harness_threads = 8
-  num_shards                      = 8
-  auto_sharding_enabled           = false
-  enable_streaming_engine         = true
+  num_shards                      = 8 // 0 for auto-sharding, >0 for explicit sharding
+  enable_streaming_engine         = false
+
+  autosharding_with_streaming_engine_validation_error_message = "Please use auto-sharding (numShards=0) only with enable_streaming_engine=true"
+  autosharding_with_streaming_engine_validation_error_condition = local.num_shards == 0 && !local.enable_streaming_engine
+
+  validate_autosharding_with_streaming_engine = local.autosharding_with_streaming_engine_validation_error_condition ? tobool(local.autosharding_with_streaming_engine_validation_error_message) : true
+
+  # autosharding_with_streaming_engine_check = regex(
+  #   "^${local.autosharding_with_streaming_engine_validation_error_message}$",
+  #   ( local.autosharding_with_streaming_engine_validation_error_condition ? "" : local.autosharding_with_streaming_engine_validation_error_message )
+  # )
+
   dump_heap_on_oom                = true
   labels = {
     owner = var.owner
@@ -49,7 +59,6 @@ module "dataflow_classic_template" {
   message_deduplication_enabled     = var.dataflow_message_deduplication_enabled
   custom_event_time_timestamp_attribute_enabled = var.dataflow_custom_event_time_timestamp_attribute_enabled
   custom_event_time_timestamp_attribute = var.dataflow_custom_event_time_timestamp_attribute
-  auto_sharding_enabled             = local.auto_sharding_enabled
   job_base_name                     = local.job_base_name
   network                           = var.network
 //  network             = data.google_compute_network.network.self_link
@@ -61,6 +70,7 @@ module "dataflow_classic_template" {
   image                             = var.image
   number_of_worker_harness_threads  = local.number_of_worker_harness_threads
   enable_streaming_engine           = local.enable_streaming_engine
+  num_shards                        = local.num_shards
   dump_heap_on_oom                  = local.dump_heap_on_oom
   poor_network_copy_dataflow_jar_via_gsutil = false
 }

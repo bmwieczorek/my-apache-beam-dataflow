@@ -259,7 +259,7 @@ public class MyPubsubToGCSJobIntegrationTest {
                     List<String> batchMessageIds = ApiFutures.allAsList(messageIdFutures).get();
                     messageIds.addAll(batchMessageIds);
 
-                    LOGGER.info("Published batched " + batchMessageIds.size() + " messages in " + (System.currentTimeMillis() - start) + " millis");
+                    LOGGER.info("Published batched {} messages in {} millis", batchMessageIds.size(), System.currentTimeMillis() - start);
                     if (publisher != null) {
                         // When finished with the publisher, shutdown to free up resources.
                         publisher.shutdown();
@@ -330,18 +330,18 @@ public class MyPubsubToGCSJobIntegrationTest {
         Set<String> paths = new TreeSet<>();
 
         Storage storage = StorageOptions.newBuilder().setProjectId(get("GCP_PROJECT")).build().getService();
-        int limit = 360;
-        for (int i = 1; i <= limit; i++) {
+        int limitRetries = 60;
+        for (int i = 1; i <= limitRetries; i++) {
             Page<Blob> blobs = storage.list(bucketName);
             List<Blob> filteredBlobs = StreamSupport.stream(blobs.iterateAll().spliterator(), false)
                     .filter(blob -> blob.getName().endsWith(".avro"))
 //                    .peek(b -> LOGGER.info("filtered blob: {}", b))
-                    .collect(Collectors.toList());
+                    .toList();
 
             LOGGER.info("Number of blobs ending with .avro: {}", filteredBlobs.size());
             paths = filteredBlobs.stream().map(BlobInfo::getName).collect(Collectors.toCollection(TreeSet::new));
 
-            if (filteredBlobs.size() > 0) {
+            if (!filteredBlobs.isEmpty()) {
                 List<String> results = new ArrayList<>();
                 filteredBlobs.forEach(b -> {
                     try {
@@ -357,7 +357,7 @@ public class MyPubsubToGCSJobIntegrationTest {
                         //noinspection ResultOfMethodCallIgnored
                         tempAvroFile.delete();
                     } catch (IOException e) {
-                        LOGGER.error("Problem downloading object from GCS: " + b, e);
+                        LOGGER.error("Problem downloading object from GCS: {}", b, e);
                     }
                 });
 
@@ -365,7 +365,7 @@ public class MyPubsubToGCSJobIntegrationTest {
                     LOGGER.info("filtered blob paths: {}", paths);
                     return results;
                 } else {
-                    LOGGER.info("Waiting for dataflow job to write read all messages to GCS ({}/{}) ...(attempt {}/{})", results.size(), expectedNumMessages, i, limit);
+                    LOGGER.info("Waiting for dataflow job to write read all messages to GCS ({}/{}) ...(attempt {}/{})", results.size(), expectedNumMessages, i, limitRetries);
                     Thread.sleep(5 * 1000L);
                     res = results;
                 }

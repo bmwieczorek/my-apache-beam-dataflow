@@ -30,14 +30,14 @@ CUSTOM_EVENT_TIME_TIMESTAMP_ATTRIBUTE_ENABLED=$(curl http://metadata.google.inte
 echo "CUSTOM_EVENT_TIME_TIMESTAMP_ATTRIBUTE_ENABLED=$CUSTOM_EVENT_TIME_TIMESTAMP_ATTRIBUTE_ENABLED" | tee -a ${LOG}
 CUSTOM_EVENT_TIME_TIMESTAMP_ATTRIBUTE=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/custom_event_time_timestamp_attribute -H "Metadata-Flavor: Google")
 echo "CUSTOM_EVENT_TIME_TIMESTAMP_ATTRIBUTE=$CUSTOM_EVENT_TIME_TIMESTAMP_ATTRIBUTE" | tee -a ${LOG}
-AUTO_SHARDING_ENABLED=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/auto_sharding_enabled -H "Metadata-Flavor: Google")
-echo "AUTO_SHARDING_ENABLED=$AUTO_SHARDING_ENABLED" | tee -a ${LOG}
 WAIT_SECS_BEFORE_VM_DELETE=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/wait_secs_before_delete -H "Metadata-Flavor: Google")
 echo "WAIT_SECS_BEFORE_VM_DELETE=$WAIT_SECS_BEFORE_VM_DELETE" | tee -a ${LOG}
 NUMBER_OF_WORKER_HARNESS_THREADS=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/number_of_worker_harness_threads -H "Metadata-Flavor: Google")
 echo "NUMBER_OF_WORKER_HARNESS_THREADS=$NUMBER_OF_WORKER_HARNESS_THREADS" | tee -a ${LOG}
-#ENABLE_STREAMING_ENGINE=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/enable_streaming_engine -H "Metadata-Flavor: Google")
-#echo "ENABLE_STREAMING_ENGINE=$ENABLE_STREAMING_ENGINE" | tee -a ${LOG}
+ENABLE_STREAMING_ENGINE=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/enable_streaming_engine -H "Metadata-Flavor: Google")
+echo "ENABLE_STREAMING_ENGINE=$ENABLE_STREAMING_ENGINE" | tee -a ${LOG}
+NUM_SHARDS=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/num_shards -H "Metadata-Flavor: Google")
+echo "NUM_SHARDS=NUM_SHARDS" | tee -a ${LOG}
 DUMP_HEAP_ON_OOM=$(curl http://metadata.google.internal/computeMetadata/v1/instance/attributes/dump_heap_on_oom -H "Metadata-Flavor: Google")
 echo "DUMP_HEAP_ON_OOM=$DUMP_HEAP_ON_OOM" | tee -a ${LOG}
 
@@ -86,7 +86,7 @@ gsutil -o GSUtil:check_hashes=never cp "${DATAFLOW_JAR_GCS_PATH}" . 2>&1 | tee -
 JAVA_DATAFLOW_RUN_OPTS="--project=$PROJECT --region=$REGION --serviceAccount=$SERVICE_ACCOUNT --usePublicIps=false"
 echo "Creating template $DATAFLOW_TEMPLATE_GCS_PATH" | tee -a ${LOG}
 
-echo "Executing: java -Dorg.xerial.snappy.tempdir=$(pwd) -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAIN_CLASS} ${JAVA_DATAFLOW_RUN_OPTS} --runner=DataflowRunner --stagingLocation=gs://${BUCKET}/staging --dumpHeapOnOOM=${DUMP_HEAP_ON_OOM} --saveHeapDumpsToGcsPath=gs://${BUCKET}/oom --numberOfWorkerHarnessThreads=${NUMBER_OF_WORKER_HARNESS_THREADS} --numWorkers=2 --diskSizeGb=200 --autoscalingAlgorithm=THROUGHPUT_BASED --enableStreamingEngine=${ENABLE_STREAMING_ENGINE} --templateLocation=${DATAFLOW_TEMPLATE_GCS_PATH}" | tee -a ${LOG}
+echo "Executing: java -Dorg.xerial.snappy.tempdir=$(pwd) -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAIN_CLASS} ${JAVA_DATAFLOW_RUN_OPTS} --runner=DataflowRunner --messageDeduplicationEnabled=${MESSAGE_DEDUPLICATION_ENABLED} --customEventTimeTimestampAttributeEnabled=${CUSTOM_EVENT_TIME_TIMESTAMP_ATTRIBUTE_ENABLED} --timestampAttribute=${CUSTOM_EVENT_TIME_TIMESTAMP_ATTRIBUTE} --stagingLocation=gs://${BUCKET}/staging --dumpHeapOnOOM=${DUMP_HEAP_ON_OOM} --saveHeapDumpsToGcsPath=gs://${BUCKET}/oom --numberOfWorkerHarnessThreads=${NUMBER_OF_WORKER_HARNESS_THREADS} --numWorkers=1 --diskSizeGb=200 --windowSecs=60 --autoscalingAlgorithm=THROUGHPUT_BASED --enableStreamingEngine=${ENABLE_STREAMING_ENGINE} --numShards=${NUM_SHARDS} --templateLocation=${DATAFLOW_TEMPLATE_GCS_PATH}" | tee -a ${LOG}
 
 java -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAIN_CLASS} \
   ${JAVA_DATAFLOW_RUN_OPTS} \
@@ -94,7 +94,6 @@ java -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAI
   --messageDeduplicationEnabled=${MESSAGE_DEDUPLICATION_ENABLED} \
   --customEventTimeTimestampAttributeEnabled=${CUSTOM_EVENT_TIME_TIMESTAMP_ATTRIBUTE_ENABLED} \
   --timestampAttribute=${CUSTOM_EVENT_TIME_TIMESTAMP_ATTRIBUTE} \
-  --autoShardingEnabled=${AUTO_SHARDING_ENABLED} \
   --stagingLocation="gs://${BUCKET}/staging" \
   --dumpHeapOnOOM=${DUMP_HEAP_ON_OOM} \
   --saveHeapDumpsToGcsPath="gs://${BUCKET}/oom" \
@@ -103,8 +102,11 @@ java -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAI
   --diskSizeGb=200 \
   --windowSecs=60 \
   --autoscalingAlgorithm=THROUGHPUT_BASED \
+  --enableStreamingEngine=${ENABLE_STREAMING_ENGINE} \
+  --numShards=${NUM_SHARDS} \
   --templateLocation="${DATAFLOW_TEMPLATE_GCS_PATH}" 2>&1 | tee -a ${LOG}
 
+# streaming engine is required for auto-sharding
 #  --enableStreamingEngine=${ENABLE_STREAMING_ENGINE} \  // passed to dataflow_classic_template_job when starting a job (it is also possible at template generation)
 
 #  --workerLogLevelOverrides="{ \"org.apache.beam.sdk.util.WindowTracing\": \"DEBUG\" }" \

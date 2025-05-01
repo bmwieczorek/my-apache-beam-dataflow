@@ -84,9 +84,9 @@ variable "custom_event_time_timestamp_attribute" {
   type        = string
 }
 
-variable "auto_sharding_enabled" {
-  description = "If dataflow should use auto sharding for FileIO.write"
-  type        = bool
+variable "num_shards" {
+  description = "If dataflow should use auto sharding with num_shards = 0 (requires streaming engine) or explict sharding with num_shards > 0"
+  type        = number
 }
 
 variable "owner" {

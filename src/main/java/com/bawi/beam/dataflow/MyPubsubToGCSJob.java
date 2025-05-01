@@ -81,12 +81,8 @@ public class MyPubsubToGCSJob {
         String getTimestampAttribute();
         void setTimestampAttribute(String timestampAttribute);
 
-        ValueProvider<Integer> getNumShards();
-        void setNumShards(ValueProvider<Integer> numShards);
-
-        @Validation.Required
-        boolean getAutoShardingEnabled();
-        void setAutoShardingEnabled(boolean autoShardingEnabled);
+        int getNumShards();
+        void setNumShards(int numShards);
 
     // DataflowPipelineOptions
 //        String getTemplateLocation();
@@ -241,11 +237,9 @@ gcloud dataflow flex-template run $APP-$OWNER \
                 .to(output)
                 .withTempDirectory(temp);
 
-        LOGGER.info("autoShardingEnabled: {}", options.getAutoShardingEnabled());
-        FileIO.Write<String, KV<String, GenericRecord>> fileIOWriteSharded = options.getAutoShardingEnabled() ?
-                fileIOWrite.withAutoSharding() :
-//                fileIOWrite.withNumShards(0);
-                fileIOWrite.withNumShards(options.getNumShards());
+        LOGGER.info("numShards: {}", options.getNumShards());
+        FileIO.Write<String, KV<String, GenericRecord>> fileIOWriteSharded =
+                options.getNumShards() == 0 ? fileIOWrite.withAutoSharding() : fileIOWrite.withNumShards(options.getNumShards());
 
         transformedKV.apply(fileIOWriteSharded);
 

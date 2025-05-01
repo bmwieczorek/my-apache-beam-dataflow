@@ -58,12 +58,13 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
     "dataflow_jar_main_class" = var.main_class
     "message_deduplication_enabled" = var.message_deduplication_enabled
     "custom_event_time_timestamp_attribute_enabled" = var.custom_event_time_timestamp_attribute_enabled
-    "auto_sharding_enabled" = var.auto_sharding_enabled
     "custom_event_time_timestamp_attribute" = var.custom_event_time_timestamp_attribute
     "wait_secs_before_delete" = 300
     // Worker harness starting with
     "number_of_worker_harness_threads" = var.number_of_worker_harness_threads
-    # "enable_streaming_engine" = var.enable_streaming_engine # moved to dataflow_classic_template_job to pass it when starting a job
+    "enable_streaming_engine" = var.enable_streaming_engine
+    # streaming engine is required for auto-sharding (num_shards=0), if auto-sharing is never used you can remove streaming engine from template generation and move to dataflow_classic_template_job when starting a job from template
+    "num_shards" = var.num_shards
     "dump_heap_on_oom" = var.dump_heap_on_oom
   }
   labels = {
