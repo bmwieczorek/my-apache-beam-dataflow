@@ -20,7 +20,7 @@ locals {
   }
 
   inner_list = [
-    for k,v in var.my_nested_map: [
+    for k,v in var.my_nested_map_string_to_list: [
 //      for e in lookup(v, "my_inner_list", {}): { name = e, value = v.my_inner_value }
       for e in v.my_inner_list: { name = e, value = v.my_inner_value }
     ]
@@ -105,34 +105,36 @@ output "keyB" {
   value = local.my_nested_map["key-c"] // access my key name
 }
 
-resource "null_resource" "null" {
+resource "null_resource" "null_my_map" {
   for_each = local.my_map
 }
 
-resource "google_storage_bucket" "list-bucket" {
+resource "null_resource" "list_null_resource" {
   for_each = toset(local.my_string_list)
-  name = "bartek-list-${each.key}-bucket"
-  project = var.project
-  location = "us"
+  triggers = { always = timestamp() }
+  provisioner "local-exec" {
+    command = "echo bartek-list-${each.key}"
+  }
 }
 
-resource "google_storage_bucket" "map-bucket" {
+resource "null_resource" "map_null_resource" {
   for_each = local.my_map
-  name = "bartek-map-${each.value}-bucket"
-//  name = "bartek-map-${each.key}-bucket"
-  project = var.project
-  location = "us"
+  triggers = { always = timestamp() }
+  provisioner "local-exec" {
+    command = "echo bartek-map-${each.key}-${each.value}"
+  }
 }
 
-resource "google_storage_bucket" "nested-map-bucket" {
+resource "null_resource" "nested_map_null_resource" {
   for_each = local.my_nested_map
-  name = "bartek-nested-map-${each.value.my_inner_value}-bucket"
-  project = var.project
-  location = "us"
+  triggers = { always = timestamp() }
+  provisioner "local-exec" {
+    command = "echo bartek-nested-map-${each.value.my_inner_value}"
+  }
 }
 
 
-variable "my_nested_map" {
+variable "my_nested_map_string_to_list" {
   type = map(object({ my_inner_value = string,my_inner_list=list(string)}))
   default = {
     key-z = {
@@ -141,9 +143,11 @@ variable "my_nested_map" {
     }
   }
 }
-resource "google_storage_bucket" "variable-nested-map-bucket" {
-  for_each = var.my_nested_map
-  name = "bartek-variable-nested-map-${each.value.my_inner_value}-bucket"
-  project = var.project
-  location = "us"
+
+resource "null_resource" "nested_map_string_to_list_null_resource" {
+  for_each = var.my_nested_map_string_to_list
+  triggers = { always = timestamp() }
+  provisioner "local-exec" {
+    command = "echo bartek-variable-nested-map-string-to-list-${each.value.my_inner_value}"
+  }
 }
