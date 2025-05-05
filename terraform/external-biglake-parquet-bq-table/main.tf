@@ -1,18 +1,36 @@
 locals {
-  dataset_id                       = "${var.owner}_dataset"
-  bucket                           = "${var.project}-${var.owner}"
-  external_biglake_table           = "external_biglake_table"
-  empty_parquet_file               = "emptyMyNestedRecord.parquet"
+  table                            = "external_biglake_table"
+  empty_parquet_file               = "myEmptyNestedRecord.parquet"
   non_empty_parquet_file           = "myNestedRecord.parquet"
   gcs_hive_zero_partition_path     = "year=0000/month=00/day=00/hour=00"
   gcs_hive_non_zero_partition_path = "year=2024/month=09/day=09/hour=09"
-  bq_schema_file                   = "myBigQueryNestedParquet.json"
+  bq_schema_file                   = "myNestedParquetBigQuerySchema.json"
+}
+
+data "external" "bq_connection_id_sa" {
+  program = ["bash", "get_connection_id_sa.sh", var.bq_project, var.location]
+}
+
+data "external" "bq_connection_id" {
+  program = ["bash", "get_connection_id.sh", var.bq_project, var.location]
+}
+
+resource "google_storage_bucket" "bucket" {
+  project = var.project
+  name   = "${var.project}-${var.owner}-biglake"
+  location = var.location
+}
+
+resource "google_bigquery_dataset" "dataset" {
+  project    = var.project
+  dataset_id = "${var.owner}_biglake"
+  location   = var.location
 }
 
 resource "google_storage_bucket_object" "empty_parquet_file" {
-  name   = "${local.external_biglake_table}/${local.gcs_hive_zero_partition_path}/${local.empty_parquet_file}"
+  name   = "${local.table}/${local.gcs_hive_zero_partition_path}/${local.empty_parquet_file}"
   source = local.empty_parquet_file
-  bucket = local.bucket
+  bucket = google_storage_bucket.bucket.name
 }
 
 resource "null_resource" "parquet_metadata" {
@@ -21,22 +39,33 @@ resource "null_resource" "parquet_metadata" {
   }
 
   provisioner "local-exec" {
-    command = "parquet meta ${local.empty_parquet_file} | grep myRequiredDateTime"
+    command = "parquet meta ${local.empty_parquet_file} | grep -i time"
   }
   depends_on = [google_storage_bucket_object.empty_parquet_file]
 }
 
+resource "google_storage_bucket_iam_member" "storage_to_bq_conn_id_sa_binding" {
+  bucket = google_storage_bucket.bucket.name
+  role = "roles/storage.objectViewer"
+  member = "serviceAccount:${data.external.bq_connection_id_sa.result.serviceAccountId}"
+}
+
 resource "google_bigquery_table" "external_biglake_table" {
   project             = var.project
-  dataset_id          = local.dataset_id
-  table_id            = local.external_biglake_table
+  dataset_id          = google_bigquery_dataset.dataset.dataset_id
+  table_id            = local.table
   deletion_protection = false
-#   schema = file(var.schema_file)
+  # schema = file(local.bq_schema_file)
   schema = null
+  max_staleness = "0-0 7 0:0:0" # 7 days
+
 
   external_data_configuration {
     autodetect    = true
     source_format = "PARQUET"
+    metadata_cache_mode = "MANUAL" # CALL BQ.REFRESH_EXTERNAL_METADATA_CACHE('myproject.test_db.test_table')
+    # metadata_cache_mode = "AUTOMATIC" # requires max_staleness #  googleapi: Error 400: maxStaleness must be specified when MetadataCacheMode is AUTOMATIC, invalid
+    connection_id = "${var.bq_project}.us.${data.external.bq_connection_id.result.connectionId}"
 
     parquet_options {
       enable_list_inference = true
@@ -44,13 +73,13 @@ resource "google_bigquery_table" "external_biglake_table" {
 
     hive_partitioning_options {
       mode              = "CUSTOM"
-      source_uri_prefix = "gs://${local.bucket}/${local.external_biglake_table}/{year:STRING}/{month:STRING}/{day:STRING}/{hour:STRING}"
+      source_uri_prefix = "gs://${google_storage_bucket.bucket.name}/${local.table}/{year:STRING}/{month:STRING}/{day:STRING}/{hour:STRING}"
     }
 
-    source_uris = ["gs://${local.bucket}/${local.external_biglake_table}/*.parquet"]
+    source_uris = ["gs://${google_storage_bucket.bucket.name}/${local.table}/*.parquet"]
   }
 
-  depends_on = [null_resource.parquet_metadata]
+  depends_on = [google_storage_bucket_object.empty_parquet_file, null_resource.parquet_metadata]
 }
 
 resource "null_resource" "bq_show_schema" {
@@ -70,15 +99,18 @@ resource "null_resource" "bq_select_external_biglake_table_with_empty_file_only"
   }
 
   provisioner "local-exec" {
-    command = "bq query --use_legacy_sql=false 'SELECT * FROM ${google_bigquery_table.external_biglake_table.dataset_id}.${google_bigquery_table.external_biglake_table.table_id} WHERE year is not null'"
+    command = "bq query --use_legacy_sql=false 'SELECT count(*) AS cnt FROM ${google_bigquery_table.external_biglake_table.dataset_id}.${google_bigquery_table.external_biglake_table.table_id} WHERE year is not null'"
   }
-  depends_on = [null_resource.bq_show_schema]
+  depends_on = [
+    null_resource.bq_show_schema,
+    google_storage_bucket_iam_member.storage_to_bq_conn_id_sa_binding # Access Denied: bqcx-xxxx-yyy@gcp-sa-bigquery-condel.iam.gserviceaccount.com does not have storage.objects.list access to the Google Cloud Storage bucket. Permission 'storage.objects.list'. Please make sure gs://bucket/external_biglake_table/*.parquet is accessible via appropriate IAM roles, e.g. Storage Object Viewer or Storage Object Creator.
+  ]
 }
 
 resource "google_storage_bucket_object" "non_empty_parquet_file" {
-  name       = "${local.external_biglake_table}/${local.gcs_hive_non_zero_partition_path}/${local.non_empty_parquet_file}"
+  name       = "${local.table}/${local.gcs_hive_non_zero_partition_path}/${local.non_empty_parquet_file}"
   source     = local.non_empty_parquet_file
-  bucket     = local.bucket
+  bucket     = google_storage_bucket.bucket.name
   depends_on = [null_resource.bq_select_external_biglake_table_with_empty_file_only]
 }
 
@@ -94,66 +126,3 @@ resource "null_resource" "bq_select_external_biglake_table_with_non_empty_file" 
   depends_on = [null_resource.bq_select_external_biglake_table_with_empty_file_only, google_storage_bucket_object.non_empty_parquet_file]
 }
 
-
-resource "google_storage_bucket_iam_member" "storage_sa_binding" {
-  bucket = local.bucket
-  role = "roles/storage.objectViewer"
-  member = "serviceAccount:bq-internal-sa@gcp-sa-bigquery-condel.iam.gserviceaccount.com"
-}
-
-resource "google_storage_bucket_object" "bq_schema_file" {
-  name       = local.bq_schema_file
-  source     = local.bq_schema_file
-  bucket     = local.bucket
-}
-
-# curl -X POST \
-#  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-#  -H "Content-Type: application/json" \
-#  -d '{
-#    "tableReference": {
-#      "projectId": "my-bq-project",
-#      "datasetId": "bartek_dataset",
-#      "tableId": "my_rest_table_external_autodetect"
-#    },
-#    "externalDataConfiguration": {
-#	   "sourceUris": ["gs://my-bucket/external_biglake_table/*.parquet"],
-#	   "sourceFormat": "PARQUET",
-#	   "autodetect": true,
-#	   "hivePartitioningOptions": {
-#	     "mode": "CUSTOM",
-#  	     "sourceUriPrefix": "gs://my-bucket/external_biglake_table/{year:STRING}/{month:STRING}/{day:STRING}/{hour:STRING}",
-#        "requirePartitionFilter": true,
-#      },
-#	   "connectionId": "my-bq-project.us.lakehouse_connection"
-#    }
-#  }' \
-# "https://bigquery.googleapis.com/bigquery/v2/projects/my-bq-project/datasets/bartek_dataset/tables"
-
-
-# schema="`cat myBigQueryNestedParquet.json`"
-#curl -X POST \
-#  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-#  -H "Content-Type: application/json" \
-#  -d "{
-#    \"tableReference\": {
-#      \"projectId\": \"my-bq-project\",
-#      \"datasetId\": \"bartek_dataset\",
-#      \"tableId\": \"my_rest_table_external_no_autodetect_use_schema_file\"
-#    },
-#    \"schema\": {
-#	\"fields\": $schema
-#    },
-#    \"externalDataConfiguration\": {
-#	\"sourceUris\": [\"gs://my-bucket/external_biglake_table/*.parquet\"],
-#	\"sourceFormat\": \"PARQUET\",
-#	\"autodetect\": false,
-#	\"hivePartitioningOptions\": {
-#	  \"mode\": \"CUSTOM\",
-#  	  \"sourceUriPrefix\": \"gs://my-bucket/external_biglake_table/{year:STRING}/{month:STRING}/{day:STRING}/{hour:STRING}\",
-#         \"requirePartitionFilter\": true,
-#       },
-#	\"connectionId\": \"my-bq-project.us.lakehouse_connection\",
-#    }
-#  }" \
-# https://bigquery.googleapis.com/bigquery/v2/projects/my-bq-project/datasets/bartek_dataset/tables
