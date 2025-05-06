@@ -271,3 +271,71 @@ resource "null_resource" "bq_select_external_table_explicit_schema_with_non_empt
 
   depends_on = [google_storage_bucket_object.non_empty_parquet_file]
 }
+
+# bq mkdef \
+# --connection_id=${GCP_BQ_PROJECT}.us.my_connection \
+# --source_format=PARQUET \
+# --parquet_enable_list_inference \
+# --hive_partitioning_mode=CUSTOM \
+# --hive_partitioning_source_uri_prefix="gs://${GCP_BUCKET}/parquet/year:STRING}/{month:STRING}/{day:STRING}/{hour:STRING}" \
+# --require_hive_partition_filter=true \
+# --metadata_cache_mode=MANUAL \
+# "gs://${GCP_BUCKET}/parquet/*.parquet" >  biglake_table_with_manual_metadata_refresh_def
+#
+#
+# bq mk --table --external_table_definition=biglake_table_with_manual_metadata_refresh_def \
+# --max_staleness='0-0 0 1:00:0' \
+# ${GCP_BQ_PROJECT}:${GCP_OWNER}_biglake_external.biglake_table_with_manual_metadata_refresh \
+# myNestedParquetBigQuerySchema.json
+#
+#
+# curl -X POST \
+#  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+#  -H "Content-Type: application/json" \
+#  -d '{
+#    "tableReference": {
+#      "projectId": "${GCP_BQ_PROJECT}",
+#      "datasetId": "${GCP_OWNER}_biglake_external",
+#      "tableId": "biglake_table_with_manual_metadata_refresh"
+#    },
+#    "externalDataConfiguration": {
+# 	   "sourceUris": ["gs://${GCP_BUCKET}/parquet/*.parquet"],
+# 	   "sourceFormat": "PARQUET",
+# 	   "autodetect": true,
+# 	   "hivePartitioningOptions": {
+# 	     "mode": "CUSTOM",
+#  	     "sourceUriPrefix": "gs://${GCP_BUCKET}/parquet/{year:STRING}/{month:STRING}/{day:STRING}/{hour:STRING}",
+#        "requirePartitionFilter": true,
+#      },
+# 	   "connectionId": "${GCP_BQ_PROJECT}.us.my_connection"
+#    }
+#  }' \
+# "https://bigquery.googleapis.com/bigquery/v2/projects/${GCP_BQ_PROJECT}/datasets/${GCP_OWNER}_biglake_external/tables"
+#
+#
+# schema="`cat myNestedParquetBigQuerySchema.json`"
+# curl -X POST \
+#  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+#  -H "Content-Type: application/json" \
+#  -d "{
+#    \"tableReference\": {
+#      \"projectId\": \"${GCP_BQ_PROJECT}\",
+#      \"datasetId\": \"${GCP_OWNER}_biglake_external\",
+#      \"tableId\": \"biglake_table_with_manual_metadata_refresh\"
+#    },
+#    \"schema\": {
+# 	\"fields\": $schema
+#    },
+#    \"externalDataConfiguration\": {
+# 	\"sourceUris\": [\"gs://${GCP_BQ_PROJECT}/parquet/*.parquet\"],
+# 	\"sourceFormat\": \"PARQUET\",
+# 	\"autodetect\": false,
+# 	\"hivePartitioningOptions\": {
+# 	  \"mode\": \"CUSTOM\",
+#  	  \"sourceUriPrefix\": \"gs://${GCP_BQ_PROJECT}/parquet/{year:STRING}/{month:STRING}/{day:STRING}/{hour:STRING}\",
+#         \"requirePartitionFilter\": true,
+#       },
+# 	\"connectionId\": \"{GCP_BQ_PROJECT}.us.my_connection\",
+#    }
+#  }" \
+# https://bigquery.googleapis.com/bigquery/v2/projects/${GCP_BQ_PROJECT}/datasets/${GCP_OWNER}_biglake_external/tables
