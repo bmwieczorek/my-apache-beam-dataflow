@@ -35,10 +35,14 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Paths;
 import java.sql.Date;
+import java.time.*;
 import java.util.Arrays;
 import java.util.List;
 
-public class ReadParquetFileTest implements Serializable {
+public class MyWriteReadParquetJobTest implements Serializable {
+    public static final String DATE = "2025-05-07";
+    public static final String TIME = "22:13:21.698149";
+    public static final String DATE_TIME = "2025-05-07T22:20:47.865";
 
     @Rule
     public final transient TestPipeline pipeline = TestPipeline.create();
@@ -53,17 +57,17 @@ public class ReadParquetFileTest implements Serializable {
         GenericData.Record record = createGenericRecord(INTPUT_SCHEMA);
 
         String fileRelativePath = "target/myNestedRecord.parquet";
+//        String fileRelativePath = "target/myEmptyNestedRecord.parquet";
         Path path = new Path(fileRelativePath);
         File file = new File(path.toUri().getPath());
         deleteIfPresent(file);
-
-        Configuration conf = new Configuration();
-        conf.setBoolean("parquet.avro.write-old-list-structure", false); // used for record.put("myRequiredArrayNullableInts", Arrays.asList(1, null, 3));
 
         FileSystem fs = FileSystems.getFileSystem(new URI("file", null, "/", null, null));
         java.nio.file.Path nioOutputPath = fs.getPath(fileRelativePath);
         LocalOutputFile outputFile = new LocalOutputFile(nioOutputPath);
 
+        Configuration conf = new Configuration();
+        conf.setBoolean("parquet.avro.write-old-list-structure", false); // used for record.put("myRequiredArrayNullableInts", Arrays.asList(1, null, 3));
         try (ParquetWriter<GenericData.Record> writer =
              AvroParquetWriter.<GenericData.Record>builder(outputFile)
                      .withSchema(INTPUT_SCHEMA)
@@ -82,30 +86,38 @@ public class ReadParquetFileTest implements Serializable {
                     @Override
                     public String apply(GenericRecord genericRecord) {
                         Utf8 name = (Utf8) genericRecord.get("myRequiredString");
+                        String myRequiredString = name.toString();
                         ByteBuffer byteBuffer = (ByteBuffer) genericRecord.get("myRequiredBytes");
-                        byte[] bytes = byteBuffer.array();
-                        String value = name.toString() + "," + new String(bytes);
+                        byte[] myRequiredBytes = byteBuffer.array();
                         Object myRequiredArrayNullableInts = genericRecord.get("myRequiredArrayNullableInts");
-                        LOGGER.info("value={}, myRequiredArrayNullableInts={}", value, myRequiredArrayNullableInts);
+                        int myRequiredDate = (int) genericRecord.get("myRequiredDate");
+                        long myRequiredTime = (long) genericRecord.get("myRequiredTime") * 1000;
+                        long myRequiredDateTime = (long) genericRecord.get("myRequiredDateTime") / 1000 ;
+                        String value = String.format("myRequiredString=%s, myRequiredBytes=%s, myRequiredArrayNullableInts=%s, " +
+                                        "myRequiredDate=%s, myRequiredTime=%s, myRequiredDateTime=%s",
+                                myRequiredString, new String(myRequiredBytes), myRequiredArrayNullableInts,
+                                LocalDate.ofEpochDay(myRequiredDate), LocalTime.ofNanoOfDay(myRequiredTime),
+                                LocalDateTime.ofInstant(Instant.ofEpochMilli(myRequiredDateTime), ZoneOffset.UTC));
+                        LOGGER.info(value);
                         return value;
                     }
                 })
                 .from(fileRelativePath)
         );
 
-//        pCollection.apply("MyConsoleIO1", MyConsoleIO.write());
-//        pCollection.apply("MyConsoleIO2", MyConsoleIO.write());
-
         // assert
-        PAssert.thatSingleton(pCollection).isEqualTo("abc,ABC123");
+        PAssert.thatSingleton(pCollection).isEqualTo("myRequiredString=abc, myRequiredBytes=ABC123, myRequiredArrayNullableInts=[1, 3], myRequiredDate=" + DATE +
+                ", myRequiredTime=" + TIME + ", myRequiredDateTime=" + DATE_TIME);
         pipeline.run().waitUntilFinish();
 //        deleteIfPresent(file);
     }
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ReadParquetFileTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MyWriteReadParquetJobTest.class);
 
     private static final Schema TIMESTAMP_MICROS_LOGICAL_TYPE = LogicalTypes.timestampMicros().addToSchema(Schema.create(Schema.Type.LONG));
     private static final Schema DATE_LOGICAL_TYPE = LogicalTypes.date().addToSchema(Schema.create(Schema.Type.INT));
+    private static final Schema TIME_LOGICAL_TYPE = LogicalTypes.timeMicros().addToSchema(Schema.create(Schema.Type.LONG));
+    private static final Schema DATETIME_LOGICAL_TYPE = LogicalTypes.localTimestampMicros().addToSchema(Schema.create(Schema.Type.LONG));
     private static final Schema DECIMAL_38_LOGICAL_TYPE = LogicalTypes.decimal(38, 9).addToSchema(Schema.create(Schema.Type.BYTES));
 
     private static final Schema INTPUT_SCHEMA =
@@ -120,7 +132,9 @@ public class ReadParquetFileTest implements Serializable {
                     .name("myBytesDecimal").type(DECIMAL_38_LOGICAL_TYPE).noDefault()
                     .name("myRequiredTimestamp").type(TIMESTAMP_MICROS_LOGICAL_TYPE).noDefault() // needs to be timestamp_micros (not timestamp_millis)
                     .name("myOptionalTimestamp").type().optional().type(TIMESTAMP_MICROS_LOGICAL_TYPE)
-                    .name("myRequiredDate").doc("Expiration date field").type(DATE_LOGICAL_TYPE).noDefault()
+                    .name("myRequiredDate").doc("Expiration date field").type(DATE_LOGICAL_TYPE).noDefault()  // int
+                    .name("myRequiredTime").doc("My required time field").type(TIME_LOGICAL_TYPE).noDefault() // needs to be timestamp_micros (not timestamp_millis)
+                    .name("myRequiredDateTime").doc("My required datetime field").type(DATETIME_LOGICAL_TYPE).noDefault()
                     .name("myRequiredArrayLongs").type().array().items().longType().noDefault()
                     .name("myRequiredArrayNullableInts").type().array().items().nullable().longType().noDefault()
                     .name("myRequiredSubRecord").type(SchemaBuilder.record("myRequiredSubRecordType").fields().requiredDouble("myRequiredDouble").requiredBoolean("myRequiredBoolean").endRecord()).noDefault()
@@ -141,9 +155,15 @@ public class ReadParquetFileTest implements Serializable {
         record.put("myRequiredBytes", ByteBuffer.wrap("ABC123".getBytes()));
         record.put("myBytesDecimal", doubleToByteBuffer(1.23d));
         record.put("myRequiredTimestamp", System.currentTimeMillis() * 1000); // needs to be timestamp_micros (not timestamp_millis)
-        record.put("myRequiredDate", (int) new Date(System.currentTimeMillis()).toLocalDate().toEpochDay());
+//        record.put("myRequiredTime", LocalTime.now().toNanoOfDay() / 1000); // nano to micros
+        record.put("myRequiredTime", LocalTime.parse(TIME).toNanoOfDay() / 1000); // nano to micros
+//        record.put("myRequiredDateTime", LocalDateTime.now().toInstant(ZoneOffset.UTC).toEpochMilli() * 1000); // needs to be timestamp_micros (not timestamp_millis)
+        record.put("myRequiredDateTime", LocalDateTime.parse(DATE_TIME).toInstant(ZoneOffset.UTC).toEpochMilli() * 1000); // needs to be timestamp_micros (not timestamp_millis)
+//        record.put("myRequiredDate", (int) new Date(System.currentTimeMillis()).toLocalDate().toEpochDay());
+        record.put("myRequiredDate", (int) Date.valueOf(DATE).toLocalDate().toEpochDay());
         record.put("myRequiredArrayLongs", Arrays.asList(1L, 2L, 3L));
-        record.put("myRequiredArrayNullableInts", Arrays.asList(1, null, 3)); // requires conf.setBoolean("parquet.avro.write-old-list-structure", false);
+//        record.put("myRequiredArrayNullableInts", Arrays.asList(1, null, 3)); // requires conf.setBoolean("parquet.avro.write-old-list-structure", false);
+        record.put("myRequiredArrayNullableInts", Arrays.asList(1, 3)); // requires conf.setBoolean("parquet.avro.write-old-list-structure", false);
         Schema myRequiredSubRecordSchema = schema.getField("myRequiredSubRecord").schema();
         GenericRecord myRequiredSubRecord = new GenericData.Record(myRequiredSubRecordSchema);
         myRequiredSubRecord.put("myRequiredDouble", 1.0d);
