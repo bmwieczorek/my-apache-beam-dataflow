@@ -2,7 +2,7 @@ from datetime import timedelta
 import pendulum
 from airflow import DAG
 from airflow.models import DagRun, TaskInstance, Variable
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.python import PythonOperator
 
 
 # https://bmwieczorek.wordpress.com/2023/04/05/airflow-overwrite-dag-parameters-arguments-variables/

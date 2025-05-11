@@ -3,8 +3,8 @@ import time
 import pendulum
 from airflow import DAG
 from airflow.models import DagRun, TaskInstance, Variable
-from airflow.operators.bash_operator import BashOperator
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator
 from airflow.providers.google.cloud.operators.gcs import GCSListObjectsOperator
 
 # pip install apache-airflow==1.10.15

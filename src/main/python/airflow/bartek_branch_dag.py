@@ -2,9 +2,9 @@ import random
 
 from airflow import DAG
 import pendulum
-from airflow.operators.bash_operator import BashOperator
-from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators.python_operator import BranchPythonOperator
+from airflow.operators.bash import BashOperator
+from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import BranchPythonOperator
 from airflow.utils.trigger_rule import TriggerRule
 
 
@@ -24,7 +24,7 @@ with DAG(dag_id='bartek_branch_dag',
     t = BranchPythonOperator(task_id='branching', python_callable=_my_python_branch)
     t1 = BashOperator(task_id='branch1', bash_command='echo "Branch1"')
     t2 = BashOperator(task_id='branch2', bash_command='echo "Branch2"')
-    join = DummyOperator(task_id='join', trigger_rule=TriggerRule.NONE_FAILED_OR_SKIPPED)
+    join = EmptyOperator(task_id='join', trigger_rule=TriggerRule.NONE_FAILED_OR_SKIPPED)
 
     t >> [t1, t2] >> join
 

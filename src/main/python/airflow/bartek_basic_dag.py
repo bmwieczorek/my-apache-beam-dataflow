@@ -1,6 +1,6 @@
 import pendulum
 from airflow import DAG
-from airflow.operators.bash_operator import BashOperator
+from airflow.operators.bash import BashOperator
 
 # pip install apache-airflow==1.10.15
 

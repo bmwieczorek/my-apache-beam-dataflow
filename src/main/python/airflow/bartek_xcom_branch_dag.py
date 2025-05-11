@@ -2,9 +2,9 @@ import logging
 import pendulum
 from airflow import DAG
 from airflow.models import DagRun, TaskInstance
-from airflow.operators.bash_operator import BashOperator
-from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators.python_operator import BranchPythonOperator, PythonOperator
+from airflow.operators.bash import BashOperator
+from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.utils.trigger_rule import TriggerRule
 
 
@@ -51,10 +51,10 @@ with DAG(dag_id='bartek_xcom_branch_dag',
     has_param_branch = BranchPythonOperator(task_id='has_param_branch', provide_context=True, python_callable=_has_param_branch)
     has_data_branch = BranchPythonOperator(task_id='has_data_branch', provide_context=True, python_callable=_has_data_branch)
     prepare_temp = BashOperator(task_id='prepare_temp', bash_command='echo "prepare_temp"')
-    skip_prepare_temp = DummyOperator(task_id='skip_prepare_temp')
+    skip_prepare_temp = EmptyOperator(task_id='skip_prepare_temp')
     process = BashOperator(task_id='process', bash_command='echo "process"', trigger_rule=TriggerRule.ONE_SUCCESS)
     post_process = BashOperator(task_id='post_process', bash_command='echo "post_process"')
-    no_data_end = DummyOperator(task_id='no_data_end')
+    no_data_end = EmptyOperator(task_id='no_data_end')
 
     setup >> has_param_branch >> [has_data_branch, skip_prepare_temp]
     has_data_branch >> [prepare_temp, no_data_end]

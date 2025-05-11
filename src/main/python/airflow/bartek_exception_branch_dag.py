@@ -4,8 +4,8 @@ from datetime import timedelta
 import pendulum
 from airflow import DAG
 from airflow.exceptions import AirflowFailException
-from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators.python_operator import BranchPythonOperator, PythonOperator
+from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.utils.trigger_rule import TriggerRule
 
 
@@ -35,7 +35,7 @@ with DAG(dag_id='bartek_exception_branch_dag',
     t = BranchPythonOperator(task_id='branching', python_callable=_my_python_branch)
     t1 = PythonOperator(task_id='airflow_fail_exception_branch', python_callable=_python_airflow_fail_exception_callable)
     t2 = PythonOperator(task_id='exception_branch', python_callable=_python_exception_callable)
-    join = DummyOperator(task_id='join', trigger_rule=TriggerRule.NONE_FAILED_OR_SKIPPED)
+    join = EmptyOperator(task_id='join', trigger_rule=TriggerRule.NONE_FAILED_OR_SKIPPED)
 
     t >> [t1, t2] >> join
 
