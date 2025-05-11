@@ -390,7 +390,7 @@ public class MyPubsubToGCSJobIntegrationTest {
     private Process runMvnAsBashProcess(String cmd) throws IOException {
         ProcessBuilder processBuilder = new ProcessBuilder();
         processBuilder.inheritIO();
-        processBuilder.command("bash", "-c", "test -f ~/.bash_profile && source ~/.bash_profile || true && " + cmd);
+        processBuilder.command("bash", "-c", "test -f ~/.profile && source ~/.profile || true && " + cmd);
         return processBuilder.start();
     }
 
@@ -401,7 +401,7 @@ public class MyPubsubToGCSJobIntegrationTest {
         processBuilder.directory(new File("terraform/" + MyPubsubToGCSJob.class.getSimpleName()));
 //        processBuilder.command("./run-terraform.sh");
         //processBuilder.command("bash", "-c", "ls -la");
-        processBuilder.command("bash", "-c", "test -f ~/.bash_profile && source ~/.bash_profile || true && " + cmd);
+        processBuilder.command("bash", "-c", "test -f ~/.profile && source ~/.profile || true && " + cmd);
         return processBuilder.start();
     }
 
