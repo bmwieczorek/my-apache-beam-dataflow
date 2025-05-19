@@ -14,11 +14,11 @@
         <!-- versions transitively downgraded by non beam dependencies like commons-codec upgrade to newer version recommend by beam -->
         <!-- versions not directly specified by beam like google-cloud-bigquery upgrade to version specified in beam's com.google.cloud/libraries-bom -->
 
-        <!-- https://github.com/apache/beam/blob/release-2.64/buildSrc/src/main/groovy/org/apache/beam/gradle/BeamModulePlugin.groovy -->
+        <!-- https://github.com/apache/beam/blob/release-2.65/buildSrc/src/main/groovy/org/apache/beam/gradle/BeamModulePlugin.groovy -->
 <!--        mvn dependency:tree -Dverbose-->
         <!--         google_cloud_platform_libraries_bom         : "com.google.cloud:libraries-bom:26.56.0" -->
-        <!--         https://mvnrepository.com/artifact/com.google.cloud/libraries-bom/26.56.0 -->
-        <beam.version>2.64.0</beam.version> <!-- profiling since 2.33 with service account with roles/cloudprofiler.agent -->
+        <!--         https://mvnrepository.com/artifact/com.google.cloud/libraries-bom/26.57.0 -->
+        <beam.version>2.65.0</beam.version> <!-- profiling since 2.33 with service account with roles/cloudprofiler.agent -->
         <slf4j.version>2.0.16</slf4j.version> <!-- from beam release-2.64 -->
         <kafka.version>1.1.1</kafka.version>
         <auto-service-annotations.version>1.0.1</auto-service-annotations.version>
@@ -35,8 +35,8 @@
         <!-- testing -->
         <junit.version>4.13.2</junit.version> <!-- newest version 4.13.2 -->
         <hamcrest.version>2.2</hamcrest.version> <!-- newest version 2.2 -->
-        <google-cloud-bigquery.version>2.48.1</google-cloud-bigquery.version> <!-- beam sets it via https://mvnrepository.com/artifact/com.google.cloud/libraries-bom/26.56.0 -->
-        <google-cloud-storage.version>2.49.0</google-cloud-storage.version> <!-- https://mvnrepository.com/artifact/com.google.cloud/libraries-bom/26.56.0 -> https://mvnrepository.com/artifact/com.google.cloud/google-cloud-storage-bom/2.38.0 -->
+        <google-cloud-bigquery.version>2.49.0</google-cloud-bigquery.version> <!-- beam sets it via https://mvnrepository.com/artifact/com.google.cloud/libraries-bom/26.57.0 -->
+        <google-cloud-storage.version>2.50.0</google-cloud-storage.version> <!-- https://mvnrepository.com/artifact/com.google.cloud/libraries-bom/26.57.0 -> https://mvnrepository.com/artifact/com.google.cloud/google-cloud-storage-bom/2.50.0 -->
 
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven-exec-plugin.version>3.5.0</maven-exec-plugin.version>
