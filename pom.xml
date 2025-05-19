@@ -53,8 +53,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <source>17</source>
-                    <target>17</target>
+                    <source>21</source>
+                    <target>21</target>
 
                     <!-- show compilation error when mvn compile -->
 <!--                    <forceJavacCompilerUse>true</forceJavacCompilerUse>-->
@@ -361,6 +361,8 @@
                                         <exclude>META-INF/*.SF</exclude>
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.RSA</exclude>
+                                        <!-- workaround for java 21 https://github.com/dnsjava/dnsjava/issues/338 -->
+                                        <exclude>META-INF/services/java.net.spi.InetAddressResolverProvider</exclude>
                                     </excludes>
                                 </filter>
                             </filters>
