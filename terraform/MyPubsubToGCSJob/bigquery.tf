@@ -6,6 +6,16 @@ resource "google_bigquery_dataset" "dataset" {
   labels = local.labels
 }
 
+resource "google_bigquery_dataset_iam_member" "dataset_sa_binding" {
+  dataset_id = google_bigquery_dataset.dataset.dataset_id
+  project = var.project
+  role = "roles/bigquery.dataOwner"
+  member = "serviceAccount:${var.service_account}"
+  depends_on = [
+    google_bigquery_dataset.dataset
+  ]
+}
+
 resource "google_bigquery_table" "table" {
   project = var.project
   dataset_id = google_bigquery_dataset.dataset.dataset_id
