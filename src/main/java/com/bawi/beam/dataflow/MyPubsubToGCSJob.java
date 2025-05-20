@@ -1,6 +1,7 @@
 package com.bawi.beam.dataflow;
 
 import com.bawi.beam.WindowUtils;
+import com.bawi.beam.dataflow.schema.AvroToBigQuerySchemaConverter;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.file.CodecFactory;
@@ -12,7 +13,11 @@ import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.extensions.avro.coders.AvroGenericCoder;
 import org.apache.beam.sdk.extensions.avro.io.AvroIO;
 import org.apache.beam.sdk.io.Compression;
+import org.apache.beam.sdk.io.FileBasedSink;
 import org.apache.beam.sdk.io.FileIO;
+import org.apache.beam.sdk.io.fs.ResolveOptions;
+import org.apache.beam.sdk.io.fs.ResourceId;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubMessage;
 import org.apache.beam.sdk.metrics.Distribution;
@@ -34,10 +39,8 @@ import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.text.NumberFormat;
 import java.util.TreeMap;
 import java.util.UUID;
 
@@ -46,7 +49,6 @@ import static com.bawi.beam.dataflow.LogUtils.*;
 
 public class MyPubsubToGCSJob {
 
-//    public interface MyPipelineOptions extends DataflowPipelineOptions {
     @SuppressWarnings("unused")
     public interface MyPipelineOptions extends PipelineOptions {
 
@@ -83,28 +85,6 @@ public class MyPubsubToGCSJob {
 
         int getNumShards();
         void setNumShards(int numShards);
-
-    // DataflowPipelineOptions
-//        String getTemplateLocation();
-//        void setTemplateLocation(String value);
-//
-//        int getDiskSizeGb();
-//        void setDiskSizeGb(int value);
-//
-//        int getNumWorkers();
-//        void setNumWorkers(int value);
-//
-//        int getMaxNumWorkers();
-//        void setMaxNumWorkers(int value);
-//
-//        String getWorkerMachineType();
-//        void setWorkerMachineType(String value);
-//
-//        String getWorkerDiskType();
-//        void setWorkerDiskType(String value);
-//
-//        String getSubnetwork();
-//        void setSubnetwork(String value);
     }
 
     /*
@@ -151,17 +131,18 @@ gcloud dataflow flex-template run $APP-$OWNER \
         // requires org.apache.beam:beam-sdks-java-io-google-cloud-platform
         ValueProvider<String> output = options.getOutput();
         ValueProvider<String> temp = options.getTemp();
+        LOGGER.info("numShards: {}", options.getNumShards());
 
-        PubsubIO.Read<PubsubMessage> read = PubsubIO.readMessagesWithAttributesAndMessageId().fromSubscription(options.getSubscription());
+        PubsubIO.Read<PubsubMessage> pubsubMessageRead = PubsubIO.readMessagesWithAttributesAndMessageId().fromSubscription(options.getSubscription());
 
         if (options.getMessageDeduplicationEnabled()) {
             LOGGER.info("Deduplication enabled based on {}", MY_MSG_ATTR_NAME);
-            read = read.withIdAttribute(MY_MSG_ATTR_NAME);
+            pubsubMessageRead = pubsubMessageRead.withIdAttribute(MY_MSG_ATTR_NAME);
         }
 
         if (options.getCustomEventTimeTimestampAttributeEnabled()) {
             LOGGER.info("Read with custom timestamp attribute enabled based on {}", options.getTimestampAttribute());
-            read = read.withTimestampAttribute(options.getTimestampAttribute());
+            pubsubMessageRead = pubsubMessageRead.withTimestampAttribute(options.getTimestampAttribute());
         }
 
 //        when static primitive backed in pipeline template
@@ -170,11 +151,10 @@ gcloud dataflow flex-template run $APP-$OWNER \
 //        Timestamp Attribute et2timestampAttribute:/org.apache.beam.sdk.io.gcp.pubsub.PubsubIO$Read2
 //        beam:display_data:labelled:v1
 
-        PCollection<KV<String, GenericRecord>> transformedKV = readingPipeline
-                .apply(read)
+        PCollection<GenericRecord> concatBodyAndAttrsPCollection = readingPipeline
+                .apply(pubsubMessageRead)
                 .apply("AfterPubSub", ParDo.of(new MyBundleSizeInterceptor<>("AfterPubSub")))
-                .apply(Window
-                            .<PubsubMessage>into(FixedWindows.of(Duration.standardSeconds(options.getWindowSecs())))
+                .apply(Window.into(FixedWindows.of(Duration.standardSeconds(options.getWindowSecs())))
 
 //                            .triggering(Repeatedly.forever(
 //                                    AfterFirst.of(
@@ -185,13 +165,58 @@ gcloud dataflow flex-template run $APP-$OWNER \
 //                            )
 //                            .withAllowedLateness(Duration.standardMinutes(10))
 //                            .discardingFiredPanes() // if Window.into is after DoFn then DoFn logs Global Window otherwise IntervalWindow
-                    )
-                    .apply("AfterWindowInfo", ParDo.of(new MyBundleSizeInterceptor<>("AfterWindowInfo")))
-                    .apply(ConcatBodyAttrAndMsgIdFn.CLASS_NAME, ParDo.of(new ConcatBodyAttrAndMsgIdFn()))
-                    .setCoder(AvroGenericCoder.of(SCHEMA)) // required to explicitly set coder for GenericRecord
-                    .apply("AfterConcatBodyAttrAndMsgIdFn", ParDo.of(new MyBundleSizeInterceptor<>("AfterConcatBodyAttrAndMsgIdFn")))
-    /*
-                    .apply(AvroIO.writeGenericRecords(SCHEMA).withWindowedWrites()
+                )
+                .apply("AfterWindowInfo", ParDo.of(new MyBundleSizeInterceptor<>("AfterWindowInfo")))
+                .apply(ConcatBodyAttrAndMsgIdFn.CLASS_NAME, ParDo.of(new ConcatBodyAttrAndMsgIdFn()))
+                .setCoder(AvroGenericCoder.of(SCHEMA)) // required to explicitly set coder for GenericRecord
+                .apply("AfterConcatBodyAttrAndMsgIdFn", ParDo.of(new MyBundleSizeInterceptor<>("AfterConcatBodyAttrAndMsgIdFn")));
+
+
+        // write to BQ
+        concatBodyAndAttrsPCollection.apply(BigQueryIO.<GenericRecord>write()
+                .withAvroFormatFunction(r -> {
+                    GenericRecord element = r.getElement();
+                    LOGGER.info("[{}][{}] element {}, schema {}", getIP(), getThread(), element, r.getSchema());
+                    return element;
+                })
+                .withAvroSchemaFactory(qTableSchema -> SCHEMA)
+                .to(options.getTableSpec())
+                .useAvroLogicalTypes()
+                .withoutValidation()
+                .withSchema(AvroToBigQuerySchemaConverter.convert(SCHEMA))
+//                .withAutoSharding() // requires streaming engine
+                .withNumFileShards(10)
+                .withTriggeringFrequency(Duration.standardMinutes(1))
+//                        .withLoadJobProjectId(options.getBQLoadJobProjectId())
+                .withMethod(BigQueryIO.Write.Method.FILE_LOADS)
+                .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
+                .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED));
+
+
+        // write to GCS 1
+        FileIO.Write<String, KV<String, GenericRecord>> fileIOWrite = FileIO.<String, KV<String, GenericRecord>>writeDynamic()
+                .by(KV::getKey)
+                .via(Contextful.fn(KV::getValue), AvroIO.<GenericRecord>sink(SCHEMA).withCodec(CodecFactory.fromString("snappy")))
+                .withDestinationCoder(StringUtf8Coder.of())
+                .withNaming(path -> new CustomWriteFileNaming(path, "snappy", "avro"))
+                .to(output)
+                .withTempDirectory(temp);
+
+        FileIO.Write<String, KV<String, GenericRecord>> fileIOWriteSharded =
+                options.getNumShards() == 0 ? fileIOWrite.withAutoSharding() : fileIOWrite.withNumShards(options.getNumShards());
+
+
+        // write to GCS
+        concatBodyAndAttrsPCollection
+                .apply(ParDo.of(new ToTimestampedPathKV(options.getOutput())))
+                .setCoder(KvCoder.of(StringUtf8Coder.of(), AvroGenericCoder.of(SCHEMA)))
+                .apply(ParDo.of(new MyBundleSizeInterceptor<>("ToTimestampedPathKV")))
+                .apply(fileIOWriteSharded);
+
+
+
+        // write to GCS 2
+        concatBodyAndAttrsPCollection.apply(AvroIO.writeGenericRecords(SCHEMA).withWindowedWrites()
                             //.to(output)
                             //.to(options.getOutput())
                             .to(new FileBasedSink.FilenamePolicy() {
@@ -201,7 +226,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
                                     // ResourceId resource = FileBasedSink.convertToFileResourceIfPossible(output);
                                     ResourceId resource = FileBasedSink.convertToFileResourceIfPossible(output.get());
                                     IntervalWindow intervalWindow = (IntervalWindow) window;
-                                    String parentDirectoryPath = resource.isDirectory() ? "" : firstNonNull(resource.getFilename(), "");
+                                    String parentDirectoryPath = resource.isDirectory() ? "" : firstNonNullOrDefaultToEmpty(resource.getFilename());
                                     String suggestedFilenameSuffix = outputFileHints.getSuggestedFilenameSuffix();
                                     String suffix = suggestedFilenameSuffix != null && !suggestedFilenameSuffix.isEmpty() ? suggestedFilenameSuffix : ".avro";
                                     PaneInfo.Timing pathTiming = paneInfo.getTiming();
@@ -209,60 +234,21 @@ gcloud dataflow flex-template run $APP-$OWNER \
                                     String filename = String.format("%s/%s/%s-%s-" +
                                                     "%s-%s-%s-" +
                                                     "%s-%s-%s-of-%s%s",
-                                            parentDirectoryPath, yyyyMMddHHmm, UUID.randomUUID(), System.currentTimeMillis(),
-                                            getLocalHostAddress().getHostAddress(), Thread.currentThread().getId(),  Thread.currentThread().getName(), window.maxTimestamp().toString().replace(":","_").replace(" ","_"), pathTiming,
+                                            parentDirectoryPath + "-windowedWrites", yyyyMMddHHmm, UUID.randomUUID(), System.currentTimeMillis(),
+                                            getLocalHostAddress().getHostAddress(), Thread.currentThread().threadId(),  Thread.currentThread().getName(), window.maxTimestamp().toString().replace(":","_").replace(" ","_"), pathTiming,
                                             shardNumber, numShards, suffix);
     //                                LOGGER.info("filename='{}', {}", filename, getMessage());  // output/year=2021/month=12/day=23/hour=07/minute=52/d52a2109-f8f9-459b-b055-365be2558833-1640246141797.avro
                                     return resource.getCurrentDirectory().resolve(filename, ResolveOptions.StandardResolveOptions.RESOLVE_FILE);
                                 }
 
                                 @Override
-                                public @Nullable ResourceId unwindowedFilename(int shardNumber, int numShards, FileBasedSink.OutputFileHints outputFileHints) {
+                                public ResourceId unwindowedFilename(int shardNumber, int numShards, FileBasedSink.OutputFileHints outputFileHints) {
                                     throw new UnsupportedOperationException("Unsupported.");
                                 }
                             })
                             // .withTempDirectory(FileBasedSink.convertToFileResourceIfPossible(output).getCurrentDirectory())
                             .withTempDirectory(ValueProvider.NestedValueProvider.of(temp, t -> FileBasedSink.convertToFileResourceIfPossible(t).getCurrentDirectory()))
                             .withNumShards(2));
-*/
-                    .apply(ParDo.of(new ToTimestampedPathKV(options.getOutput())))
-                    .setCoder(KvCoder.of(StringUtf8Coder.of(), AvroGenericCoder.of(SCHEMA)))
-                    .apply(ParDo.of(new MyBundleSizeInterceptor<>("ToTimestampedPathKV")));
-
-        FileIO.Write<String, KV<String, GenericRecord>> fileIOWrite = FileIO.<String, KV<String, GenericRecord>>writeDynamic()
-                .by(KV::getKey)
-                .via(Contextful.fn(KV::getValue), AvroIO.<GenericRecord>sink(SCHEMA).withCodec(CodecFactory.fromString("snappy")))
-                .withDestinationCoder(StringUtf8Coder.of())
-                .withNaming(path -> new CustomWriteFileNaming(path, "snappy", "avro"))
-                .to(output)
-                .withTempDirectory(temp);
-
-        LOGGER.info("numShards: {}", options.getNumShards());
-        FileIO.Write<String, KV<String, GenericRecord>> fileIOWriteSharded =
-                options.getNumShards() == 0 ? fileIOWrite.withAutoSharding() : fileIOWrite.withNumShards(options.getNumShards());
-
-        transformedKV.apply(fileIOWriteSharded);
-
-/*
-
-                    .apply(BigQueryIO.<GenericRecord>write()
-                            .withAvroFormatFunction(r -> {
-                                GenericRecord element = r.getElement();
-                                LOGGER.info("[{}][{}] element {}, schema {}", getIP(), getThread(), element, r.getSchema());
-                                return element;
-                            })
-                            .withAvroSchemaFactory(qTableSchema -> SCHEMA)
-                            .to(options.getTableSpec())
-                            .useAvroLogicalTypes()
-                            .withoutValidation()
-                            .withSchema(AvroToBigQuerySchemaConverter.convert(SCHEMA))
-                            .withAutoSharding()
-                            .withTriggeringFrequency(Duration.standardMinutes(1))
-    //                        .withLoadJobProjectId(options.getBQLoadJobProjectId())
-                            .withMethod(BigQueryIO.Write.Method.FILE_LOADS)
-                            .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
-                            .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED));
-*/
 
         readingPipeline.run();
     }
@@ -282,9 +268,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
             long startMs = System.currentTimeMillis();
             Metrics.counter(CLASS_NAME, "inputRecordCount_" + FORMATTER.print(startMs)).inc();
             PUBSUB_MESSAGE_SIZE_BYTES.update(pubsubMessage.getPayload().length);
-//            DataflowPipelineOptions pipelineOptions = (DataflowPipelineOptions) ctx.getPipelineOptions();
-//            List<String> experiments = pipelineOptions.getExperiments();
-//            LOGGER.info("experiments={}", experiments);
+//            LOGGER.info("experiments={}", ((DataflowPipelineOptions) ctx.getPipelineOptions()).getExperiments());
             long inputDataFreshnessMs = startMs - timestamp.getMillis();
             String publishTimeAttribute = pubsubMessage.getAttribute(PUBLISH_TIME_ATTRIBUTE);
             String eventTimeAttribute = pubsubMessage.getAttribute(EVENT_TIME_ATTRIBUTE);
@@ -306,23 +290,6 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
         private GenericData.Record doProcess(PubsubMessage pubsubMessage, long inputDataFreshnessMs, long customPublishTimeInputDataFreshnessMs, long customEventTimeInputDataFreshnessMs) {
             String body = new String(pubsubMessage.getPayload());
-//            int n = Integer.parseInt(body.split(":")[1]);
-/*
-//            if (Integer.parseInt(body.split(":")[1]) % (8 * 60 * 4) == 0) {
-//            if (Integer.parseInt(body.split(":")[1]) >= (8 * 60 * 4) && Integer.parseInt(body.split(":")[1]) < (8 * 60 * 4 + 240)) {
-            long start = System.currentTimeMillis();
-            String factorial = factorial(n);
-            long end = System.currentTimeMillis();
-            long diff = end - start;
-            LOGGER.info("factorial {} took {} millis for message {}, {}", 400000 + (10 * n), diff, body, factorial);
-*/
-//            int sleepMillis = (17 * 1000) + n;
-//            LOGGER.info("Sleeping {} millis for message {}", sleepMillis, body);
-//            try {
-//                Thread.sleep(sleepMillis);
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
             GenericData.Record record = new GenericData.Record(SCHEMA);
             String value = "body=" + body + ", attributes=" + new TreeMap<>(pubsubMessage.getAttributeMap()) + ", messageId=" + pubsubMessage.getMessageId()
                     + ", inputDataFreshnessMs=" + inputDataFreshnessMs + ", customInputDataFreshnessMs=" + customPublishTimeInputDataFreshnessMs
@@ -332,23 +299,15 @@ gcloud dataflow flex-template run $APP-$OWNER \
         }
     }
 
-    private static String factorial(int limit) {
-        BigInteger factorial = BigInteger.valueOf(1);
-        for (int i = 1; i <= limit; i++) {
-            factorial = factorial.multiply(BigInteger.valueOf(i));
-        }
-        return factorial.toString();
-    }
-
     private static String getMessage() {
         InetAddress localHostAddress = getLocalHostAddress();
         Thread thread = Thread.currentThread();
-        String total = format(Runtime.getRuntime().totalMemory());
-        String free = format(Runtime.getRuntime().freeMemory());
-        String used = format(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
-        String max = format(Runtime.getRuntime().maxMemory());
+        String total = LogUtils.format(Runtime.getRuntime().totalMemory());
+        String free = LogUtils.format(Runtime.getRuntime().freeMemory());
+        String used = LogUtils.format(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
+        String max = LogUtils.format(Runtime.getRuntime().maxMemory());
         return String.format("%s|i:%s|n:%s|g:%s|c:%s|u:%s|f:%s|t:%s|m:%s",
-                localHostAddress, thread.getId(), thread.getName(), thread.getThreadGroup().getName(), Runtime.getRuntime().availableProcessors(), used, free, total, max);
+                localHostAddress, thread.threadId(), thread.getName(), thread.getThreadGroup().getName(), Runtime.getRuntime().availableProcessors(), used, free, total, max);
     }
 
     private static InetAddress getLocalHostAddress() {
@@ -358,12 +317,6 @@ gcloud dataflow flex-template run $APP-$OWNER \
             LOGGER.error("Unable to get local host address", e);
             return null;
         }
-    }
-
-    private static String format(long value) {
-        NumberFormat numberFormat = NumberFormat.getInstance();
-        numberFormat.setGroupingUsed(true);
-        return numberFormat.format(value);
     }
 
     static class CustomWriteFileNaming implements FileIO.Write.FileNaming {
@@ -396,7 +349,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
                     parentAndFormattedDateTimePath,
                     pane.getIndex(), pane.getTiming(), normalizedWindow,
                     shardIndex, numShards,
-                    Thread.currentThread().getId(),
+                    Thread.currentThread().threadId(),
                     Thread.currentThread().getName(),
                     getLocalHostAddressSpaced(),
                     FORMATTER_MIN_SECS.print(now), UUID.randomUUID(),
@@ -404,16 +357,6 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
             LOGGER.info("[{}][Write] Writing data to '{}',w={},p={}", ipAddressAndThread(), path, windowToString(window), pane);
             return path;
-        }
-
-        private static String getLocalHostAddress() {
-            try {
-                InetAddress localHost = InetAddress.getLocalHost();
-                return localHost.getHostAddress();
-            } catch (UnknownHostException e) {
-                LOGGER.error("Unable to get local host address", e);
-                return "";
-            }
         }
     }
 
@@ -445,8 +388,8 @@ gcloud dataflow flex-template run $APP-$OWNER \
         }
     }
 
-    private static String firstNonNull(String value, String alternative) {
-        return value != null && !value.isEmpty() ? value : alternative;
+    private static String firstNonNullOrDefaultToEmpty(String value) {
+        return value != null && !value.isEmpty() ? value : "";
     }
 
     private static String getIP() {
@@ -459,7 +402,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
     }
 
     private static String getThread() {
-        return Thread.currentThread().getName() + ":" + Thread.currentThread().getId();
+        return Thread.currentThread().getName() + ":" + Thread.currentThread().threadId();
     }
 }
 
@@ -471,7 +414,7 @@ AfterPubsub_threadId_Thread-30:118	10
 AfterPubsub_threadId_Thread-31:121	5
 AfterPubsub_threadId_Thread-33:126	20
 AfterPubsub_threadId_Thread-37:141	23
-..
+...
 AfterPubsub_threadId_Thread-73:812  11
 
 
