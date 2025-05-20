@@ -123,11 +123,13 @@ java -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAI
 #  --maxNumWorkers=2 \
 result=$?
 
-echo "Done" | tee -a ${LOG}
 echo "Uploading log file and deleting instance in $WAIT_SECS_BEFORE_VM_DELETE secs: gcloud compute instances delete $INSTANCE --zone=$ZONE --quiet" | tee -a ${LOG}
 gsutil cp ${LOG} gs://${BUCKET}/compute/
 
+echo "Done" | tee -a ${LOG}
+
 if [ ${result} -ne 0 ]; then
+  grep 'Exception in thread "main"' ${LOG} | tee -a ${LOG}
   gcloud compute instances add-metadata --zone ${ZONE} ${INSTANCE} --metadata=startup-state="Failed"
 else
   gcloud compute instances add-metadata --zone ${ZONE} ${INSTANCE} --metadata=startup-state="Completed"
