@@ -334,8 +334,9 @@ public class MyPubsubToGCSJobIntegrationTest {
         for (int i = 1; i <= limitRetries; i++) {
             Page<Blob> blobs = storage.list(bucketName);
             List<Blob> filteredBlobs = StreamSupport.stream(blobs.iterateAll().spliterator(), false)
+                    .filter(blob -> blob.getName().startsWith("output/"))
                     .filter(blob -> blob.getName().endsWith(".avro"))
-//                    .peek(b -> LOGGER.info("filtered blob: {}", b))
+//                    .peek(b -> LOGGER.info("filtered blob: {}, {}", b, b.getName()))
                     .toList();
 
             LOGGER.info("Number of blobs ending with .avro: {}", filteredBlobs.size());
