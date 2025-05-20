@@ -85,6 +85,7 @@ java -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAI
   --sdkHarnessLogLevelOverrides="{ \"com.sabre.dna.vbp.calc.weights.WeightsValidator\": \"WARN\" }" \
   --diskSizeGb=100 \
   --workerDiskType="compute.googleapis.com/projects/${PROJECT}/zones/us-central1-f/diskTypes/pd-ssd" \
+  --dataflowServiceOptions=enable_lineage=true \
   --templateLocation="${DATAFLOW_TEMPLATE_GCS_PATH}" 2>&1 | tee -a ${LOG}
 
 #  comment hardcoding table_spec in template as passed dynamically at template execution
