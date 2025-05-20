@@ -104,6 +104,7 @@ java -Dorg.xerial.snappy.tempdir="$(pwd)" -cp ${DATAFLOW_JAR} ${DATAFLOW_JAR_MAI
   --autoscalingAlgorithm=THROUGHPUT_BASED \
   --enableStreamingEngine=${ENABLE_STREAMING_ENGINE} \
   --numShards=${NUM_SHARDS} \
+  --dataflowServiceOptions=enable_lineage=true \
   --templateLocation="${DATAFLOW_TEMPLATE_GCS_PATH}" 2>&1 | tee -a ${LOG}
 
 # streaming engine is required for auto-sharding
