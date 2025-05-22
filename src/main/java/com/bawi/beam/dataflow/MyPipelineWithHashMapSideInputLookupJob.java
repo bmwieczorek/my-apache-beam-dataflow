@@ -45,7 +45,7 @@ public class MyPipelineWithHashMapSideInputLookupJob {
         PCollection<Long> filteredAndTransformed = input.apply("FilterOutRestricted",
                 ParDo.of(new FilterOutRestrictedOrders()).withSideInput(TAG, refMapView));
 
-        filteredAndTransformed.apply("WriteToConsole", MyConsoleIO.write());
+        filteredAndTransformed.apply("Write", MyConsoleIO.write());
 
         PipelineResult result = pipeline.run();
         if ("DirectPipelineResult".equals(result.getClass().getSimpleName())) {
