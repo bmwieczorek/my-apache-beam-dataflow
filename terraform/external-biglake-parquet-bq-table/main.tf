@@ -17,6 +17,7 @@ resource "google_storage_bucket" "bucket" {
   project = var.project
   name   = "${var.project}-${var.owner}-biglake-external-table"
   location = var.location
+  force_destroy =  true # for testing purposes - allow deleting bucket with objects in it
 }
 
 resource "google_bigquery_dataset" "dataset" {
