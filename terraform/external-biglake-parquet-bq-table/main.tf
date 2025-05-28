@@ -1,13 +1,33 @@
 locals {
   biglake_table                    = "biglake_table"
-  external_table                   = "external_table"
-  gcs_files_root_path              = "parquet"
+  external_parquet_table           = "external_parquet_table"
+  external_avro_table              = "external_avro_table"
+  gcs_parquet_files_root_path      = "parquet"
+  gcs_avro_files_root_path         = "avro"
   empty_parquet_file               = "myEmptyNestedRecord.parquet"
   non_empty_parquet_file           = "myNestedRecord.parquet"
+  empty_avro_file                  = "myEmptyNestedRecord.snappy.avro"
+  non_empty_avro_file              = "myNestedRecord.snappy.avro"
   gcs_hive_zero_partition_path     = "year=0000/month=00/day=00/hour=00"
   gcs_hive_non_zero_partition_path = "year=2024/month=09/day=09/hour=09"
   bq_schema_file                   = "myNestedParquetBigQuerySchema.json"
 }
+
+resource "google_storage_bucket" "bucket" {
+  project = var.project
+  name   = "${var.project}-${var.owner}-biglake-external-table"
+  location = var.location
+}
+
+resource "google_bigquery_dataset" "dataset" {
+  project    = var.project
+  dataset_id = "${var.owner}_biglake_external"
+  location   = var.location
+}
+
+###########
+# PARQUET #
+###########
 
 resource "null_resource" "show_local_parquet_metadata" {
   triggers = {
@@ -27,22 +47,10 @@ data "external" "bq_connection_id" {
   program = ["bash", "get_connection_id.sh", var.bq_project, var.location]
 }
 
-resource "google_storage_bucket" "bucket" {
-  project = var.project
-  name   = "${var.project}-${var.owner}-biglake-external-table"
-  location = var.location
-}
-
 resource "google_storage_bucket_object" "empty_parquet_file" {
-  name   = "${local.gcs_files_root_path}/${local.gcs_hive_zero_partition_path}/${local.empty_parquet_file}"
+  name   = "${local.gcs_parquet_files_root_path}/${local.gcs_hive_zero_partition_path}/${local.empty_parquet_file}"
   source = local.empty_parquet_file
   bucket = google_storage_bucket.bucket.name
-}
-
-resource "google_bigquery_dataset" "dataset" {
-  project    = var.project
-  dataset_id = "${var.owner}_biglake_external"
-  location   = var.location
 }
 
 resource "google_storage_bucket_iam_member" "storage_to_bq_conn_id_sa_binding" {
@@ -73,10 +81,10 @@ resource "google_bigquery_table" "biglake_with_autodetect_schema_automatic_metad
 
     hive_partitioning_options {
       mode              = "CUSTOM"
-      source_uri_prefix = "gs://${google_storage_bucket.bucket.name}/${local.gcs_files_root_path}/{year:STRING}/{month:STRING}/{day:STRING}/{hour:STRING}"
+      source_uri_prefix = "gs://${google_storage_bucket.bucket.name}/${local.gcs_parquet_files_root_path}/{year:STRING}/{month:STRING}/{day:STRING}/{hour:STRING}"
     }
 
-    source_uris = ["gs://${google_storage_bucket.bucket.name}/${local.gcs_files_root_path}/*.parquet"]
+    source_uris = ["gs://${google_storage_bucket.bucket.name}/${local.gcs_parquet_files_root_path}/*.parquet"]
   }
 
   depends_on = [
@@ -109,7 +117,7 @@ resource "null_resource" "bq_select_biglake_with_autodetect_schema_automatic_met
 }
 
 resource "google_storage_bucket_object" "non_empty_parquet_file" {
-  name       = "${local.gcs_files_root_path}/${local.gcs_hive_non_zero_partition_path}/${local.non_empty_parquet_file}"
+  name       = "${local.gcs_parquet_files_root_path}/${local.gcs_hive_non_zero_partition_path}/${local.non_empty_parquet_file}"
   source     = local.non_empty_parquet_file
   bucket     = google_storage_bucket.bucket.name
   depends_on = [
@@ -154,10 +162,10 @@ resource "google_bigquery_table" "biglake_with_explicit_schema_manual_metadata_r
 
     hive_partitioning_options {
       mode              = "CUSTOM"
-      source_uri_prefix = "gs://${google_storage_bucket.bucket.name}/${local.gcs_files_root_path}/{year:STRING}/{month:STRING}/{day:STRING}/{hour:STRING}"
+      source_uri_prefix = "gs://${google_storage_bucket.bucket.name}/${local.gcs_parquet_files_root_path}/{year:STRING}/{month:STRING}/{day:STRING}/{hour:STRING}"
     }
 
-    source_uris = ["gs://${google_storage_bucket.bucket.name}/${local.gcs_files_root_path}/*.parquet"]
+    source_uris = ["gs://${google_storage_bucket.bucket.name}/${local.gcs_parquet_files_root_path}/*.parquet"]
   }
 
   depends_on = [
@@ -206,10 +214,10 @@ resource "null_resource" "bq_select_biglake_with_explicit_schema_manual_metadata
   ]
 }
 
-resource "google_bigquery_table" "external_table_with_explicit_schema" {
+resource "google_bigquery_table" "external_parquet_table_with_explicit_schema" {
   project             = var.project
   dataset_id          = google_bigquery_dataset.dataset.dataset_id
-  table_id            = "${local.external_table}_with_explicit_schema"
+  table_id            = "${local.external_parquet_table}_with_explicit_schema"
   deletion_protection = false
   schema              = file(local.bq_schema_file)
   # schema = null
@@ -229,10 +237,10 @@ resource "google_bigquery_table" "external_table_with_explicit_schema" {
 
     hive_partitioning_options {
       mode              = "CUSTOM"
-      source_uri_prefix = "gs://${google_storage_bucket.bucket.name}/${local.gcs_files_root_path}/{year:STRING}/{month:STRING}/{day:STRING}/{hour:STRING}"
+      source_uri_prefix = "gs://${google_storage_bucket.bucket.name}/${local.gcs_parquet_files_root_path}/{year:STRING}/{month:STRING}/{day:STRING}/{hour:STRING}"
     }
 
-    source_uris = ["gs://${google_storage_bucket.bucket.name}/${local.gcs_files_root_path}/*.parquet"]
+    source_uris = ["gs://${google_storage_bucket.bucket.name}/${local.gcs_parquet_files_root_path}/*.parquet"]
   }
 
   depends_on = [
@@ -240,36 +248,120 @@ resource "google_bigquery_table" "external_table_with_explicit_schema" {
   ]
 }
 
-resource "null_resource" "bq_show_schema_external_table_with_explicit_schema" {
+resource "null_resource" "bq_show_schema_external_parquet_table_with_explicit_schema" {
   triggers = {
     always_run = formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())
   }
 
   provisioner "local-exec" {
-    command = "bq show --format=prettyjson ${google_bigquery_dataset.dataset.project}:${google_bigquery_dataset.dataset.dataset_id}.${google_bigquery_table.external_table_with_explicit_schema.table_id} | jq '.schema.fields' | jq '.[] | select(.name==\"myRequiredDateTime\")'"
+    command = "bq show --format=prettyjson ${google_bigquery_dataset.dataset.project}:${google_bigquery_dataset.dataset.dataset_id}.${google_bigquery_table.external_parquet_table_with_explicit_schema.table_id} | jq '.schema.fields' | jq '.[] | select(.name==\"myRequiredDateTime\")'"
   }
 }
 
-resource "null_resource" "bq_select_external_table_with_explicit_schema_with_empty_file_only" {
+resource "null_resource" "bq_select_external_parquet_table_with_explicit_schema_with_empty_file_only" {
   triggers = {
     always_run = formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())
   }
 
   provisioner "local-exec" {
-    command = "bq query --use_legacy_sql=false 'SELECT count(*) AS cnt FROM ${google_bigquery_dataset.dataset.project}.${google_bigquery_dataset.dataset.dataset_id}.${google_bigquery_table.external_table_with_explicit_schema.table_id} WHERE year is not null'"
+    command = "bq query --use_legacy_sql=false 'SELECT count(*) AS cnt FROM ${google_bigquery_dataset.dataset.project}.${google_bigquery_dataset.dataset.dataset_id}.${google_bigquery_table.external_parquet_table_with_explicit_schema.table_id} WHERE year is not null'"
   }
 }
 
-resource "null_resource" "bq_select_external_table_explicit_schema_with_non_empty_file" {
+resource "null_resource" "bq_select_external_parquet_table_explicit_schema_with_non_empty_file" {
   triggers = {
     always_run = formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())
   }
 
   provisioner "local-exec" {
-    command = "bq query --use_legacy_sql=false 'SELECT * FROM ${google_bigquery_dataset.dataset.project}.${google_bigquery_dataset.dataset.dataset_id}.${google_bigquery_table.external_table_with_explicit_schema.table_id} WHERE year is not null'"
+    command = "bq query --use_legacy_sql=false 'SELECT * FROM ${google_bigquery_dataset.dataset.project}.${google_bigquery_dataset.dataset.dataset_id}.${google_bigquery_table.external_parquet_table_with_explicit_schema.table_id} WHERE year is not null'"
   }
 
   depends_on = [google_storage_bucket_object.non_empty_parquet_file]
+}
+
+
+########
+# AVRO #
+########
+
+resource "google_bigquery_table" "external_avro_table_with_explicit_schema" {
+  project             = var.project
+  dataset_id          = google_bigquery_dataset.dataset.dataset_id
+  table_id            = "${local.external_avro_table}_with_explicit_schema"
+  deletion_protection = false
+  schema = file(local.bq_schema_file)
+
+  external_data_configuration {
+    autodetect    = false
+    source_format = "AVRO"
+
+    avro_options {
+      use_avro_logical_types = true
+    }
+
+    hive_partitioning_options {
+      mode              = "CUSTOM"
+      source_uri_prefix = "gs://${google_storage_bucket.bucket.name}/${local.gcs_avro_files_root_path}/{year:STRING}/{month:STRING}/{day:STRING}/{hour:STRING}"
+    }
+
+    source_uris = ["gs://${google_storage_bucket.bucket.name}/${local.gcs_avro_files_root_path}/*.avro"]
+  }
+
+  depends_on = [
+    // google_storage_bucket_object.empty_avro_file # not required as neither view is created on top of this table nor it has metadata cache refresh enabled
+  ]
+}
+
+resource "null_resource" "bq_show_schema_external_avro_table_with_explicit_schema" {
+  triggers = {
+    always_run = formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())
+  }
+
+  provisioner "local-exec" {
+    command = "bq show --format=prettyjson ${google_bigquery_dataset.dataset.project}:${google_bigquery_dataset.dataset.dataset_id}.${google_bigquery_table.external_avro_table_with_explicit_schema.table_id} | jq '.schema.fields' | jq '.[] | select(.name==\"myRequiredDateTime\")'"
+  }
+}
+
+resource "google_storage_bucket_object" "empty_avro_file" {
+  name   = "${local.gcs_avro_files_root_path}/${local.gcs_hive_zero_partition_path}/${local.empty_avro_file}"
+  source = local.empty_avro_file
+  bucket = google_storage_bucket.bucket.name
+}
+
+resource "null_resource" "bq_select_external_avro_table_with_explicit_schema_with_empty_file_only" {
+  triggers = {
+    always_run = formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())
+  }
+
+  provisioner "local-exec" {
+    command = "bq query --use_legacy_sql=false 'SELECT count(*) AS cnt FROM ${google_bigquery_dataset.dataset.project}.${google_bigquery_dataset.dataset.dataset_id}.${google_bigquery_table.external_avro_table_with_explicit_schema.table_id} WHERE year is not null'"
+  }
+
+  depends_on = [
+    google_storage_bucket_object.empty_avro_file
+  ]
+}
+
+resource "google_storage_bucket_object" "non_empty_avro_file" {
+  name       = "${local.gcs_avro_files_root_path}/${local.gcs_hive_non_zero_partition_path}/${local.non_empty_avro_file}"
+  source     = local.non_empty_avro_file
+  bucket     = google_storage_bucket.bucket.name
+  depends_on = [
+    null_resource.bq_select_external_avro_table_with_explicit_schema_with_empty_file_only
+  ]
+}
+
+resource "null_resource" "bq_select_external_avro_table_explicit_schema_with_non_empty_file" {
+  triggers = {
+    always_run = formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())
+  }
+
+  provisioner "local-exec" {
+    command = "bq query --use_legacy_sql=false 'SELECT * FROM ${google_bigquery_dataset.dataset.project}.${google_bigquery_dataset.dataset.dataset_id}.${google_bigquery_table.external_avro_table_with_explicit_schema.table_id} WHERE year is not null'"
+  }
+
+  depends_on = [google_storage_bucket_object.non_empty_avro_file]
 }
 
 # bq mkdef \

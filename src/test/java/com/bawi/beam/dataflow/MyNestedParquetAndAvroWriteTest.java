@@ -3,16 +3,17 @@ package com.bawi.beam.dataflow;
 import org.apache.avro.LogicalTypes;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
+import org.apache.avro.file.CodecFactory;
+import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.parquet.avro.AvroParquetWriter;
 import org.apache.parquet.hadoop.ParquetWriter;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.apache.parquet.io.LocalOutputFile;
-import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,12 +37,9 @@ import java.util.Arrays;
 import java.util.List;
 
 
-public class MyNestedParquetWriteTest implements Serializable {
+public class MyNestedParquetAndAvroWriteTest implements Serializable {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MyNestedParquetWriteTest.class);
-
-    @Rule
-    public final transient TestPipeline pipeline = TestPipeline.create();
+    private static final Logger LOGGER = LoggerFactory.getLogger(MyNestedParquetAndAvroWriteTest.class);
 
     @Test
     public void test() throws IOException, URISyntaxException {
@@ -50,10 +48,30 @@ public class MyNestedParquetWriteTest implements Serializable {
 
         // given - generate parquet file
         LOGGER.info(INTPUT_SCHEMA.toString(true));
-        GenericData.Record record = createGenericRecord(INTPUT_SCHEMA);
 
-        String fileRelativePath = "target/myNestedRecord.parquet";
-//        String fileRelativePath = "target/myEmptyNestedRecord.parquet";
+        generateParquetFile("target/myEmptyNestedRecord.parquet", null);
+        generateParquetFile("target/myNestedRecord.parquet", createGenericRecord(INTPUT_SCHEMA));
+
+        generateAvroFile("target/myEmptyNestedRecord.snappy.avro", null);
+        generateAvroFile("target/myNestedRecord.snappy.avro", createGenericRecord(INTPUT_SCHEMA));
+
+    }
+
+    private static void generateAvroFile(String avroEmptyFileRelativePath, GenericData.Record record) throws IOException {
+        Path avroPath = new Path(avroEmptyFileRelativePath);
+        File avroFile = new File(avroPath.toUri().getPath());
+        deleteIfPresent(avroFile);
+
+        try (DataFileWriter<GenericData.Record> writer = new DataFileWriter<>(new GenericDatumWriter<>(INTPUT_SCHEMA))) {
+            writer.setCodec(CodecFactory.snappyCodec());
+            writer.create(INTPUT_SCHEMA, avroFile);
+            if (record != null) {
+                writer.append(record);
+            }
+        }
+    }
+
+    private static void generateParquetFile(String fileRelativePath, GenericData.Record record) throws URISyntaxException, IOException {
         Path path = new Path(fileRelativePath);
         File file = new File(path.toUri().getPath());
         deleteIfPresent(file);
@@ -71,7 +89,9 @@ public class MyNestedParquetWriteTest implements Serializable {
                      .withCompressionCodec(CompressionCodecName.SNAPPY)
                      .build()) {
 
-            writer.write(record);
+            if (record != null) {
+                writer.write(record);
+            }
         }
     }
 
@@ -98,7 +118,8 @@ public class MyNestedParquetWriteTest implements Serializable {
                     .name("myRequiredTime").doc("My required time field").type(TIME_LOGICAL_TYPE).noDefault()
                     .name("myRequiredDateTime").doc("My required datetime field").type(DATETIME_LOGICAL_TYPE).noDefault()
                     .name("myRequiredArrayLongs").type().array().items().longType().noDefault()
-                    .name("myRequiredArrayNullableInts").type().array().items().nullable().longType().noDefault()
+//                    .name("myRequiredArrayNullableInts").type().array().items().nullable().longType().noDefault() // for avro generation: org.apache.avro.file.DataFileWriter$AppendWriteException: org.apache.avro.UnresolvedUnionException: Not in union {"type":"array","items":["long","null"]}: [1, 3] (field=myRequiredArrayNullableInts)
+                    .name("myRequiredArrayNullableInts").type().optional().array().items().longType()
                     .name("myRequiredSubRecord").type(SchemaBuilder.record("myRequiredSubRecordType").fields().requiredDouble("myRequiredDouble").requiredBoolean("myRequiredBoolean").endRecord()).noDefault()
                     .name("myOptionalSubRecord").type().optional().record("myOptionalSubRecordType").fields().requiredFloat("myRequiredFloat").requiredBoolean("myRequiredBoolean").endRecord()
                     .name("myNullableSubRecord").type().nullable().record("myNullableSubRecordType").fields().requiredLong("myRequiredLong").requiredBoolean("myRequiredBoolean").endRecord().noDefault()
