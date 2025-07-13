@@ -28,6 +28,7 @@ public class ReadTextFileTest implements Serializable {
     @Test
     public void test() throws IOException {
         // given - generate file
+        Files.deleteIfExists(Paths.get("target/myFile.txt"));
         Files.write(Paths.get("target/myFile.txt"), "abc123".getBytes(), StandardOpenOption.CREATE);
 
         // when - read file
