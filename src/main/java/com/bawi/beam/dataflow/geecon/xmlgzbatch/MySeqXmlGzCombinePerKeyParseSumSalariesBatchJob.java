@@ -1,10 +1,10 @@
-package com.bawi.beam.dataflow.geecon;
+package com.bawi.beam.dataflow.geecon.xmlgzbatch;
 
 import com.bawi.VtdXmlParser;
 import com.bawi.VtdXmlParser.Entry;
 import com.bawi.beam.dataflow.PipelineUtils;
-import com.bawi.parser.impl.StringLengthParser;
-import com.bawi.parser.impl.SumValuesParser;
+import com.bawi.parser.StringLengthParser;
+import com.bawi.parser.SumValuesParser;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.io.GenerateSequence;
@@ -27,6 +27,7 @@ import java.util.Objects;
 import static com.bawi.beam.dataflow.LogUtils.hostname;
 import static com.bawi.beam.dataflow.LogUtils.hostnameAndThreadId;
 import static com.bawi.beam.dataflow.PipelineUtils.*;
+import static com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.distribute;
 import static com.bawi.beam.dataflow.geecon.XmlPayload.XML_PAYLOAD;
 import static com.bawi.io.GzipUtils.gunzip;
 import static com.bawi.io.GzipUtils.gzip;
@@ -47,7 +48,7 @@ public class MySeqXmlGzCombinePerKeyParseSumSalariesBatchJob {
                                 , "--numWorkers=3"
                                 , "--maxNumWorkers=3"
                                 , "--workerMachineType=t2d-standard-2"
-                                , "--sequenceLimit=50000000"
+                                , "--sequenceLimit=5000"
                                 , "--experiments=enable_stackdriver_agent_metrics"
                         ) :
                         PipelineUtils.updateArgs(args
@@ -71,16 +72,9 @@ public class MySeqXmlGzCombinePerKeyParseSumSalariesBatchJob {
                 }))
                 ;
 
-        PipelineResult result = pipeline.run();
-        if (result.getClass().getSimpleName().equals("DataflowPipelineJob") || result.getClass().getSimpleName().equals("DirectPipelineResult")) {
-            result.waitUntilFinish();
-            LOGGER.info("counters={}", getCounters(result.metrics()));
-            LOGGER.info("distributions={}", getDistributions(result.metrics()));
-        }
-    }
-
-    private static String distribute(Long n) {
-        return List.of("US", "US", "PL", "US", "MT", "US", "US", "PL", "US", "US").get((int) (n % 10));
+        PipelineResult pipelineResult = pipeline.run();
+        pipelineResult.waitUntilFinish();
+        logMetrics(pipelineResult);
     }
 
     static class GunzipParseSumSalariesInXmlCombineFn extends Combine.CombineFn<byte[], MySumAccum, Long> {
@@ -104,7 +98,7 @@ public class MySeqXmlGzCombinePerKeyParseSumSalariesBatchJob {
             long start = currentTimeMillis();
             String xml = new String(gunzip(input));
             Map<String, Object> xmlAsMap = new VtdXmlParser(mapping).parseXml(xml);
-            long staffBasicSalarySum = (int) xmlAsMap.get("staff_basic_salary_sum");
+            long staffBasicSalarySum = (long) (int) xmlAsMap.get("staff_basic_salary_sum");
             Metrics.distribution(MySeqXmlGzCombinePerKeyParseSumSalariesBatchJob.class, "elapsedTime").update(currentTimeMillis() - start);
             return new MySumAccum(staffBasicSalarySum);
         }

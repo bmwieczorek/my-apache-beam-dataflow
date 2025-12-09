@@ -1,10 +1,10 @@
-package com.bawi.beam.dataflow.geecon;
+package com.bawi.beam.dataflow.geecon.xmlgzbatch;
 
 import com.bawi.VtdXmlParser;
 import com.bawi.VtdXmlParser.Entry;
 import com.bawi.beam.dataflow.PipelineUtils;
-import com.bawi.parser.impl.StringLengthParser;
-import com.bawi.parser.impl.SumValuesParser;
+import com.bawi.parser.StringLengthParser;
+import com.bawi.parser.SumValuesParser;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.io.GenerateSequence;
@@ -26,6 +26,7 @@ import java.util.Map;
 
 import static com.bawi.beam.dataflow.LogUtils.hostname;
 import static com.bawi.beam.dataflow.PipelineUtils.*;
+import static com.bawi.beam.dataflow.geecon.MyGzippedXmlJobUtils.distribute;
 import static com.bawi.beam.dataflow.geecon.XmlPayload.XML_PAYLOAD;
 import static com.bawi.io.GzipUtils.gunzip;
 import static com.bawi.io.GzipUtils.gzip;
@@ -39,16 +40,22 @@ public class MySeqXmlGzGroupByPerKeyParseSumSalariesParDoBatchJob {
     private static final Logger LOGGER = LoggerFactory.getLogger(MySeqXmlGzGroupByPerKeyParseSumSalariesParDoBatchJob.class);
     private static final String JOB_NAME = "bartek-" + MySeqXmlGzGroupByPerKeyParseSumSalariesParDoBatchJob.class.getSimpleName().toLowerCase();
 
+    // slow, reducing workers from 3 to 1
     public static void main(String[] args) throws IOException {
         String[] updatedArgs =
                 isDataflowRunnerOnClasspath() ?
                         updateArgsWithDataflowRunner(args
-                                , "--jobName=" + JOB_NAME + "--10m-elements--3x-t2dst2"
+                                , "--jobName=" + JOB_NAME + "--50m-elements--3x-t2dst2"
                                 , "--numWorkers=3"
                                 , "--maxNumWorkers=3"
                                 , "--workerMachineType=t2d-standard-2"
-                                , "--sequenceLimit=10000000"
+                                , "--sequenceLimit=5000"
                                 , "--experiments=enable_stackdriver_agent_metrics"
+                                // use either --profilingAgentConfiguration={\"APICurated\":true}"  or  --dataflowServiceOptions=enable_google_cloud_profiler
+//                                ,"--profilingAgentConfiguration={\"APICurated\":true}"
+                                ,"--dataflowServiceOptions=enable_google_cloud_profiler" // adds a link to jobs https://console.cloud.google.com/profiler
+
+
                         ) :
                         PipelineUtils.updateArgs(args
                                 , "--sequenceLimit=10"
@@ -72,16 +79,9 @@ public class MySeqXmlGzGroupByPerKeyParseSumSalariesParDoBatchJob {
                 }))
         ;
 
-        PipelineResult result = pipeline.run();
-        if (result.getClass().getSimpleName().equals("DataflowPipelineJob") || result.getClass().getSimpleName().equals("DirectPipelineResult")) {
-            result.waitUntilFinish();
-            LOGGER.info("counters={}", getCounters(result.metrics()));
-            LOGGER.info("distributions={}", getDistributions(result.metrics()));
-        }
-    }
-
-    private static String distribute(Long n) {
-        return List.of("US", "US", "PL", "US", "MT", "US", "US", "PL", "US", "US").get((int) (n % 10));
+        PipelineResult pipelineResult = pipeline.run();
+        pipelineResult.waitUntilFinish();
+        logMetrics(pipelineResult);
     }
 
     static class GunzipParseSumSalariesInXmlGroup extends DoFn<KV<String, Iterable<byte[]>>, KV<String, Long>> {
