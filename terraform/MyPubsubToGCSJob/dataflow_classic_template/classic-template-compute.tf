@@ -23,8 +23,9 @@ resource "null_resource" "gsutil_upload_dataflow_jar" {
     always_run = formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())
   }
 
+  # command = "gsutil -o GSUtil:parallel_composite_upload_threshold=150M cp ${var.dataflow_jar_local_path} gs://${var.bucket}/${local.dataflow_jar_gcs_path}"
   provisioner "local-exec" {
-    command = "gsutil -o GSUtil:parallel_composite_upload_threshold=150M cp ${var.dataflow_jar_local_path} gs://${var.bucket}/${local.dataflow_jar_gcs_path}"
+    command = "gsutil cp ${var.dataflow_jar_local_path} gs://${var.bucket}/${local.dataflow_jar_gcs_path}"
   }
 }
 
