@@ -33,7 +33,7 @@ public class MyDynamicBQWriteTest implements Serializable {
                                 "\"myRequiredString\":\"abc\"," +
                                 "\"myRequiredInt\":\"123\"," +
                                 "\"myRequiredDate\":\"2017-01-01\"," +
-                                "\"myRequiredTimestamp\":\"2022-03-20 03:41:42.123000 UTC\"," +
+                                "\"myRequiredTimestamp\":\"2022-03-20 03:41:42.123 UTC\"," +
                                 "\"myRequiredBoolean\":true," +
                                 "\"myRequiredNumeric\":\"1.230000000\"," +
                                 "\"myRequiredDouble\":4.56," +
