@@ -21,3 +21,4 @@ gpg/*.gpg
 gpg/*.asc
 gpg/*.txt
 /src/main/resources/sfw*.gz
+.python-version

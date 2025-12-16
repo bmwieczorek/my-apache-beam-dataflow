@@ -5,6 +5,8 @@ brew install parquet-cli
 
 echo ". ~/.profile" >> ~/.bash_profile
 
+# generate .python-version with composer-2.4.3-airflow-2.5.3-python-3.8.14-jupyter to start terminal with virtualenv
+pyenv local composer-2.4.3-airflow-2.5.3-python-3.8.14-jupyter
 
 export NO_PROXY=*
 export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
