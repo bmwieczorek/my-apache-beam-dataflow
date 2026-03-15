@@ -8,8 +8,8 @@ locals {
   max_workers                     = 2
   number_of_worker_harness_threads = 0
 #   number_of_worker_harness_threads = 8
-  num_shards                      = 8 // 0 for auto-sharding, >0 for explicit sharding
-  enable_streaming_engine         = false
+  num_shards                      = 0 // 0 for auto-sharding, >0 for explicit sharding
+  enable_streaming_engine         = true
 
   autosharding_with_streaming_engine_validation_error_message = "Please use auto-sharding (numShards=0) only with enable_streaming_engine=true"
   autosharding_with_streaming_engine_validation_error_condition = local.num_shards == 0 && !local.enable_streaming_engine
