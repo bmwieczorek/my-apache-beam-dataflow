@@ -424,6 +424,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
         }
     }
 
+    @SuppressWarnings("NullableProblems")
     static class ToTimestampedPathKV extends DoFn<GenericRecord, KV<String, GenericRecord>> {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(ToTimestampedPathKV.class);
