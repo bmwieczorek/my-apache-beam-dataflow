@@ -304,7 +304,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
                 if (customEventTimeInputDataFreshnessMs > 0)
                     CUSTOM_EVENT_TIME_INPUT_DATA_FRESHNESS_MS.update(customEventTimeInputDataFreshnessMs);
 
-                // OOM case - so data object is not be removed by GC before OOM happens and the log with memory info is printed
+                // OOM simulation - so data object is not removed by GC before OOM happens and the log with memory info is printed
                 if (bigArrayToSimulateOOM.length > 0) {
                     LOGGER.info("MEMORY_HOG size: {}, total memory: {}, free memory: {}", bigArrayToSimulateOOM.length, Runtime.getRuntime().totalMemory(), Runtime.getRuntime().freeMemory());
                 }
@@ -323,7 +323,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
                             currentMachineType, getRecommendedHighMemMachineType(currentMachineType), jobUpdateCurlCommand, t);
                     throw t;
                 } else if (t instanceof Exception) {
-                    LOGGER.error("Exception occurred during processing. Skipping rethrowing the to avoid pipeline indefinite retries. Exception: {}, Root cause: {}", t.getMessage(), rootCause.getMessage(), t);
+                    LOGGER.error("Exception occurred during processing. Skipping rethrowing it to avoid pipeline indefinite retries. Exception: {}, Root cause: {}", t.getMessage(), rootCause.getMessage(), t);
                 } else {
                     LOGGER.error("Rethrowing non OutOfMemoryError throwable: {}, Root cause: {}", t.getMessage(), rootCause.getMessage(), t);
                     throw t;
