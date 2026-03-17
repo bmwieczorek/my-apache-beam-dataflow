@@ -436,7 +436,6 @@ gcloud dataflow flex-template run $APP-$OWNER \
         //        private final String outputDir;
         private final ValueProvider<String> outputDir;
 
-        @SuppressWarnings("deprecation")
         @Override
         public Duration getAllowedTimestampSkew() {
             return Duration.millis(Long.MAX_VALUE);
