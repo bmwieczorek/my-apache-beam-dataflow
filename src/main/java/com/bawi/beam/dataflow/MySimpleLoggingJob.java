@@ -1,5 +1,15 @@
 package com.bawi.beam.dataflow;
 
+import static com.bawi.beam.dataflow.DataflowJobDetails.getMachineType;
+import static com.bawi.beam.dataflow.LogUtils.getIp;
+import static com.bawi.beam.dataflow.LogUtils.getThreadNameAndId;
+import static com.bawi.beam.dataflow.MySimpleLoggingJob.MyFn.THREAD_IDS;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.metrics.Distribution;
@@ -11,17 +21,8 @@ import org.apache.beam.sdk.transforms.ParDo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import static com.bawi.beam.dataflow.MySimpleLoggingJob.MyFn.THREAD_IDS;
-
 public class MySimpleLoggingJob {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MySimpleLoggingJob.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MySimpleLoggingJob.class);    
 
     public static void main(String[] args) {
         args = PipelineUtils.updateArgsWithDataflowRunner(args);
@@ -48,43 +49,32 @@ public class MySimpleLoggingJob {
         @StartBundle
         public void startBundle() {
             bundleSize = 0;
-            LOGGER.info("[{}][tid={}] Starting bundle", ip(), threadId());
+            LOGGER.info("[{}][tid={}][mt={}] Starting bundle", getIp(), getThreadNameAndId(), getMachineType());
         }
 
         @ProcessElement
         public void process(@Element Integer i, OutputReceiver<Integer> receiver) throws InterruptedException {
             bundleSize++;
-            THREAD_IDS.add(threadId());
-            LOGGER.info("[{}][tid={}] Processing: {}", ip(), threadId(), i);
+            THREAD_IDS.add(getThreadNameAndId());
+            LOGGER.info("[{}][tid={}][mt={}] Processing: {}", getIp(), getThreadNameAndId(), getMachineType(), i);
             Thread.sleep(1000);
             receiver.output(i);
         }
 
+
         @FinishBundle
         public void finishBundle() {
-            LOGGER.info("[{}][tid={}] Bundle size: {}", ip(), threadId(), bundleSize);
+            LOGGER.info("[{}][tid={}][mt={}] Bundle size: {}", getIp(), getThreadNameAndId(), getMachineType(), bundleSize);
             bundleSizeDist.update(bundleSize);
             bundleSize=0;
         }
     }
 
-    private static long threadId() {
-        return Thread.currentThread().getId();
-    }
-
-    private static String ip() {
-        try {
-            return InetAddress.getLocalHost().getHostAddress();
-        } catch (UnknownHostException e) {
-            LOGGER.error("Unable to get local host address", e);
-            return null;
-        }
-    }
 }
 
 /*
 
-#Machine type	vCPUs	Memory	Price (USD)	Preemptible price (same for certral,east,west-1)
+#Machine type	vCPUs	Memory	Price (USD)	Preemptible price (same for central,east,west-1)
 #e2-small	    2	    2GB	    $0.016751	$0.005025
 #n1-standard-1	1	    3.75GB	$0.04749975	$0.01
 
@@ -206,4 +196,15 @@ mvn compile -DskipTests -Pdataflow-runner exec:java \
 //        bundleSizeDist_MAX	48	    ParDo(MyFn)
 //        bundleSizeDist_MEAN	33	    ParDo(MyFn)
 //        bundleSizeDist_MIN	2	    ParDo(MyFn)
+
+
+
+
+
+
+
+
+
+
+
 
