@@ -232,6 +232,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
                 //.to(options.getOutput())
                 .to(new FileBasedSink.FilenamePolicy() {
 
+                    @SuppressWarnings("NullableProblems")
                     @Override
                     public ResourceId windowedFilename(int shardNumber, int numShards, BoundedWindow window, PaneInfo paneInfo, FileBasedSink.OutputFileHints outputFileHints) {
                         // ResourceId resource = FileBasedSink.convertToFileResourceIfPossible(output);
