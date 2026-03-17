@@ -22,7 +22,7 @@ public class LogUtils {
 //        return String.format("%s|i:%s|n:%s|g:%s|c:%s|u:%s|f:%s|t:%s|m:%s",
 //                localHostAddress, thread.getId(), thread.getName(), thread.getThreadGroup().getName(), Runtime.getRuntime().availableProcessors(), used, free, total, max);
 
-        return String.format("%s|%s", getLocalHostAddress(), thread.getId());
+        return String.format("%s|%s", getIp(), thread.threadId());
 
 //        return String.format("i:%s", thread.getId());
 
@@ -30,7 +30,7 @@ public class LogUtils {
 
     }
 
-    public static String getLocalHostAddress() {
+    public static String getIp() {
         try {
             return InetAddress.getLocalHost().getHostAddress();
         } catch (UnknownHostException e) {
@@ -48,12 +48,21 @@ public class LogUtils {
         }
     }
 
+    static InetAddress getLocalHostAddress() {
+        try {
+            return InetAddress.getLocalHost();
+        } catch (UnknownHostException e) {
+            LOGGER.error("Unable to get local host address", e);
+            return null;
+        }
+    }
+
     public static String hostnameAndThreadId() {
-        return hostname() + "_" + Thread.currentThread().getId();
+        return hostname() + "_" + Thread.currentThread().threadId();
     }
 
     public static String getLocalHostAddressSpaced() {
-        String localHostAddress = getLocalHostAddress();
+        String localHostAddress = getIp();
         return localHostAddress == null ? "" : localHostAddress.replace(".","_");
     }
 
@@ -65,5 +74,9 @@ public class LogUtils {
 
     public static String windowToString(BoundedWindow window) {
         return window instanceof GlobalWindow ? "GlobalWindow: maxTimestamp=" + window.maxTimestamp() : window.getClass().getSimpleName() + ": " + window;
+    }
+
+    static long getThreadNameAndId() {
+        return Thread.currentThread().threadId();
     }
 }
