@@ -60,96 +60,73 @@ public class MyPubsubToGCSJobIntegrationTest {
 
     private final String vars = " -var=\"dataflow_classic_template_enabled=" + dataflow_classic_template_enabled + "\"" +
             " -var=\"dataflow_message_deduplication_enabled=" + dataflowDeduplicationEnabled + "\"" +
-            " -var=\"dataflow_custom_event_time_timestamp_attribute_enabled=" + true + "\""+ // timestamp_attribute_enabled requires granting service account roles/pubsub.editor at project level
+            " -var=\"dataflow_custom_event_time_timestamp_attribute_enabled=" + true + "\"" + // timestamp_attribute_enabled requires granting service account roles/pubsub.editor at project level
             " -var=\"dataflow_custom_event_time_timestamp_attribute=" + EVENT_TIME_ATTRIBUTE + "\"" +
 //                " -var=\"dataflow_custom_event_time_timestamp_attribute_enabled=" + !isMessageEventTimeIncreasing + "\""+
             " -var=\"skip_wait_on_job_termination=" + skip_wait_on_job_termination + "\"" +
             " -var=\"recalculate_template=" + recalculate_template + "\"";
 
     @Before
-    public void cleanUp() throws IOException, InterruptedException {
-        runMvnAsBashProcess("env");
-        Process process = runBashProcess("terraform init && terraform destroy -auto-approve " + vars);
-        logProcess(process);
-        int statusCode = process.waitFor();
-        Assert.assertEquals("init and destroy process should exit terraform with 0 statusCode code", 0, statusCode);
+    public void prepareBefore() throws IOException, InterruptedException {
+        assertEnvVariablesPresent();
+        rebuildUberJar(); // jar needs to be present beforehand as it referenced in later by terraform
+        runTerraformDestroy();
     }
 
     @After
     public void cleanUpAfter() throws IOException, InterruptedException {
         // Process process = runBashProcess("terraform init && terraform destroy -auto-approve -target=module.dataflow_classic_template_job " + vars);
-        Process process = runBashProcess("terraform init && terraform destroy -auto-approve " + vars);
-        logProcess(process);
-        int statusCode = process.waitFor();
-        Assert.assertEquals("init and destroy process should exit terraform with 0 statusCode code", 0, statusCode);
+        runTerraformDestroy();
     }
 
     @Test
     public void testE2E() throws IOException, InterruptedException {
-        Assert.assertNotNull("Expected Google Project ID to be set as env variable", get("GCP_PROJECT"));
-        Assert.assertNotNull("Expected Google Project resource owner to be set as env variable", get("GCP_OWNER"));
-        LOGGER.info("Read env variables: GCP_PROJECT={}, GCP_OWNER={}", get("GCP_PROJECT"), get("GCP_OWNER"));
-
-        Process mvnProcess =
-                dataflow_classic_template_enabled ?
-                runMvnAsBashProcess("mvn clean package -Pdist -DskipTests")
-                        :
-                runMvnAsBashProcess("mvn clean package -Pbuild-and-deploy-flex-template -Dgcp.project.id=${GCP_PROJECT} -DskipTests");
-        logProcess(mvnProcess);
-        int mvnProcessStatus = mvnProcess.waitFor();
-        Assert.assertEquals("mvn build should exit with 0 status code", 0, mvnProcessStatus);
-
         // given
         String topic = get("GCP_OWNER") + "-topic";
         String gcsBucket = get("GCP_PROJECT") + "-" + get("GCP_OWNER") + "-" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase();
         LOGGER.info("topic={}, bucket={}", topic, gcsBucket);
-//        int numMessages = 23 * 60 * 10;
-        int numMessages = 23 * 60;
-
 
         // when
         Process terraformApplyProcess = runBashProcess("terraform apply -auto-approve " + vars);
-
         logProcess(terraformApplyProcess);
         int status = terraformApplyProcess.waitFor();
-        Assert.assertEquals("Should exit terraform with 0 status code", 0, status);
+        Assert.assertEquals("Should exit terraform apply with 0 status code", 0, status);
 
         LOGGER.info("Waiting 1 min for infra to start");
         Thread.sleep(60 * 1000);
 
+        // send messages to PubSub with fixed delay
+        // int numMessages = 23 * 60 * 10;
+        int numMessagesToSend = 23 * 60; // 1380
         long firstEventTimeMillis = System.currentTimeMillis();
         Function<Integer, Long> fn = msgIdx -> isMessageEventTimeIncreasing ? (msgIdx == 1 ? firstEventTimeMillis : System.currentTimeMillis()) : firstEventTimeMillis;
-
-        List<String> messageIds = sendNPubsubMessagesWithDelay(topic, numMessages, Duration.ofMillis(250), fn);
+        List<String> messageIds = sendNPubsubMessagesWithDelay(topic, numMessagesToSend, Duration.ofMillis(250), fn);
 
         // then
         //noinspection ConstantValue
-        int expectedMessageCount = generateMessageDuplicates && dataflowDeduplicationEnabled ? numMessages / 2 : numMessages;
-        List<String> avroRecordsAsStrings = waitUpTo5MinsForDataflowJobToWriteAvroFileToGCSBucket(gcsBucket, expectedMessageCount);
-
-        LOGGER.info("Content of avro file(s) read from GCS: {}", avroRecordsAsStrings);
-
+        int expectedMessageCount = generateMessageDuplicates && dataflowDeduplicationEnabled ? numMessagesToSend / 2 : numMessagesToSend;
+        int numberOfReadRetries = 120; // 300 retries with 5 sec deply gives 25 mins of checking for generic records in job's avro output
+        List<String> avroRecordsAsStrings = readWithRetriesAvroFileFromGCSGeneratedByDataflowJob(gcsBucket, expectedMessageCount, numberOfReadRetries);
+        LOGGER.info("Content of generated avro file(s) read from GCS: {}", avroRecordsAsStrings);
         LOGGER.info("Read {} elements", avroRecordsAsStrings.size());
 
-        Assert.assertEquals(expectedMessageCount , avroRecordsAsStrings.size());
+        Assert.assertEquals(expectedMessageCount, avroRecordsAsStrings.size());
 
+        // check for message pattern
         int messageIndex = getFirstMessageIndex(generateMessageDuplicates, 1);
 //        int messageIndex = numMessages;
         String messageId = messageIds.get(messageIndex - 1);
         String regex = "\\{\"" + BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID + "\": " + "\"" + "body=" + MY_MSG_BODY + ":" + messageIndex + ", attributes=\\{" + EVENT_TIME_ATTRIBUTE + "=" + Instant.ofEpochMilli(firstEventTimeMillis) + ", " + MY_MSG_ATTR_NAME + "=" + MY_MSG_ATTR_VALUE + messageIndex + ", " + PUBLISH_TIME_ATTRIBUTE + "=" + "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z" + "}" + ", messageId=" + messageId
                 + ", inputDataFreshnessMs=" + "\\d+" + ", customInputDataFreshnessMs=" + "\\d+" + ", customEventTimeInputDataFreshnessMs=" + "\\d+" + "\"}";
-
         LOGGER.info("regex={}", regex);
         Pattern pattern = Pattern.compile(regex);
-
-        long reaCount = avroRecordsAsStrings.stream()
+        long realCount = avroRecordsAsStrings.stream()
                 .filter(s -> s.contains(MY_MSG_BODY + ":1,") || s.contains(MY_MSG_BODY + ":2,"))
                 .peek(s -> LOGGER.info("s={}", s))
                 .count();
-
         //noinspection ConstantValue
         int expectedCount = generateMessageDuplicates && dataflowDeduplicationEnabled ? 1 : 2;
-        Assert.assertEquals(expectedCount, reaCount);
+        Assert.assertEquals(expectedCount, realCount);
 
 //        String query = "select * from " + get("GCP_PROJECT") + "." + get("GCP_OWNER") + "_" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase() + ".my_table";
 //        long actualMessageCount = waitUpTo10MinsForDataflowJobToPopulateBigQuery(query, expectedMessageCount);
@@ -160,20 +137,11 @@ public class MyPubsubToGCSJobIntegrationTest {
         Thread.sleep(waitMinsBeforeDestroy * 60 * 1000);
     }
 
-    private long waitUpTo10MinsForDataflowJobToPopulateBigQuery(String query, int expectedRowsCount) throws InterruptedException {
-        long totalRows = 0;
-
-        for (int i = 1; i <= 60; i++) {
-            totalRows = BigQueryOptions.getDefaultInstance().getService().query(QueryJobConfiguration.of(query)).getTotalRows();
-            LOGGER.info("Returned total rows count: {}", totalRows);
-            if (totalRows == expectedRowsCount) {
-                break;
-            } else {
-                LOGGER.info("Waiting for dataflow job to complete and to get expected BigQuery results count {} ... (attempt {}/100)", expectedRowsCount, i);
-                Thread.sleep(10 * 1000L);
-            }
-        }
-        return totalRows;
+    private void runTerraformDestroy() throws IOException, InterruptedException {
+        Process process = runBashProcess("terraform init && terraform destroy -auto-approve " + vars);
+        logProcess(process);
+        int statusCode = process.waitFor();
+        Assert.assertEquals("init and destroy process should exit terraform with 0 statusCode code", 0, statusCode);
     }
 
     private String get(String variable) {
@@ -190,7 +158,6 @@ public class MyPubsubToGCSJobIntegrationTest {
         ScheduledFuture<?> handle = scheduler.scheduleAtFixedRate(() -> {
             Publisher publisher = null;
             List<ApiFuture<String>> messageIdFutures = new ArrayList<>();
-
 
             int i = counter.get();
             if (i > numMessages) return;
@@ -236,13 +203,13 @@ public class MyPubsubToGCSJobIntegrationTest {
 
                     String body = MY_MSG_BODY + ":" + ii;
                     PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
-                        .setData(ByteString.copyFromUtf8(body))
-                        .putAllAttributes(ImmutableMap.of(
-                                MY_MSG_ATTR_NAME, myMsgAttrValue,
-                                PUBLISH_TIME_ATTRIBUTE, Instant.now().toString(),
-                                EVENT_TIME_ATTRIBUTE, Instant.ofEpochMilli(eventTimeMillis).toString()
-                        ))
-                        .build();
+                            .setData(ByteString.copyFromUtf8(body))
+                            .putAllAttributes(ImmutableMap.of(
+                                    MY_MSG_ATTR_NAME, myMsgAttrValue,
+                                    PUBLISH_TIME_ATTRIBUTE, Instant.now().toString(),
+                                    EVENT_TIME_ATTRIBUTE, Instant.ofEpochMilli(eventTimeMillis).toString()
+                            ))
+                            .build();
 
                     if (ii <= 5) {
                         LOGGER.info("Sent PS {} msg {} and {}={}", ii, body, MY_MSG_ATTR_NAME, myMsgAttrValue);
@@ -306,31 +273,12 @@ public class MyPubsubToGCSJobIntegrationTest {
         return generateMessageDuplicates ? (i + 1 - ((i + 1) % 2)) : i;
     }
 
-    private String sendMessageToPubsub(String myMsgBody, String myMsgAttrValue, long eventTimeMillis, String topic) throws IOException, InterruptedException, ExecutionException {
-        Publisher publisher = Publisher.newBuilder(TopicName.of(get("GCP_PROJECT"), topic)).build();
-        PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
-                .setData(ByteString.copyFromUtf8(myMsgBody))
-                .putAllAttributes(ImmutableMap.of(
-                        MY_MSG_ATTR_NAME, myMsgAttrValue,
-                        PUBLISH_TIME_ATTRIBUTE, Instant.now().toString(),
-                        EVENT_TIME_ATTRIBUTE, Instant.ofEpochMilli(eventTimeMillis).toString()
-                ))
-                .build();
+    private List<String> readWithRetriesAvroFileFromGCSGeneratedByDataflowJob(String bucketName, int expectedNumMessages, int limitRetries) throws InterruptedException {
+        int retryDelaySecs = 5;
 
-        ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
-        String messageId = messageIdFuture.get();
-        publisher.shutdown();
-        publisher.awaitTermination(1, TimeUnit.MINUTES);
-        return messageId;
-    }
-
-
-    private List<String> waitUpTo5MinsForDataflowJobToWriteAvroFileToGCSBucket(String bucketName, int expectedNumMessages) throws InterruptedException {
-        List<String> res = new ArrayList<>();
-        Set<String> paths = new TreeSet<>();
-
+        List<String> outputAvroRecordsAsStrings = new ArrayList<>();
+        Set<String> blobPaths = new TreeSet<>();
         Storage storage = StorageOptions.newBuilder().setProjectId(get("GCP_PROJECT")).build().getService();
-        int limitRetries = 60;
         for (int i = 1; i <= limitRetries; i++) {
             Page<Blob> blobs = storage.list(bucketName);
             List<Blob> filteredBlobs = StreamSupport.stream(blobs.iterateAll().spliterator(), false)
@@ -340,7 +288,7 @@ public class MyPubsubToGCSJobIntegrationTest {
                     .toList();
 
             LOGGER.info("Number of blobs ending with .avro: {}", filteredBlobs.size());
-            paths = filteredBlobs.stream().map(BlobInfo::getName).collect(Collectors.toCollection(TreeSet::new));
+            blobPaths = filteredBlobs.stream().map(BlobInfo::getName).collect(Collectors.toCollection(TreeSet::new));
 
             if (!filteredBlobs.isEmpty()) {
                 List<String> results = new ArrayList<>();
@@ -363,20 +311,20 @@ public class MyPubsubToGCSJobIntegrationTest {
                 });
 
                 if (results.size() == expectedNumMessages) {
-                    LOGGER.info("filtered blob paths: {}", paths);
+                    LOGGER.info("filtered blob paths: {}", blobPaths);
                     return results;
                 } else {
                     LOGGER.info("Waiting for dataflow job to write read all messages to GCS ({}/{}) ...(attempt {}/{})", results.size(), expectedNumMessages, i, limitRetries);
-                    Thread.sleep(5 * 1000L);
-                    res = results;
+                    Thread.sleep(retryDelaySecs * 1000L);
+                    outputAvroRecordsAsStrings = results;
                 }
             } else {
-                LOGGER.info("Waiting for dataflow job to start reading {} message(s) from Pubsub, transform and write avro to GCS ... (attempt {}/60)", expectedNumMessages, i);
-                Thread.sleep(5 * 1000L);
+                LOGGER.info("Waiting for dataflow job to start reading {} message(s) from Pubsub, transform and write avro to GCS ... (attempt {}/{})", expectedNumMessages, i, limitRetries);
+                Thread.sleep(retryDelaySecs * 1000L);
             }
         }
-        LOGGER.info("filtered blob paths: {}", paths);
-        return res;
+        LOGGER.info("filtered blob paths: {}", blobPaths);
+        return outputAvroRecordsAsStrings;
     }
 
     private void logProcess(Process process) throws IOException {
@@ -404,6 +352,58 @@ public class MyPubsubToGCSJobIntegrationTest {
         //processBuilder.command("bash", "-c", "ls -la");
         processBuilder.command("bash", "-c", "test -f ~/.profile && source ~/.profile || true && " + cmd);
         return processBuilder.start();
+    }
+
+    private void rebuildUberJar() throws IOException, InterruptedException {
+        Process mvnProcess =
+                dataflow_classic_template_enabled ?
+                        runMvnAsBashProcess("mvn clean package -Pdist -DskipTests")
+                        :
+                        runMvnAsBashProcess("mvn clean package -Pbuild-and-deploy-flex-template -Dgcp.project.id=${GCP_PROJECT} -DskipTests");
+        logProcess(mvnProcess);
+        int mvnProcessStatus = mvnProcess.waitFor();
+        Assert.assertEquals("mvn build should exit with 0 status code", 0, mvnProcessStatus);
+    }
+
+    private void assertEnvVariablesPresent() throws IOException {
+        runMvnAsBashProcess("env");
+        Assert.assertNotNull("Expected Google Project ID to be set as env variable", get("GCP_PROJECT"));
+        Assert.assertNotNull("Expected Google Project resource owner to be set as env variable", get("GCP_OWNER"));
+        LOGGER.info("Read env variables: GCP_PROJECT={}, GCP_OWNER={}", get("GCP_PROJECT"), get("GCP_OWNER"));
+    }
+
+    private long waitUpTo10MinsForDataflowJobToPopulateBigQuery(String query, int expectedRowsCount) throws InterruptedException {
+        long totalRows = 0;
+
+        for (int i = 1; i <= 60; i++) {
+            totalRows = BigQueryOptions.getDefaultInstance().getService().query(QueryJobConfiguration.of(query)).getTotalRows();
+            LOGGER.info("Returned total rows count: {}", totalRows);
+            if (totalRows == expectedRowsCount) {
+                break;
+            } else {
+                LOGGER.info("Waiting for dataflow job to complete and to get expected BigQuery results count {} ... (attempt {}/100)", expectedRowsCount, i);
+                Thread.sleep(10 * 1000L);
+            }
+        }
+        return totalRows;
+    }
+
+    private String sendMessageToPubsub(String myMsgBody, String myMsgAttrValue, long eventTimeMillis, String topic) throws IOException, InterruptedException, ExecutionException {
+        Publisher publisher = Publisher.newBuilder(TopicName.of(get("GCP_PROJECT"), topic)).build();
+        PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
+                .setData(ByteString.copyFromUtf8(myMsgBody))
+                .putAllAttributes(ImmutableMap.of(
+                        MY_MSG_ATTR_NAME, myMsgAttrValue,
+                        PUBLISH_TIME_ATTRIBUTE, Instant.now().toString(),
+                        EVENT_TIME_ATTRIBUTE, Instant.ofEpochMilli(eventTimeMillis).toString()
+                ))
+                .build();
+
+        ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
+        String messageId = messageIdFuture.get();
+        publisher.shutdown();
+        publisher.awaitTermination(1, TimeUnit.MINUTES);
+        return messageId;
     }
 
 //    private Process runTerraformInfrastructureSetupAsBashProcess(String pathToTerraform) throws IOException {
@@ -472,7 +472,7 @@ AfterPubsub_threadId_Thread-30:118	10
 AfterPubsub_threadId_Thread-31:121	5
 AfterPubsub_threadId_Thread-33:126	20
 AfterPubsub_threadId_Thread-37:141	23
-..
+...
 AfterPubsub_threadId_Thread-73:812  11
 
 
