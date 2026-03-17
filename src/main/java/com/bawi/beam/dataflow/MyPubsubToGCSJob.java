@@ -206,6 +206,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
 
         // write to GCS 1
+        @SuppressWarnings("DataFlowIssue")
         FileIO.Write<String, KV<String, GenericRecord>> fileIOWrite = FileIO.<String, KV<String, GenericRecord>>writeDynamic()
                 .by(KV::getKey)
                 .via(Contextful.fn(KV::getValue), AvroIO.<GenericRecord>sink(SCHEMA).withCodec(CodecFactory.fromString("snappy")))
@@ -253,6 +254,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
                         return resource.getCurrentDirectory().resolve(filename, ResolveOptions.StandardResolveOptions.RESOLVE_FILE);
                     }
 
+                    @SuppressWarnings("NullableProblems")
                     @Override
                     public ResourceId unwindowedFilename(int shardNumber, int numShards, FileBasedSink.OutputFileHints outputFileHints) {
                         throw new UnsupportedOperationException("Unsupported.");
