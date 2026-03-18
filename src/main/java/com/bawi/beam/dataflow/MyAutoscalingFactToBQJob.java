@@ -31,7 +31,7 @@ import java.util.stream.IntStream;
 public class MyAutoscalingFactToBQJob {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyAutoscalingFactToBQJob.class);
 
-    private static Schema SCHEMA = SchemaBuilder.record("root").fields()
+    private static final Schema SCHEMA = SchemaBuilder.record("root").fields()
                 .requiredString("value")
                 .optionalString("local_host_address")
                 .optionalLong("thread_id")
@@ -94,13 +94,13 @@ mvn clean compile -DskipTests -Pdataflow-runner exec:java \
                         record.put("local_host_address", localHostAddress.toString());
                     }
                     Thread thread = Thread.currentThread();
-                    record.put("thread_id", thread.getId());
+                    record.put("thread_id", thread.threadId());
                     record.put("thread_name", thread.getName());
                     ThreadGroup threadGroup = thread.getThreadGroup();
                     if (threadGroup != null) {
                         record.put("thread_group", threadGroup.getName());
                     }
-                    LOGGER.info("i={},localHostAddress={},thread_id={},thread_name={},threadGroup={}", i, localHostAddress, thread.getId(), thread.getName(), thread.getThreadGroup());
+                    LOGGER.info("i={},localHostAddress={},thread_id={},thread_name={},threadGroup={}", i, localHostAddress, thread.threadId(), thread.getName(), thread.getThreadGroup());
                     return record;
                 })).setCoder(AvroGenericCoder.of(SCHEMA))
 

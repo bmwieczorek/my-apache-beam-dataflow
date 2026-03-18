@@ -56,6 +56,6 @@ public class MyBundleSizeInterceptor<T> extends DoFn<T, T> {
     }
 
     private static String getThreadInfo() {
-        return Thread.currentThread().getName() + ":" + Thread.currentThread().getId();
+        return Thread.currentThread().getName() + ":" + Thread.currentThread().threadId();
     }
 }
