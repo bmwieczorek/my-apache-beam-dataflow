@@ -2,6 +2,7 @@ package com.bawi.beam.dataflow;
 
 import org.junit.Test;
 
+@SuppressWarnings("unused") // testing various compilation scenarios - so many unused variables that require still to compile
 public class MyGenericTest {
     static abstract class Fn<In, Out> {
         abstract Out apply(In in);
