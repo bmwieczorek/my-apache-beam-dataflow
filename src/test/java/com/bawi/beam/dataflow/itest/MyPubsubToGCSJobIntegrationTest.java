@@ -250,7 +250,7 @@ public class MyPubsubToGCSJobIntegrationTest {
             List<Blob> filteredBlobs = StreamSupport.stream(blobs.iterateAll().spliterator(), false)
                     .filter(blob -> blob.getName().startsWith(objectPathPrefix))
                     .filter(blob -> blob.getName().endsWith(".avro"))
-//                    .peek(b -> LOGGER.info("filtered blob: {}, {}", b, b.getName()))
+                    // .peek(b -> LOGGER.info("filtered blob: {}, {}", b, b.getName()))
                     .toList();
 
             LOGGER.info("Found {} *.avro file(s) in {}", filteredBlobs.size(), objectPathPrefix);
