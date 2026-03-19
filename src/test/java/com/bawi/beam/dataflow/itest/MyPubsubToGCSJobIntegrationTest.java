@@ -100,8 +100,8 @@ public class MyPubsubToGCSJobIntegrationTest {
         long firstEventTimeMillis = System.currentTimeMillis();
         Function<Integer, Long> fn = msgIdx -> isMessageEventTimeIncreasing ? (msgIdx == 1 ? firstEventTimeMillis : System.currentTimeMillis()) : firstEventTimeMillis;
         Set<String> messageIds = sendNPubsubMessagesWithDelay(topic, numMessagesToSend, Duration.ofMillis(250), fn);
-//        Assert.assertEquals("Received different number of PubSub message ids than sent payloads", numMessagesToSend, messageIds.size());
-        LOGGER.info("Send {} elements to PubSub. Got back messageIds: {}", numMessagesToSend, messageIds.size());
+        Assert.assertEquals("Sent " + numMessagesToSend + " messages to PubSub, got " + messageIds.size() + " messageIds", numMessagesToSend, messageIds.size());
+        LOGGER.info("Sent {} messages to PubSub, got {} messageIds", numMessagesToSend, messageIds.size());
 
 
         // then
@@ -109,9 +109,11 @@ public class MyPubsubToGCSJobIntegrationTest {
         int expectedMessageCount = generateMessageDuplicates && dataflowDeduplicationEnabled ? numMessagesToSend / 2 : numMessagesToSend;
         int numberOfReadRetries = 120; // 300 retries with 5 sec deply gives 25 mins of checking for generic records in job's avro output
         List<String> readDFGeneratedAvroRecordsAsStrings = readWithRetriesAvroFileFromGCSGeneratedByDataflowJob(gcsBucket, "output/", expectedMessageCount, numberOfReadRetries);
-        LOGGER.info("Read {} elements. Content of generated avro file(s) read from GCS: first: {}, last: {}", readDFGeneratedAvroRecordsAsStrings.size(), readDFGeneratedAvroRecordsAsStrings.getFirst(), readDFGeneratedAvroRecordsAsStrings.getLast());
 
+        LOGGER.info("Sent {} messages to PubSub, read {} avro records" , readDFGeneratedAvroRecordsAsStrings.getFirst(), readDFGeneratedAvroRecordsAsStrings.getLast());
         Assert.assertEquals(expectedMessageCount, readDFGeneratedAvroRecordsAsStrings.size());
+
+        LOGGER.info("Content of generated avro file(s) read from GCS: first: {}, last: {}", numMessagesToSend, readDFGeneratedAvroRecordsAsStrings.size());
 
         List<String> filteredMessages = readDFGeneratedAvroRecordsAsStrings.stream()
                 .filter(s -> s.contains(MY_MSG_BODY + ":1,") || s.contains(MY_MSG_BODY + ":2,")).toList();
@@ -119,12 +121,12 @@ public class MyPubsubToGCSJobIntegrationTest {
 
         @SuppressWarnings("ConstantValue")
         int expectedCount = generateMessageDuplicates && dataflowDeduplicationEnabled ? 1 : 2;
-        LOGGER.info("Number of messages read from GCS: {} vs expected: {}", filteredMessages.size(), expectedCount);
-        Assert.assertEquals(expectedCount, filteredMessages.size());
+        LOGGER.info("Expected {} messages read from GCS, got {}", expectedCount, filteredMessages.size());
+        Assert.assertEquals("Expected " + expectedCount + " messages read from GCS, got " + filteredMessages.size(), expectedCount, filteredMessages.size());
 
         long actualBQRecordsCount = readWithRetriesBQTableRowsPopulatedByDataflowJob(expectedMessageCount);
-        LOGGER.info("Number of rows read from BQ: {} vs expected: {}", actualBQRecordsCount, expectedCount);
-        Assert.assertEquals("Expected to get " + expectedMessageCount + " records from BigQuery", expectedMessageCount, actualBQRecordsCount);
+        LOGGER.info("Expected {} rows read from BQ, got {}", expectedMessageCount, actualBQRecordsCount);
+        Assert.assertEquals("Expected " + expectedMessageCount + " row read from BQ, got " + actualBQRecordsCount, expectedMessageCount, actualBQRecordsCount);
 
         int waitMinsBeforeDestroy = 1;
         LOGGER.info("Assertions passed, waiting {} min(s) before deleting resources", waitMinsBeforeDestroy);
