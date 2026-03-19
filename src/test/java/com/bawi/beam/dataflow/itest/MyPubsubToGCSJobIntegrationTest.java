@@ -213,7 +213,7 @@ public class MyPubsubToGCSJobIntegrationTest {
                     messageIds.addAll(batchMessageIds);
                     int msgCounter = counter.get() - 1;
                     if (msgCounter % logMessagesInterval == 0 || (counter.get() - 1) == numMessagesToSend) {
-                        LOGGER.info("Sent msg {}/{} in {}ms", msgCounter, numMessagesToSend, System.currentTimeMillis() - timeMillisStart);
+                        LOGGER.info("Sent message {}/{} in {}ms", msgCounter, numMessagesToSend, System.currentTimeMillis() - timeMillisStart);
                     }
                 } catch (IOException | InterruptedException | ExecutionException e) {
                     throw new RuntimeException(e);
