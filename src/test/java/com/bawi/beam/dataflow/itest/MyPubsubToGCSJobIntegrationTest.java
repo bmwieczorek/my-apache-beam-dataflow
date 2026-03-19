@@ -8,10 +8,7 @@ import com.google.api.gax.paging.Page;
 import com.google.cloud.bigquery.BigQueryOptions;
 import com.google.cloud.bigquery.QueryJobConfiguration;
 import com.google.cloud.pubsub.v1.Publisher;
-import com.google.cloud.storage.Blob;
-import com.google.cloud.storage.BlobInfo;
-import com.google.cloud.storage.Storage;
-import com.google.cloud.storage.StorageOptions;
+import com.google.cloud.storage.*;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
 import com.google.pubsub.v1.PubsubMessage;
@@ -34,14 +31,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -75,6 +68,7 @@ public class MyPubsubToGCSJobIntegrationTest {
 
     @After
     public void cleanUpAfter() throws IOException, InterruptedException {
+        LOGGER.info("Running cleanUpAfter");
         // Process process = runBashProcess("terraform init && terraform destroy -auto-approve -target=module.dataflow_classic_template_job " + vars);
         runTerraformDestroy();
     }
@@ -100,37 +94,32 @@ public class MyPubsubToGCSJobIntegrationTest {
         int numMessagesToSend = 23 * 60; // 1380
         long firstEventTimeMillis = System.currentTimeMillis();
         Function<Integer, Long> fn = msgIdx -> isMessageEventTimeIncreasing ? (msgIdx == 1 ? firstEventTimeMillis : System.currentTimeMillis()) : firstEventTimeMillis;
-        List<String> messageIds = sendNPubsubMessagesWithDelay(topic, numMessagesToSend, Duration.ofMillis(250), fn);
+        Set<String> messageIds = sendNPubsubMessagesWithDelay(topic, numMessagesToSend, Duration.ofMillis(250), fn);
+//        Assert.assertEquals("Received different number of PubSub message ids than sent payloads", numMessagesToSend, messageIds.size());
+        LOGGER.info("Send {} elements to PubSub. Got back messageIds: {}", numMessagesToSend, messageIds.size());
+
 
         // then
-        //noinspection ConstantValue
+        @SuppressWarnings("ConstantValue")
         int expectedMessageCount = generateMessageDuplicates && dataflowDeduplicationEnabled ? numMessagesToSend / 2 : numMessagesToSend;
         int numberOfReadRetries = 120; // 300 retries with 5 sec deply gives 25 mins of checking for generic records in job's avro output
-        List<String> avroRecordsAsStrings = readWithRetriesAvroFileFromGCSGeneratedByDataflowJob(gcsBucket, expectedMessageCount, numberOfReadRetries);
-        LOGGER.info("Content of generated avro file(s) read from GCS: {}", avroRecordsAsStrings);
-        LOGGER.info("Read {} elements", avroRecordsAsStrings.size());
+        List<String> readDFGeneratedAvroRecordsAsStrings = readWithRetriesAvroFileFromGCSGeneratedByDataflowJob(gcsBucket, "output/", expectedMessageCount, numberOfReadRetries);
+        LOGGER.info("Read {} elements. Content of generated avro file(s) read from GCS: first: {}, last: {}", readDFGeneratedAvroRecordsAsStrings.size(), readDFGeneratedAvroRecordsAsStrings.getFirst(), readDFGeneratedAvroRecordsAsStrings.getLast());
 
-        Assert.assertEquals(expectedMessageCount, avroRecordsAsStrings.size());
+        Assert.assertEquals(expectedMessageCount, readDFGeneratedAvroRecordsAsStrings.size());
 
-        // check for message pattern
-        int messageIndex = getFirstMessageIndex(generateMessageDuplicates, 1);
-//        int messageIndex = numMessages;
-        String messageId = messageIds.get(messageIndex - 1);
-        String regex = "\\{\"" + BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID + "\": " + "\"" + "body=" + MY_MSG_BODY + ":" + messageIndex + ", attributes=\\{" + EVENT_TIME_ATTRIBUTE + "=" + Instant.ofEpochMilli(firstEventTimeMillis) + ", " + MY_MSG_ATTR_NAME + "=" + MY_MSG_ATTR_VALUE + messageIndex + ", " + PUBLISH_TIME_ATTRIBUTE + "=" + "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z" + "}" + ", messageId=" + messageId
-                + ", inputDataFreshnessMs=" + "\\d+" + ", customInputDataFreshnessMs=" + "\\d+" + ", customEventTimeInputDataFreshnessMs=" + "\\d+" + "\"}";
-        LOGGER.info("regex={}", regex);
-        Pattern pattern = Pattern.compile(regex);
-        long realCount = avroRecordsAsStrings.stream()
-                .filter(s -> s.contains(MY_MSG_BODY + ":1,") || s.contains(MY_MSG_BODY + ":2,"))
-                .peek(s -> LOGGER.info("s={}", s))
-                .count();
-        //noinspection ConstantValue
+        List<String> filteredMessages = readDFGeneratedAvroRecordsAsStrings.stream()
+                .filter(s -> s.contains(MY_MSG_BODY + ":1,") || s.contains(MY_MSG_BODY + ":2,")).toList();
+        filteredMessages.forEach(m -> LOGGER.info("Read message: {}", m));
+
+        @SuppressWarnings("ConstantValue")
         int expectedCount = generateMessageDuplicates && dataflowDeduplicationEnabled ? 1 : 2;
-        Assert.assertEquals(expectedCount, realCount);
+        LOGGER.info("Number of messages read from GCS: {} vs expected: {}", filteredMessages.size(), expectedCount);
+        Assert.assertEquals(expectedCount, filteredMessages.size());
 
-//        String query = "select * from " + get("GCP_PROJECT") + "." + get("GCP_OWNER") + "_" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase() + ".my_table";
-//        long actualMessageCount = waitUpTo10MinsForDataflowJobToPopulateBigQuery(query, expectedMessageCount);
-//        Assert.assertEquals("Expected to get " + expectedMessageCount + " records from BigQuery", expectedMessageCount, actualMessageCount);
+        long actualBQRecordsCount = readWithRetriesBQTableRowsPopulatedByDataflowJob(expectedMessageCount);
+        LOGGER.info("Number of rows read from BQ: {} vs expected: {}", actualBQRecordsCount, expectedCount);
+        Assert.assertEquals("Expected to get " + expectedMessageCount + " records from BigQuery", expectedMessageCount, actualBQRecordsCount);
 
         int waitMinsBeforeDestroy = 1;
         LOGGER.info("Assertions passed, waiting {} min(s) before deleting resources", waitMinsBeforeDestroy);
@@ -148,132 +137,104 @@ public class MyPubsubToGCSJobIntegrationTest {
         return System.getProperty(variable, System.getenv(variable));
     }
 
-    private List<String> sendNPubsubMessagesWithDelay(String topic, int numMessages, Duration sleepDuration, Function<Integer, Long> msgIdxToTimestampMillisFn) throws InterruptedException {
-        List<String> messageIds = new ArrayList<>();
+    private Set<String> sendNPubsubMessagesWithDelay(String topic, int numMessagesToSend, Duration sleepDuration, Function<Integer, Long> msgIdxToTimestampMillisFn) throws InterruptedException {
+        Set<String> messageIds = new HashSet<>();
+        int logMessagesInterval = 10;
+        int messagesBatchSize = 5;
 
         AtomicInteger counter = new AtomicInteger(1);
-        CountDownLatch countDownLatch = new CountDownLatch(numMessages);
-        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
+        CountDownLatch countDownLatch = new CountDownLatch(numMessagesToSend);
+        try (ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5)) {
 
-        ScheduledFuture<?> handle = scheduler.scheduleAtFixedRate(() -> {
-            Publisher publisher = null;
-            List<ApiFuture<String>> messageIdFutures = new ArrayList<>();
+            ScheduledFuture<?> handle = scheduler.scheduleAtFixedRate(() -> {
+                Publisher publisher = null;
+                List<ApiFuture<String>> messageIdFutures = new ArrayList<>();
 
-            int i = counter.get();
-            if (i > numMessages) return;
+                int i = counter.get();
+                if (i > numMessagesToSend) return;
 
-            long start = 0;
-            try {
-                // Batch settings control how the publisher batches messages
-                long requestBytesThreshold = 5000L; // default : 1000 bytes
-                long messageCountBatchSize = 10L; // default : 100 message
+                long timeMillisStart = System.currentTimeMillis();
+                try {
+                    // Batch settings control how the publisher batches messages
+                    long requestBytesThreshold = 5000L; // default : 1000 bytes
+                    long messageCountBatchSize = 10L; // default : 100 message
 
-                org.threeten.bp.Duration publishDelayThreshold = org.threeten.bp.Duration.ofMillis(100); // default : 1 ms
+                    org.threeten.bp.Duration publishDelayThreshold = org.threeten.bp.Duration.ofMillis(100); // default : 1 ms
 
-                // Publish request get triggered based on request size, messages count & time since last
-                // publish, whichever condition is met first.
-                BatchingSettings batchingSettings =
-                        BatchingSettings.newBuilder()
-                                .setElementCountThreshold(messageCountBatchSize)
-                                .setRequestByteThreshold(requestBytesThreshold)
-                                .setDelayThreshold(publishDelayThreshold)
+                    // Publish request get triggered based on request size, messages count & time since last
+                    // publish, whichever condition is met first.
+                    BatchingSettings batchingSettings =
+                            BatchingSettings.newBuilder()
+                                    .setElementCountThreshold(messageCountBatchSize)
+                                    .setRequestByteThreshold(requestBytesThreshold)
+                                    .setDelayThreshold(publishDelayThreshold)
+                                    .build();
+
+                    // Create a publisher instance with default settings bound to the topic
+                    publisher = Publisher.newBuilder(TopicName.of(get("GCP_PROJECT"), topic)).setBatchingSettings(batchingSettings).build();
+
+                    // schedule publishing one message at a time : messages get automatically batched
+                    for (int j = 1; j <= messagesBatchSize; j++) {
+                        countDownLatch.countDown();
+                        int msgCounter = counter.getAndIncrement();
+                        if (msgCounter > numMessagesToSend) return;
+
+                        // values of myMsgAttrName attribute are not unique but duplicated: 0, 2, 2, 4, 4 ...
+                        // attrs: M1: myMsgAttrName1=myMsgAttrValue0, M2: myMsgAttrName2=myMsgAttrValue=2, M3: myMsgAttrName3=myMsgAttrValue=2, M4: myMsgAttrName4=myMsgAttrValue=4
+//                    String myMsgAttrValue = generateMessageDuplicates ? MY_MSG_ATTR_VALUE + (msgCounter + 1 - ((msgCounter + 1) % 2)) : MY_MSG_ATTR_VALUE + msgCounter;
+                        String myMsgAttrValue = MY_MSG_ATTR_VALUE + getFirstMessageIndex(generateMessageDuplicates, msgCounter);
+                        long eventTimeMillis = msgIdxToTimestampMillisFn.apply(msgCounter);
+                        String body = MY_MSG_BODY + ":" + msgCounter;
+
+                        // initial logging of first messages
+                        if (msgCounter <= logMessagesInterval) {
+                            LOGGER.info("Sending message {} of {} with body {} and attrs {}={}, et={}",
+                                    msgCounter, numMessagesToSend, body, MY_MSG_ATTR_NAME, myMsgAttrValue, Instant.ofEpochMilli(eventTimeMillis).toDateTime());
+                        }
+
+                        PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
+                                .setData(ByteString.copyFromUtf8(body))
+                                .putAllAttributes(ImmutableMap.of(
+                                        MY_MSG_ATTR_NAME, myMsgAttrValue,
+                                        PUBLISH_TIME_ATTRIBUTE, Instant.now().toString(),
+                                        EVENT_TIME_ATTRIBUTE, Instant.ofEpochMilli(eventTimeMillis).toString()
+                                ))
                                 .build();
 
-                // Create a publisher instance with default settings bound to the topic
-                publisher = Publisher.newBuilder(TopicName.of(get("GCP_PROJECT"), topic)).setBatchingSettings(batchingSettings).build();
-
-                // schedule publishing one message at a time : messages get automatically batched
-                for (int j = 0; j < 5; j++) {
-                    countDownLatch.countDown();
-                    int ii = counter.getAndIncrement();
-                    if (ii > numMessages) return;
-
-                    // values of myMsgAttrName attribute are not unique but duplicated: 0, 2, 2, 4, 4 ...
-                    // attrs: M1: myMsgAttrName1=myMsgAttrValue0, M2: myMsgAttrName2=myMsgAttrValue=2, M3: myMsgAttrName3=myMsgAttrValue=2, M4: myMsgAttrName4=myMsgAttrValue=4
-//                    String myMsgAttrValue = generateMessageDuplicates ? MY_MSG_ATTR_VALUE + (ii + 1 - ((ii + 1) % 2)) : MY_MSG_ATTR_VALUE + ii;
-                    String myMsgAttrValue = MY_MSG_ATTR_VALUE + getFirstMessageIndex(generateMessageDuplicates, ii);
-
-                    long eventTimeMillis = msgIdxToTimestampMillisFn.apply(ii);
-
-                    // values of myMsgAttrName attr
-                    if (j == 0) {
-                        start = System.currentTimeMillis();
-                        LOGGER.info("Sending PS msg ({} of {}), {}, et={}", ii, numMessages, myMsgAttrValue, Instant.ofEpochMilli(eventTimeMillis).toDateTime());
+                        ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
+                        messageIdFutures.add(messageIdFuture);
+                        List<String> batchMessageIds = ApiFutures.allAsList(messageIdFutures).get();
+                        messageIds.addAll(batchMessageIds);
+                        if (msgCounter % logMessagesInterval == 0 || msgCounter == numMessagesToSend) {
+                            LOGGER.info("Published message {} of {} (batched {} messages send in {} millis)", msgCounter, numMessagesToSend, j, System.currentTimeMillis() - timeMillisStart);
+                        }
                     }
-
-                    String body = MY_MSG_BODY + ":" + ii;
-                    PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
-                            .setData(ByteString.copyFromUtf8(body))
-                            .putAllAttributes(ImmutableMap.of(
-                                    MY_MSG_ATTR_NAME, myMsgAttrValue,
-                                    PUBLISH_TIME_ATTRIBUTE, Instant.now().toString(),
-                                    EVENT_TIME_ATTRIBUTE, Instant.ofEpochMilli(eventTimeMillis).toString()
-                            ))
-                            .build();
-
-                    if (ii <= 5) {
-                        LOGGER.info("Sent PS {} msg {} and {}={}", ii, body, MY_MSG_ATTR_NAME, myMsgAttrValue);
-                    }
-
-                    ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
-                    messageIdFutures.add(messageIdFuture);
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            } finally {
-                // Wait on any pending publish requests.
-                try {
-                    List<String> batchMessageIds = ApiFutures.allAsList(messageIdFutures).get();
-                    messageIds.addAll(batchMessageIds);
-
-                    LOGGER.info("Published batched {} messages in {} millis", batchMessageIds.size(), System.currentTimeMillis() - start);
-                    if (publisher != null) {
-                        // When finished with the publisher, shutdown to free up resources.
-                        publisher.shutdown();
-                        publisher.awaitTermination(1, TimeUnit.MINUTES);
-                    }
-                } catch (InterruptedException | ExecutionException e) {
+                } catch (IOException | InterruptedException | ExecutionException e) {
                     throw new RuntimeException(e);
+                } finally {
+                    try {
+                        if (publisher != null) {
+                            // When finished with the publisher, shutdown to free up resources.
+                            publisher.shutdown();
+                            publisher.awaitTermination(1, TimeUnit.MINUTES);
+                        }
+                    } catch (InterruptedException e) {
+                        LOGGER.error("Publisher interrupted", e);
+                    }
                 }
-            }
+            }, 10, sleepDuration.toMillis(), TimeUnit.MILLISECONDS);
 
-            //LOGGER.info("Sent PS msg ({} of {}), {}, et={}", i, numMessages, myMsgAttrValue, Instant.ofEpochMilli(eventTimeMillis).toDateTime());
-        }, 10, sleepDuration.toMillis(), TimeUnit.MILLISECONDS);
-
-        countDownLatch.await();
-        handle.cancel(false);
-
-        /*
-        for (int i = 1; i <= numMessages; i++) {
-            long start = System.currentTimeMillis();
-            // values of myMsgAttrName attribute are not unique but duplicated: 0, 2, 2, 4, 4 ...
-            // attrs: M1: myMsgAttrName1=myMsgAttrValue0, M2: myMsgAttrName2=myMsgAttrValue=2, M3: myMsgAttrName3=myMsgAttrValue=2, M4: myMsgAttrName4=myMsgAttrValue=4
-            String myMsgAttrValue = generateMessageDuplicates ? MY_MSG_ATTR_VALUE + (i + 1 - ((i + 1) % 2)) : MY_MSG_ATTR_VALUE + i;
-
-            long eventTimeMillis = msgIdxToTimestampMillisFn.apply(i);
-            String messageId = sendMessageToPubsub(MY_MSG_BODY + ":" + i, myMsgAttrValue, eventTimeMillis, topic);
-            messageIds.add(messageId);
-            long end = System.currentTimeMillis();
-            long diff = end - start;
-            long actualSleep = sleepDuration.toMillis() - diff < 0 ? 0 : sleepDuration.toMillis() - diff;
-            LOGGER.info("Sent PS msg ({} of {}), {}, et={}, diff={}, sleep={}", i, numMessages, myMsgAttrValue, Instant.ofEpochMilli(eventTimeMillis).toDateTime(), diff, actualSleep);
-            Thread.sleep(actualSleep);
-//            if (i % (120) == 0) {
-//                Thread.sleep(2 * 60 * 1000); // temporarily pause sending for 2 mins
-//            }
+            countDownLatch.await();
+            handle.cancel(false);
         }
-        */
-//        String lastMessageId = sendMessageToPubsub(MY_MSG_BODY + numMessages, MY_MSG_ATTR_NAME + numMessages, MY_MSG_ATTR_VALUE + numMessages, lastEventTimeMillis, topic);
-//        LOGGER.info("Sent pubsub message ({} of {}), messageId={}", numMessages, numMessages, lastMessageId);
-//        messageIds.add(lastMessageId);
         return messageIds;
     }
 
-    private static int getFirstMessageIndex(boolean generateMessageDuplicates, int i) {
+    private static int getFirstMessageIndex(@SuppressWarnings("SameParameterValue") boolean generateMessageDuplicates, int i) {
         return generateMessageDuplicates ? (i + 1 - ((i + 1) % 2)) : i;
     }
 
-    private List<String> readWithRetriesAvroFileFromGCSGeneratedByDataflowJob(String bucketName, int expectedNumMessages, int limitRetries) throws InterruptedException {
+    private List<String> readWithRetriesAvroFileFromGCSGeneratedByDataflowJob(String bucketName, @SuppressWarnings("SameParameterValue") String objectPathPrefix, int expectedNumMessages, int limitRetries) throws InterruptedException {
         int retryDelaySecs = 5;
 
         List<String> outputAvroRecordsAsStrings = new ArrayList<>();
@@ -282,7 +243,7 @@ public class MyPubsubToGCSJobIntegrationTest {
         for (int i = 1; i <= limitRetries; i++) {
             Page<Blob> blobs = storage.list(bucketName);
             List<Blob> filteredBlobs = StreamSupport.stream(blobs.iterateAll().spliterator(), false)
-                    .filter(blob -> blob.getName().startsWith("output/"))
+                    .filter(blob -> blob.getName().startsWith(objectPathPrefix))
                     .filter(blob -> blob.getName().endsWith(".avro"))
 //                    .peek(b -> LOGGER.info("filtered blob: {}, {}", b, b.getName()))
                     .toList();
@@ -295,7 +256,22 @@ public class MyPubsubToGCSJobIntegrationTest {
                 filteredBlobs.forEach(b -> {
                     try {
                         File tempAvroFile = File.createTempFile("avro-", ".avro");
-                        b.downloadTo(Paths.get(tempAvroFile.toURI()));
+
+                        int maxRetries = 5;
+                        for (int idx = 1; idx <= maxRetries; idx++) {
+                            try {
+                                b.downloadTo(Paths.get(tempAvroFile.toURI()));
+                                break;
+                            } catch (StorageException e) {
+                                LOGGER.warn("Failed to download avro file {}. Retrying in {} secs, attempt {} of {}", tempAvroFile.getAbsolutePath(), idx, idx, maxRetries, e);
+                                try {
+                                    Thread.sleep(idx * 1000L);
+                                } catch (InterruptedException ex) {
+                                    throw new RuntimeException(ex);
+                                }
+                            }
+                        }
+
                         DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
                         try (DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(tempAvroFile, datumReader)) {
                             while (dataFileReader.hasNext()) {
@@ -311,10 +287,10 @@ public class MyPubsubToGCSJobIntegrationTest {
                 });
 
                 if (results.size() == expectedNumMessages) {
-                    LOGGER.info("filtered blob paths: {}", blobPaths);
+                    LOGGER.info("filtered blob paths: size {}, example: {}", filteredBlobs.size(), filteredBlobs.getFirst());
                     return results;
                 } else {
-                    LOGGER.info("Waiting for dataflow job to write read all messages to GCS ({}/{}) ...(attempt {}/{})", results.size(), expectedNumMessages, i, limitRetries);
+                    LOGGER.info("Waiting for dataflow job to write read all messages to GCS (written {} of {}) ... (attempt {}/{})", results.size(), expectedNumMessages, i, limitRetries);
                     Thread.sleep(retryDelaySecs * 1000L);
                     outputAvroRecordsAsStrings = results;
                 }
@@ -348,8 +324,6 @@ public class MyPubsubToGCSJobIntegrationTest {
         ProcessBuilder processBuilder = new ProcessBuilder();
         processBuilder.inheritIO();
         processBuilder.directory(new File("terraform/" + MyPubsubToGCSJob.class.getSimpleName()));
-//        processBuilder.command("./run-terraform.sh");
-        //processBuilder.command("bash", "-c", "ls -la");
         processBuilder.command("bash", "-c", "test -f ~/.profile && source ~/.profile || true && " + cmd);
         return processBuilder.start();
     }
@@ -372,7 +346,8 @@ public class MyPubsubToGCSJobIntegrationTest {
         LOGGER.info("Read env variables: GCP_PROJECT={}, GCP_OWNER={}", get("GCP_PROJECT"), get("GCP_OWNER"));
     }
 
-    private long waitUpTo10MinsForDataflowJobToPopulateBigQuery(String query, int expectedRowsCount) throws InterruptedException {
+    private long readWithRetriesBQTableRowsPopulatedByDataflowJob(int expectedRowsCount) throws InterruptedException {
+        String query = "select * from " + get("GCP_PROJECT") + "." + get("GCP_OWNER") + "_" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase() + ".my_table";
         long totalRows = 0;
 
         for (int i = 1; i <= 60; i++) {
@@ -387,42 +362,6 @@ public class MyPubsubToGCSJobIntegrationTest {
         }
         return totalRows;
     }
-
-    private String sendMessageToPubsub(String myMsgBody, String myMsgAttrValue, long eventTimeMillis, String topic) throws IOException, InterruptedException, ExecutionException {
-        Publisher publisher = Publisher.newBuilder(TopicName.of(get("GCP_PROJECT"), topic)).build();
-        PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
-                .setData(ByteString.copyFromUtf8(myMsgBody))
-                .putAllAttributes(ImmutableMap.of(
-                        MY_MSG_ATTR_NAME, myMsgAttrValue,
-                        PUBLISH_TIME_ATTRIBUTE, Instant.now().toString(),
-                        EVENT_TIME_ATTRIBUTE, Instant.ofEpochMilli(eventTimeMillis).toString()
-                ))
-                .build();
-
-        ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
-        String messageId = messageIdFuture.get();
-        publisher.shutdown();
-        publisher.awaitTermination(1, TimeUnit.MINUTES);
-        return messageId;
-    }
-
-//    private Process runTerraformInfrastructureSetupAsBashProcess(String pathToTerraform) throws IOException {
-//        // Process process = Runtime.getRuntime().exec("./run-terraform.sh", null, new File("terraform/" + MyPubsubToGCSJob.class.getSimpleName()));
-//        ProcessBuilder processBuilder = new ProcessBuilder();
-//        processBuilder.inheritIO();
-//        processBuilder.directory(new File(pathToTerraform));
-//        processBuilder.command("./run-terraform.sh");
-//        //processBuilder.command("bash", "-c", "ls -la");
-//        return processBuilder.start();
-//    }
-
-//    private String getOutput(Process process) throws IOException {
-//        try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-//            return bufferedReader
-//                    .lines()
-//                    .collect(Collectors.joining(System.lineSeparator()));
-//        }
-//    }
 }
 
 /*
