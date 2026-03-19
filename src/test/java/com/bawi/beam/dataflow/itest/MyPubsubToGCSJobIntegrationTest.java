@@ -299,7 +299,7 @@ public class MyPubsubToGCSJobIntegrationTest {
                     outputAvroRecordsAsStrings = results;
                 }
             } else {
-                LOGGER.info("Waiting for Dataflow to write avro files, retry {}/{}, next if {}s", i, limitRetries, retryDelaySecs);
+                LOGGER.info("Waiting for Dataflow to write, {}/{} retry in {}s", i, limitRetries, retryDelaySecs);
                 Thread.sleep(retryDelaySecs * 1000L);
             }
         }
