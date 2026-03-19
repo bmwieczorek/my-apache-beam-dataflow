@@ -30,6 +30,7 @@ import org.apache.beam.sdk.transforms.Contextful;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.windowing.*;
+import org.apache.beam.sdk.util.UserCodeException;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.joda.time.Duration;
@@ -115,7 +116,6 @@ gcloud dataflow flex-template run $APP-$OWNER \
  ${GCLOUD_DATAFLOW_RUN_OPTS} \
  --template-file-gcs-location gs://${BUCKET}/app-image-spec.json  \
  --worker-machine-type n2-standard-2 --num-workers 1  --max-workers 2 \
- --additional-experiments use_network_tags=default-uscentral1 \
  --parameters workerDiskType=compute.googleapis.com/projects/$PROJECT/zones/us-central1-c/diskTypes/pd-standard,diskSizeGb=200,subscription=projects/$PROJECT/subscriptions/messages
 
 
@@ -206,29 +206,16 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
 
         // write to GCS 1
-        @SuppressWarnings("DataFlowIssue")
-        FileIO.Write<String, KV<String, GenericRecord>> fileIOWrite = FileIO.<String, KV<String, GenericRecord>>writeDynamic()
-                .by(KV::getKey)
-                .via(Contextful.fn(KV::getValue), AvroIO.<GenericRecord>sink(SCHEMA).withCodec(CodecFactory.fromString("snappy")))
-                .withDestinationCoder(StringUtf8Coder.of())
-                .withNaming(path -> new CustomWriteFileNaming(path, "snappy", "avro"))
-                .to(output)
-                .withTempDirectory(temp);
-
-        FileIO.Write<String, KV<String, GenericRecord>> fileIOWriteSharded =
-                options.getNumShards() == 0 ? fileIOWrite.withAutoSharding() : fileIOWrite.withNumShards(options.getNumShards());
-
-
-        // write to GCS
         concatBodyAndAttrsPCollection
                 .apply(ParDo.of(new ToTimestampedPathKV(options.getOutput())))
                 .setCoder(KvCoder.of(StringUtf8Coder.of(), AvroGenericCoder.of(SCHEMA)))
                 .apply(ParDo.of(new MyBundleSizeInterceptor<>("ToTimestampedPathKV")))
-                .apply(fileIOWriteSharded);
+                .apply(getStringKVWrite(output, temp, options));
 
 
         // write to GCS 2
-        concatBodyAndAttrsPCollection.apply(AvroIO.writeGenericRecords(SCHEMA).withWindowedWrites()
+        concatBodyAndAttrsPCollection
+                .apply(AvroIO.writeGenericRecords(SCHEMA).withWindowedWrites()
                 //.to(output)
                 //.to(options.getOutput())
                 .to(new FileBasedSink.FilenamePolicy() {
@@ -261,10 +248,22 @@ gcloud dataflow flex-template run $APP-$OWNER \
                     }
                 })
                 // .withTempDirectory(FileBasedSink.convertToFileResourceIfPossible(output).getCurrentDirectory())
-                .withTempDirectory(ValueProvider.NestedValueProvider.of(temp, t -> FileBasedSink.convertToFileResourceIfPossible(t).getCurrentDirectory()))
+                .withTempDirectory(ValueProvider.NestedValueProvider.of(temp, t -> t != null ? FileBasedSink.convertToFileResourceIfPossible(t).getCurrentDirectory() : null))
                 .withNumShards(2));
 
         readingPipeline.run();
+    }
+
+    private static FileIO.Write<String, KV<String, GenericRecord>> getStringKVWrite(ValueProvider<String> output, ValueProvider<String> temp, MyPipelineOptions options) {
+        FileIO.Write<String, KV<String, GenericRecord>> fileIOWrite = FileIO.<String, KV<String, GenericRecord>>writeDynamic()
+                .by(kv -> kv != null ? kv.getKey() : null)
+                .via(Contextful.fn(kv -> kv != null ? kv.getValue() : null), AvroIO.<GenericRecord>sink(SCHEMA).withCodec(CodecFactory.fromString("snappy")))
+                .withDestinationCoder(StringUtf8Coder.of())
+                .withNaming(path -> new CustomWriteFileNaming(path, "snappy", "avro"))
+                .to(output)
+                .withTempDirectory(temp);
+
+        return options.getNumShards() == 0 ? fileIOWrite.withAutoSharding() : fileIOWrite.withNumShards(options.getNumShards());
     }
 
 
@@ -363,7 +362,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
     private static boolean isUserCodeExceptionWithOomAsRootCause(Throwable t) {
         // UserCodeException is always present in dependencies for all maven profiles in this project (via beam-sdks-java-core)
         if (t == null) return false;
-        if (t instanceof org.apache.beam.sdk.util.UserCodeException) {
+        if (t instanceof UserCodeException) {
             Throwable cause = t.getCause();
             while (cause != null && cause != t) {
                 if (cause instanceof OutOfMemoryError) {
@@ -378,10 +377,10 @@ gcloud dataflow flex-template run $APP-$OWNER \
     private static String getMessage() {
         InetAddress localHostAddress = getLocalHostAddress();
         Thread thread = Thread.currentThread();
-        String total = LogUtils.format(Runtime.getRuntime().totalMemory());
-        String free = LogUtils.format(Runtime.getRuntime().freeMemory());
-        String used = LogUtils.format(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
-        String max = LogUtils.format(Runtime.getRuntime().maxMemory());
+        String total = format(Runtime.getRuntime().totalMemory());
+        String free = format(Runtime.getRuntime().freeMemory());
+        String used = format(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
+        String max = format(Runtime.getRuntime().maxMemory());
         return String.format("%s|i:%s|n:%s|g:%s|c:%s|u:%s|f:%s|t:%s|m:%s",
                 localHostAddress, thread.threadId(), thread.getName(), thread.getThreadGroup().getName(), Runtime.getRuntime().availableProcessors(), used, free, total, max);
     }
@@ -436,6 +435,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
         //        private final String outputDir;
         private final ValueProvider<String> outputDir;
 
+        @SuppressWarnings("deprecation")
         @Override
         public Duration getAllowedTimestampSkew() {
             return Duration.millis(Long.MAX_VALUE);
@@ -446,8 +446,8 @@ gcloud dataflow flex-template run $APP-$OWNER \
             this.outputDir = outputDir;
         }
 
-        @DoFn.ProcessElement
-        public void process(@DoFn.Element GenericRecord record, @Timestamp Instant timestamp, OutputReceiver<KV<String, GenericRecord>> outputReceiver) {
+        @ProcessElement
+        public void process(@Element GenericRecord record, @Timestamp Instant timestamp, OutputReceiver<KV<String, GenericRecord>> outputReceiver) {
 //            String timestampedPath = outputDir + FORMATTER_PATH.print(timestamp);
             String timestampedPath = outputDir.get() + FORMATTER_PATH.print(timestamp);
             LOGGER.info("[{}][{}] timestampedPath={}", getIp(), getThreadNameAndId(), timestampedPath);
