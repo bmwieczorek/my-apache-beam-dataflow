@@ -12,14 +12,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.text.NumberFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+
+import static com.bawi.beam.dataflow.LogUtils.getRuntimeInfo;
 
 public class MyPubsubReadWriteJob {
     public interface MyPipelineOptions extends PipelineOptions {
@@ -132,7 +131,7 @@ mvn clean compile -DskipTests exec:java \
                         public String apply(PubsubMessage msg) {
                             int i = Integer.parseInt(new String(msg.getPayload()));
                             String factorial = factorial(i);
-                            LOGGER.info("[{}], i={}, fact={}", getMessage(), i, factorial);
+                            LOGGER.info("[{}], i={}, fact={}", getRuntimeInfo(), i, factorial);
                             return "body=" + i +
                                     ", attributes=" + msg.getAttributeMap() +
                                     ", messageId=" + msg.getMessageId();
@@ -150,32 +149,6 @@ mvn clean compile -DskipTests exec:java \
                 factorial = factorial.multiply(BigInteger.valueOf(i));
             }
             return factorial.toString();
-        }
-
-        private static String getMessage() {
-            InetAddress localHostAddress = getLocalHostAddress();
-            Thread thread = Thread.currentThread();
-            String total = format(Runtime.getRuntime().totalMemory());
-            String free = format(Runtime.getRuntime().freeMemory());
-            String used = format(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
-            String max = format(Runtime.getRuntime().maxMemory());
-            return String.format("%s|i:%s|n:%s|g:%s|c:%s|u:%s|f:%s|t:%s|m:%s",
-                    localHostAddress, thread.getId(), thread.getName(), thread.getThreadGroup().getName(), Runtime.getRuntime().availableProcessors(), used, free, total, max);
-        }
-
-        private static InetAddress getLocalHostAddress() {
-            try {
-                return InetAddress.getLocalHost();
-            } catch (UnknownHostException e) {
-                LOGGER.error("Unable to get local host address", e);
-                return null;
-            }
-        }
-
-        private static String format(long value) {
-            NumberFormat numberFormat = NumberFormat.getInstance();
-            numberFormat.setGroupingUsed(true);
-            return numberFormat.format(value);
         }
 
     }

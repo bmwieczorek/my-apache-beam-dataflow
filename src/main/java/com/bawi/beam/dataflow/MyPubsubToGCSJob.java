@@ -40,7 +40,6 @@ import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetAddress;
 import java.util.Random;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -125,7 +124,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MyPubsubToGCSJob.class);
 
-    public static final String BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID = "bodyWithAttributesMessageId";
+    public static final String BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID = "bodyWithAttrsMsgId"; // needs to match schema column name in terraform/MyPubsubToGCSJob/bigquery.tf
     private static final Schema SCHEMA = SchemaBuilder.record("record").fields().requiredString(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID).endRecord();
     private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("'year='yyyy/'month'=MM/'day'=dd/'hour'=HH/'minute'=mm");
 
@@ -297,7 +296,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
                 GenericData.Record record = doProcess(pubsubMessage, inputDataFreshnessMs, customPublishTimeInputDataFreshnessMs, customEventTimeInputDataFreshnessMs);
                 String windowString = window instanceof GlobalWindow ? "GlobalWindow " + window.maxTimestamp() : window.toString();
-                LOGGER.info("[{}][{}] record {} window {} {}", getIp(), getThreadNameAndId(), record, windowString, getMessage());
+                LOGGER.info("[{}][{}] record {} window {} {}", getIp(), getThreadNameAndId(), record, windowString, getRuntimeInfo());
                 outputReceiver.output(record);
 
                 if (inputDataFreshnessMs > 0) INPUT_DATA_FRESHNESS_MS.update(inputDataFreshnessMs);
@@ -308,7 +307,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
                 // OOM simulation - so data object is not removed by GC before OOM happens and the log with memory info is printed
                 if (bigArrayToSimulateOOM.length > 0) {
-                    LOGGER.info("MEMORY_HOG size: {}, total memory: {}, free memory: {}", bigArrayToSimulateOOM.length, Runtime.getRuntime().totalMemory(), Runtime.getRuntime().freeMemory());
+                    LOGGER.info("MEMORY size: {}, total memory: {}, free memory: {}", bigArrayToSimulateOOM.length, Runtime.getRuntime().totalMemory(), Runtime.getRuntime().freeMemory());
                 }
 
                 long endTimeMs = System.currentTimeMillis();
@@ -343,7 +342,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
         private GenericData.Record doProcess(PubsubMessage pubsubMessage, long inputDataFreshnessMs, long customPublishTimeInputDataFreshnessMs, long customEventTimeInputDataFreshnessMs) {
             String body = new String(pubsubMessage.getPayload());
             GenericData.Record record = new GenericData.Record(SCHEMA);
-            String value = "body=" + body + ", attributes=" + new TreeMap<>(pubsubMessage.getAttributeMap()) + ", messageId=" + pubsubMessage.getMessageId()
+            String value = "body=" + body + ", attrs=" + new TreeMap<>(pubsubMessage.getAttributeMap()) + ", msgId=" + pubsubMessage.getMessageId()
                     + ", inputDataFreshnessMs=" + inputDataFreshnessMs + ", customInputDataFreshnessMs=" + customPublishTimeInputDataFreshnessMs
                     + ", customEventTimeInputDataFreshnessMs=" + customEventTimeInputDataFreshnessMs;
             record.put(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID, value);
@@ -372,17 +371,6 @@ gcloud dataflow flex-template run $APP-$OWNER \
             }
         }
         return false;
-    }
-
-    private static String getMessage() {
-        InetAddress localHostAddress = getLocalHostAddress();
-        Thread thread = Thread.currentThread();
-        String total = format(Runtime.getRuntime().totalMemory());
-        String free = format(Runtime.getRuntime().freeMemory());
-        String used = format(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
-        String max = format(Runtime.getRuntime().maxMemory());
-        return String.format("%s|i:%s|n:%s|g:%s|c:%s|u:%s|f:%s|t:%s|m:%s",
-                localHostAddress, thread.threadId(), thread.getName(), thread.getThreadGroup().getName(), Runtime.getRuntime().availableProcessors(), used, free, total, max);
     }
 
     static class CustomWriteFileNaming implements FileIO.Write.FileNaming {

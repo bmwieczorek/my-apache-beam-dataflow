@@ -82,8 +82,8 @@ public class MyPubsubToGCSJobIntegrationTest {
     public void testE2E() throws IOException, InterruptedException {
         // given
         String topic = get("GCP_OWNER") + "-topic";
-        String gcsBucket = get("GCP_PROJECT") + "-" + get("GCP_OWNER") + "-" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase();
-        LOGGER.info("topic={}, bucket={}", topic, gcsBucket);
+        String bucket = get("GCP_PROJECT") + "-" + get("GCP_OWNER") + "-" + MyPubsubToGCSJob.class.getSimpleName().toLowerCase();
+        LOGGER.info("topic={}, bucket={}", topic, bucket);
 
         // when
         Process terraformApplyProcess = runBashProcess("terraform apply -auto-approve " + vars);
@@ -95,34 +95,41 @@ public class MyPubsubToGCSJobIntegrationTest {
         Thread.sleep(60 * 1000);
 
         // send messages to PubSub with fixed delay
-        // int numMessages = 23 * 60 * 10;
         int numMessagesToSend = 23 * 60; // 1380
         long firstEventTimeMillis = System.currentTimeMillis();
         Function<Integer, Long> fn = msgIdx -> isMessageEventTimeIncreasing ? (msgIdx == 1 ? firstEventTimeMillis : System.currentTimeMillis()) : firstEventTimeMillis;
         Set<String> messageIds = sendNPubsubMessagesWithDelay(topic, numMessagesToSend, Duration.ofMillis(250), fn);
+
+        @SuppressWarnings({ "ConstantValue", "unused" })
+        int expectedMessageCount = generateMessageDuplicates && dataflowDeduplicationEnabled ? numMessagesToSend / 2 : numMessagesToSend;
+
+        // then
         Assert.assertEquals("Sent " + numMessagesToSend + " messages to PubSub, got " + messageIds.size() + " messageIds", numMessagesToSend, messageIds.size());
         LOGGER.info("Sent {} messages to PubSub, got {} messageIds", numMessagesToSend, messageIds.size());
 
-
-        // then
-        @SuppressWarnings("ConstantValue")
-        int expectedMessageCount = generateMessageDuplicates && dataflowDeduplicationEnabled ? numMessagesToSend / 2 : numMessagesToSend;
         int numberOfReadRetries = 120; // 300 retries with 5 sec deply gives 25 mins of checking for generic records in job's avro output
-        List<String> readDFGeneratedAvroRecordsAsStrings = readWithRetriesAvroFileFromGCSGeneratedByDataflowJob(gcsBucket, "output/", expectedMessageCount, numberOfReadRetries);
 
-        LOGGER.info("Sent {} messages to PubSub, read {} avro records" , readDFGeneratedAvroRecordsAsStrings.getFirst(), readDFGeneratedAvroRecordsAsStrings.getLast());
-        Assert.assertEquals(expectedMessageCount, readDFGeneratedAvroRecordsAsStrings.size());
+        String objectPathPrefix = "output-windowedWrites/";
+        List<String> outputWindowedAvroRecords = readAvroFileGeneratedByDataflowJob(bucket, objectPathPrefix, expectedMessageCount, numberOfReadRetries);
+        LOGGER.info("Sent {} messages to PubSub, read {} avro records from {}" , expectedMessageCount, outputWindowedAvroRecords.size(), objectPathPrefix);
+        Assert.assertEquals(expectedMessageCount, outputWindowedAvroRecords.size());
+        LOGGER.info("Sample Content of generated avro file read from GCS: {}", outputWindowedAvroRecords.getFirst());
 
-        LOGGER.info("Content of generated avro file(s) read from GCS: first: {}, last: {}", numMessagesToSend, readDFGeneratedAvroRecordsAsStrings.size());
 
-        List<String> filteredMessages = readDFGeneratedAvroRecordsAsStrings.stream()
+        objectPathPrefix = "output/";
+        List<String> outputAvroRecords = readAvroFileGeneratedByDataflowJob(bucket, objectPathPrefix, expectedMessageCount, numberOfReadRetries);
+        LOGGER.info("Sent {} messages to PubSub, read {} avro records from {}" , expectedMessageCount, outputAvroRecords.size(), objectPathPrefix);
+        Assert.assertEquals(expectedMessageCount, outputAvroRecords.size());
+        LOGGER.info("Sample Content of generated avro file read from GCS: {}", outputAvroRecords.getFirst());
+
+        List<String> filteredMessages = outputAvroRecords.stream()
                 .filter(s -> s.contains(MY_MSG_BODY + ":1,") || s.contains(MY_MSG_BODY + ":2,")).toList();
-        filteredMessages.forEach(m -> LOGGER.info("Read message: {}", m));
-
-        @SuppressWarnings("ConstantValue")
+        filteredMessages.forEach(m -> LOGGER.info("Read message with body ending with :1 or :2: {}", m));
+        @SuppressWarnings({ "ConstantValue", "unused" })
         int expectedCount = generateMessageDuplicates && dataflowDeduplicationEnabled ? 1 : 2;
-        LOGGER.info("Expected {} messages read from GCS, got {}", expectedCount, filteredMessages.size());
-        Assert.assertEquals("Expected " + expectedCount + " messages read from GCS, got " + filteredMessages.size(), expectedCount, filteredMessages.size());
+        LOGGER.info("Expected filtered {} message(s) read from GCS, got {}", expectedCount, filteredMessages.size());
+        Assert.assertEquals("Expected filtered " + expectedCount + " messages read from GCS, got " + filteredMessages.size(), expectedCount, filteredMessages.size());
+
 
         long actualBQRecordsCount = readWithRetriesBQTableRowsPopulatedByDataflowJob(expectedMessageCount);
         LOGGER.info("Expected {} rows read from BQ, got {}", expectedMessageCount, actualBQRecordsCount);
@@ -215,7 +222,7 @@ public class MyPubsubToGCSJobIntegrationTest {
                     messageIds.addAll(batchMessageIds);
                     int msgCounter = counter.get() - 1;
                     if (msgCounter % logMessagesInterval == 0 || (counter.get() - 1) == numMessagesToSend) {
-                        LOGGER.info("Sent message {}/{} in {}ms", msgCounter, numMessagesToSend, System.currentTimeMillis() - timeMillisStart);
+                        LOGGER.info("Sent message {} of {} in {}ms", msgCounter, numMessagesToSend, System.currentTimeMillis() - timeMillisStart);
                     }
                 } catch (IOException | InterruptedException | ExecutionException e) {
                     throw new RuntimeException(e);
@@ -242,7 +249,7 @@ public class MyPubsubToGCSJobIntegrationTest {
         return generateMessageDuplicates ? (i + 1 - ((i + 1) % 2)) : i;
     }
 
-    private List<String> readWithRetriesAvroFileFromGCSGeneratedByDataflowJob(String bucketName, @SuppressWarnings("SameParameterValue") String objectPathPrefix, int expectedNumMessages, int limitRetries) throws InterruptedException {
+    private List<String> readAvroFileGeneratedByDataflowJob(String bucketName, @SuppressWarnings("SameParameterValue") String objectPathPrefix, int expectedNumMessages, int limitRetries) throws InterruptedException {
         int retryDelaySecs = 5;
 
         List<String> outputAvroRecordsAsStrings = new ArrayList<>();
@@ -293,7 +300,7 @@ public class MyPubsubToGCSJobIntegrationTest {
                 });
 
                 if (results.size() == expectedNumMessages) {
-                    LOGGER.info("filtered blob paths: size {}, example: {}", filteredBlobs.size(), filteredBlobs.getFirst());
+                    LOGGER.info("Filtered blob paths: size {}, sample: {}", filteredBlobs.size(), filteredBlobs.getFirst());
                     return results;
                 } else {
                     LOGGER.info("Read {}/{}, retry {}/{}, next in {}s", results.size(), expectedNumMessages, i, limitRetries, retryDelaySecs);

@@ -26,7 +26,7 @@ resource "google_bigquery_table" "table" {
 [
   {
     "mode": "REQUIRED",
-    "name": "bodyWithAttributesMessageId",
+    "name": "bodyWithAttrsMsgId",
     "type": "STRING"
   }
 ]
