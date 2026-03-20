@@ -31,6 +31,7 @@ import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.ValueInSingleWindow;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -151,6 +152,10 @@ public class MyDynamicBQWriteJob {
                     break;
                 case BYTES:
                     value = LogicalTypes.decimal(38, 9).equals(logicalType) ? parseNumeric((double) value) : ByteBuffer.wrap(((String) value).getBytes());
+                    break;
+                default:
+                    // No conversion needed for other types
+                    break;
             }
             return value;
         }
@@ -165,7 +170,7 @@ public class MyDynamicBQWriteJob {
     static class MyDynamicBQWritePTransform extends PTransform<PBegin, PCollection<TableRowWithSchema>> {
 
         @Override
-        public PCollection<TableRowWithSchema> expand(PBegin input) {
+        public @NonNull PCollection<TableRowWithSchema> expand(PBegin input) {
 
             return input.apply(Create.of(
                             KV.of("optional_record", "{\"myOptionalString\": \"abc\"}"),
@@ -213,7 +218,7 @@ public class MyDynamicBQWriteJob {
         pipeline.apply(new MyDynamicBQWritePTransform())
                 .apply(BigQueryIO.<TableRowWithSchema>write()
                         .to((ValueInSingleWindow<TableRowWithSchema> input) -> getTableDestination(input, bqLoadProjectId, dataset))
-                        .withFormatFunction(TableRowWithSchema::getTableRow)
+                        .withFormatFunction(tableRowWithSchema -> tableRowWithSchema != null ? tableRowWithSchema.getTableRow() : null)
                         .withMethod(BigQueryIO.Write.Method.FILE_LOADS)
                         .withLoadJobProjectId(bqLoadProjectId)
                         .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_TRUNCATE)
