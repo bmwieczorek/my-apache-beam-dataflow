@@ -4,12 +4,16 @@ import com.google.api.gax.rpc.NotFoundException;
 import com.google.cloud.pubsub.v1.SubscriptionAdminClient;
 import com.google.cloud.pubsub.v1.TopicAdminClient;
 import com.google.pubsub.v1.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class PubSubUtils {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PubSubUtils.class);
 
     public static List<String> listTopics(String projectId) throws IOException {
         List<String> found = new ArrayList<>();
@@ -26,7 +30,7 @@ public class PubSubUtils {
         try (TopicAdminClient topicAdminClient = TopicAdminClient.create()) {
             TopicName topicName = TopicName.of(projectId, topicId);
             Topic topic = topicAdminClient.createTopic(topicName);
-            System.out.println("Created topic: " + topic.getName());
+            LOGGER.info("Created topic: {}", topic.getName());
         }
     }
 
@@ -40,7 +44,7 @@ public class PubSubUtils {
             Subscription subscription =
                     subscriptionAdminClient.createSubscription(
                             subscriptionName, topicName, PushConfig.getDefaultInstance(), 10);
-            System.out.println("Created pull subscription: " + subscription.getName());
+            LOGGER.info("Created pull subscription: {}", subscription.getName());
         }
     }
 
@@ -60,9 +64,9 @@ public class PubSubUtils {
             TopicName topicName = TopicName.of(projectId, topicId);
             try {
                 topicAdminClient.deleteTopic(topicName);
-                System.out.println("Deleted topic: " + topicName);
+                LOGGER.info("Deleted topic: {}", topicName);
             } catch (NotFoundException e) {
-                System.out.println(e.getMessage());
+                LOGGER.info(e.getMessage());
             }
         }
     }
@@ -73,9 +77,9 @@ public class PubSubUtils {
             SubscriptionName subscriptionName = SubscriptionName.of(projectId, subscriptionId);
             try {
                 subscriptionAdminClient.deleteSubscription(subscriptionName);
-                System.out.println("Deleted subscription: " + subscriptionName);
+                LOGGER.info("Deleted subscription: {}", subscriptionName);
             } catch (NotFoundException e) {
-                System.out.println(e.getMessage());
+                LOGGER.info(e.getMessage());
             }
         }
     }
