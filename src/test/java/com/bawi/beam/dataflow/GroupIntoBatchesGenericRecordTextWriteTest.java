@@ -69,19 +69,19 @@ public class GroupIntoBatchesGenericRecordTextWriteTest {
 
         PCollection<KV<String, GenericRecord>> withMinuteDateTimeKey = records
                 .apply(ParDo.of(new WithMinuteDateTimeKey()))
-//                .apply(ParDo.of(new LogElementWithWindowDetails<>("1")))
+                .apply(ParDo.of(new LogElementWithWindowDetails<>("1")))
                 ;
 
         PCollection<KV<String, Iterable<GenericRecord>>> batched = withMinuteDateTimeKey.apply(GroupIntoBatches.ofSize(3));
 
         PCollection<KV<String, GenericRecord>> flattenedWithBatchKey = batched.apply(ParDo.of(new FlattenGroupWithSameKey()))
-//                .apply(ParDo.of(new LogElementWithWindowDetails<>("2")))
+                .apply(ParDo.of(new LogElementWithWindowDetails<>("2")))
                 ;
 
         flattenedWithBatchKey
                 .apply(FileIO.<String, KV<String, GenericRecord>>writeDynamic()
-                        .by(KV::getKey)
-                        .via(Contextful.fn(kv -> kv.getValue().toString()), TextIO.sink())
+                        .by(kv -> kv != null ? kv.getKey() : null)
+                        .via(Contextful.fn(kv -> kv != null ? kv.getValue().toString() : null), TextIO.sink())
                         .withDestinationCoder(StringUtf8Coder.of())
                         .withNaming(subPath -> new MyFileNaming(subPath, ".txt"))
                         .to(OUTPUT_DIR)
