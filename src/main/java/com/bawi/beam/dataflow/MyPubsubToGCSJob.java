@@ -124,11 +124,11 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MyPubsubToGCSJob.class);
 
-    public static final String BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID = "bodyWithAttrsMsgId"; // needs to match schema column name in terraform/MyPubsubToGCSJob/bigquery.tf
+    public static final String BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID = "bodyAttrsMsgId"; // needs to match schema column name in terraform/MyPubsubToGCSJob/bigquery.tf
     private static final Schema SCHEMA = SchemaBuilder.record("record").fields().requiredString(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID).endRecord();
     private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("'year='yyyy/'month'=MM/'day'=dd/'hour'=HH/'minute'=mm");
 
-    public static final String MY_MSG_ATTR_NAME = "myMsgAttrName";
+    public static final String MSG_ATTR_NAME = "msgAttrName";
     public static final String PUBLISH_TIME_ATTRIBUTE = "pt";
     public static final String EVENT_TIME_ATTRIBUTE = "et";
 
@@ -147,8 +147,8 @@ gcloud dataflow flex-template run $APP-$OWNER \
         PubsubIO.Read<PubsubMessage> pubsubMessageRead = PubsubIO.readMessagesWithAttributesAndMessageId().fromSubscription(options.getSubscription());
 
         if (options.getMessageDeduplicationEnabled()) {
-            LOGGER.info("Deduplication enabled based on {}", MY_MSG_ATTR_NAME);
-            pubsubMessageRead = pubsubMessageRead.withIdAttribute(MY_MSG_ATTR_NAME);
+            LOGGER.info("Deduplication enabled based on {}", MSG_ATTR_NAME);
+            pubsubMessageRead = pubsubMessageRead.withIdAttribute(MSG_ATTR_NAME);
         }
 
         if (options.getCustomEventTimeTimestampAttributeEnabled()) {
