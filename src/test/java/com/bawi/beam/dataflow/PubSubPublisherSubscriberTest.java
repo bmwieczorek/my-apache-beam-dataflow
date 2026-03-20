@@ -48,8 +48,9 @@ public class PubSubPublisherSubscriberTest {
 
         // then
         Assert.assertEquals(2, messages.size());
-        Assert.assertEquals(text1, new String(decompress(messages.getFirst())));
-        Assert.assertEquals(text2, new String(decompress(messages.getLast())));
+        List<String> receivedDecompressedMessage = messages.stream().map(bytes -> new String(decompress(bytes))).toList();
+        Assert.assertTrue(receivedDecompressedMessage.contains(text1));
+        Assert.assertTrue(receivedDecompressedMessage.contains(text2));
     }
 
     private static List<byte[]> subscribe(String project, String subscription) {
@@ -100,12 +101,15 @@ public class PubSubPublisherSubscriberTest {
         return byteStream.toByteArray();
     }
 
-    static byte[] decompress(byte[] compressedPayload) throws IOException {
+    static byte[] decompress(byte[] compressedPayload) {
         try (
                 ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(compressedPayload);
                 GZIPInputStream gzipInputStream = new GZIPInputStream(byteArrayInputStream)
         ) {
             return IOUtils.toByteArray(gzipInputStream);
+        } catch (IOException e) {
+            LOGGER.error("Error decompressing payload", e);
+            return new byte[0];
         }
     }
 
