@@ -47,8 +47,8 @@ import static com.bawi.beam.dataflow.MyPubsubToGCSJob.*;
 
 public class MyPubsubToGCSJobIntegrationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyPubsubToGCSJobIntegrationTest.class);
-    private static final String MY_MSG_BODY = "myMsgBody";
-    private static final String MY_MSG_ATTR_VALUE = "myMsgAttrValue";
+    private static final String MSG_BODY = "msgBody";
+    private static final String MSG_ATTR_VALUE = "msgAttrValue";
     private final boolean dataflow_classic_template_enabled = true;
     private final boolean generateMessageDuplicates = true;
     private final boolean dataflowDeduplicationEnabled = true;
@@ -123,7 +123,7 @@ public class MyPubsubToGCSJobIntegrationTest {
         LOGGER.info("Sample Content of generated avro file read from GCS: {}", outputAvroRecords.getFirst());
 
         List<String> filteredMessages = outputAvroRecords.stream()
-                .filter(s -> s.contains(MY_MSG_BODY + ":1,") || s.contains(MY_MSG_BODY + ":2,")).toList();
+                .filter(s -> s.contains(MSG_BODY + ":1,") || s.contains(MSG_BODY + ":2,")).toList();
         filteredMessages.forEach(m -> LOGGER.info("Read message with body ending with :1 or :2: {}", m));
         @SuppressWarnings({ "ConstantValue", "unused" })
         int expectedCount = generateMessageDuplicates && dataflowDeduplicationEnabled ? 1 : 2;
@@ -194,22 +194,22 @@ public class MyPubsubToGCSJobIntegrationTest {
                         if (msgCounter > numMessagesToSend) return;
 
                         // values of myMsgAttrName attribute are not unique but duplicated: 0, 2, 2, 4, 4 ...
-                        // attrs: M1: myMsgAttrName1=myMsgAttrValue0, M2: myMsgAttrName2=myMsgAttrValue=2, M3: myMsgAttrName3=myMsgAttrValue=2, M4: myMsgAttrName4=myMsgAttrValue=4
-//                    String myMsgAttrValue = generateMessageDuplicates ? MY_MSG_ATTR_VALUE + (msgCounter + 1 - ((msgCounter + 1) % 2)) : MY_MSG_ATTR_VALUE + msgCounter;
-                        String myMsgAttrValue = MY_MSG_ATTR_VALUE + getFirstMessageIndex(generateMessageDuplicates, msgCounter);
+                        // attrs: M1: myMsgAttrName1=msgAttrValue0, M2: myMsgAttrName2=msgAttrValue=2, M3: myMsgAttrName3=msgAttrValue=2, M4: myMsgAttrName4=msgAttrValue=4
+//                    String msgAttrValue = generateMessageDuplicates ? MSG_ATTR_VALUE + (msgCounter + 1 - ((msgCounter + 1) % 2)) : MSG_ATTR_VALUE + msgCounter;
+                        String msgAttrValue = MSG_ATTR_VALUE + getFirstMessageIndex(generateMessageDuplicates, msgCounter);
                         long eventTimeMillis = msgIdxToTimestampMillisFn.apply(msgCounter);
-                        String body = MY_MSG_BODY + ":" + msgCounter;
+                        String body = MSG_BODY + ":" + msgCounter;
 
                         // initial logging of first messages
                         if (msgCounter <= logMessagesInterval) {
                             LOGGER.info("Sending message {} of {} with body {} and attrs {}={}, et={}",
-                                    msgCounter, numMessagesToSend, body, MY_MSG_ATTR_NAME, myMsgAttrValue, Instant.ofEpochMilli(eventTimeMillis).toDateTime());
+                                    msgCounter, numMessagesToSend, body, MSG_ATTR_NAME, msgAttrValue, Instant.ofEpochMilli(eventTimeMillis).toDateTime());
                         }
 
                         PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
                                 .setData(ByteString.copyFromUtf8(body))
                                 .putAllAttributes(ImmutableMap.of(
-                                        MY_MSG_ATTR_NAME, myMsgAttrValue,
+                                        MSG_ATTR_NAME, msgAttrValue,
                                         PUBLISH_TIME_ATTRIBUTE, Instant.now().toString(),
                                         EVENT_TIME_ATTRIBUTE, Instant.ofEpochMilli(eventTimeMillis).toString()
                                 ))
@@ -391,21 +391,21 @@ beam_bq_job_LOAD_mypubsubtogcsjobroot..._00001_00000-0   load       SUCCESS   02
 /*
 deduplication on myMsgAttrName and constant even time et:
 Job
-   .apply(PubsubIO.readMessagesWithAttributesAndMessageId().fromSubscription(options.getSubscription()).withIdAttribute(MY_MSG_ATTR_NAME).withTimestampAttribute(ConcatBodyAttrAndMsgIdFn.EVENT_TIME_ATTRIBUTE))
+   .apply(PubsubIO.readMessagesWithAttributesAndMessageId().fromSubscription(options.getSubscription()).withIdAttribute(MSG_ATTR_NAME).withTimestampAttribute(ConcatBodyAttrAndMsgIdFn.EVENT_TIME_ATTRIBUTE))
 
 Test
     private final boolean isMessageAttributeValueUnique = false;
     private final boolean isMessageEventTimeIncreasing = false;
 
-2022-09-18 19:27:22,413 INFO  Sent pubsub message (1 of 600), myMsgAttrValue2, eventTime=2022-09-18T19:27:19.447+02:00
-2022-09-18 19:27:23,123 INFO  Sent pubsub message (2 of 600), myMsgAttrValue2, eventTime=2022-09-18T19:27:19.447+02:00
-2022-09-18 19:27:24,222 INFO  Sent pubsub message (3 of 600), myMsgAttrValue4, eventTime=2022-09-18T19:27:19.447+02:00
-2022-09-18 19:27:24,944 INFO  Sent pubsub message (4 of 600), myMsgAttrValue4, eventTime=2022-09-18T19:27:19.447+02:00
+2022-09-18 19:27:22,413 INFO  Sent pubsub message (1 of 600), msgAttrValue2, eventTime=2022-09-18T19:27:19.447+02:00
+2022-09-18 19:27:23,123 INFO  Sent pubsub message (2 of 600), msgAttrValue2, eventTime=2022-09-18T19:27:19.447+02:00
+2022-09-18 19:27:24,222 INFO  Sent pubsub message (3 of 600), msgAttrValue4, eventTime=2022-09-18T19:27:19.447+02:00
+2022-09-18 19:27:24,944 INFO  Sent pubsub message (4 of 600), msgAttrValue4, eventTime=2022-09-18T19:27:19.447+02:00
 ...
-2022-09-18 19:41:58,484 INFO  Sent pubsub message (597 of 600), myMsgAttrValue598, eventTime=2022-09-18T19:27:19.447+02:00
-2022-09-18 19:41:59,143 INFO  Sent pubsub message (598 of 600), myMsgAttrValue598, eventTime=2022-09-18T19:27:19.447+02:00
-2022-09-18 19:41:59,797 INFO  Sent pubsub message (599 of 600), myMsgAttrValue600, eventTime=2022-09-18T19:27:19.447+02:00
-2022-09-18 19:42:00,476 INFO  Sent pubsub message (600 of 600), myMsgAttrValue600, eventTime=2022-09-18T19:27:19.447+02:00
+2022-09-18 19:41:58,484 INFO  Sent pubsub message (597 of 600), msgAttrValue598, eventTime=2022-09-18T19:27:19.447+02:00
+2022-09-18 19:41:59,143 INFO  Sent pubsub message (598 of 600), msgAttrValue598, eventTime=2022-09-18T19:27:19.447+02:00
+2022-09-18 19:41:59,797 INFO  Sent pubsub message (599 of 600), msgAttrValue600, eventTime=2022-09-18T19:27:19.447+02:00
+2022-09-18 19:42:00,476 INFO  Sent pubsub message (600 of 600), msgAttrValue600, eventTime=2022-09-18T19:27:19.447+02:00
 2022-09-18 19:44:02,120 INFO  Returned total rows count: 300
 
 
