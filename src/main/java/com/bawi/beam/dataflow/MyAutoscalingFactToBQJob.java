@@ -25,6 +25,7 @@ import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -48,6 +49,7 @@ public class MyAutoscalingFactToBQJob {
         @Validation.Required
         @Default.String("1000,10000")
         ValueProvider<String> getSequenceStartCommaEnd();
+        @SuppressWarnings("unused")
         void setSequenceStartCommaEnd(ValueProvider<String> value);
     }
 
@@ -72,7 +74,8 @@ mvn clean compile -DskipTests -Pdataflow-runner exec:java \
         MyPipelineOptions pipelineOptions = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
         Pipeline pipeline = Pipeline.create(pipelineOptions);
 
-        ValueProvider.NestedValueProvider<List<Integer>, String> nestedValueProvider = ValueProvider.NestedValueProvider.of(pipelineOptions.getSequenceStartCommaEnd(), startCommaStop -> {
+        ValueProvider.NestedValueProvider<List<Integer>, String> nestedValueProvider = ValueProvider.NestedValueProvider.of(pipelineOptions.getSequenceStartCommaEnd(), startCommaStopArg -> {
+            String startCommaStop = Objects.requireNonNull(startCommaStopArg);
             int start = Integer.parseInt(startCommaStop.substring(0, startCommaStop.indexOf(",")));
             int end = Integer.parseInt(startCommaStop.substring(startCommaStop.indexOf(",") + 1));
             LOGGER.info("Sequence start={}, end={}", start, end);
