@@ -1,6 +1,7 @@
 package com.bawi.beam.dataflow;
 
 import com.google.api.core.ApiFuture;
+import com.google.cloud.pubsub.v1.AckReplyConsumer;
 import com.google.cloud.pubsub.v1.MessageReceiver;
 import com.google.cloud.pubsub.v1.Publisher;
 import com.google.cloud.pubsub.v1.Subscriber;
@@ -8,11 +9,13 @@ import com.google.protobuf.ByteString;
 import com.google.pubsub.v1.ProjectSubscriptionName;
 import com.google.pubsub.v1.PubsubMessage;
 import com.google.pubsub.v1.TopicName;
-import org.apache.commons.compress.utils.IOUtils;
+import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -30,18 +33,23 @@ import static com.bawi.beam.dataflow.PubSubUtils.createTopicAndSubscription;
 import static com.bawi.beam.dataflow.PubSubUtils.deleteSubscriptionAndTopic;
 
 public class PubSubPublisherSubscriberTest {
+    public static final Logger LOGGER = LoggerFactory.getLogger(PubSubPublisherSubscriberTest.class);
 
     @Test
     public void test() throws IOException, ExecutionException, InterruptedException {
         // given
-        String text = "abc123";
+        String text1 = "abc123";
+        String text2 = "cdef4567";
 
         // when
-        publish(PROJECT, TOPIC_NAME, compress(text.getBytes()));
+        publish(PROJECT, TOPIC_NAME, compress(text1.getBytes()));
+        publish(PROJECT, TOPIC_NAME, compress(text2.getBytes()));
         List<byte[]> messages = subscribe(PROJECT, SUBSCRIPTION_NAME);
 
         // then
-        Assert.assertEquals(text, new String(decompress(messages.get(0))));
+        Assert.assertEquals(2, messages.size());
+        Assert.assertEquals(text1, new String(decompress(messages.getFirst())));
+        Assert.assertEquals(text2, new String(decompress(messages.getLast())));
     }
 
     private static List<byte[]> subscribe(String project, String subscription) {
@@ -55,34 +63,33 @@ public class PubSubPublisherSubscriberTest {
     }
 
     private static void subscribe(String project, String subscription, Consumer<byte[]> c) throws TimeoutException {
-        MessageReceiver receiver = (message, consumer) -> {
+        MessageReceiver receiver = (PubsubMessage message, AckReplyConsumer consumer) -> {
             ByteString data = message.getData();
             byte[] bytes = data.toByteArray();
             c.accept(bytes);
-            System.out.println("received: message.getMessageId()=" + message.getMessageId());
-            System.out.println("received: message.getData().size()=" + message.getData().size());
+            LOGGER.info("Received: message.getMessageId()={}, message.getData().size()={}", message.getMessageId(), message.getData().size());
             consumer.ack();
         };
 
         ProjectSubscriptionName projectSubscription = ProjectSubscriptionName.of(project, subscription);
         Subscriber subscriber = Subscriber.newBuilder(projectSubscription, receiver).build();
+        LOGGER.info("Starting subscribing to project: {}, subscription: {}", projectSubscription, subscription);
         subscriber.startAsync().awaitRunning();
         subscriber.awaitTerminated(10, TimeUnit.SECONDS);
+        LOGGER.info("Stopped subscribing to project: {}, subscription: {}", projectSubscription, subscription);
+
     }
 
     private static void publish(String project, String topic, byte[] bytes) throws IOException, InterruptedException, ExecutionException {
         Publisher publisher = Publisher.newBuilder(TopicName.of(project, topic)).build();
         ByteString byteString = ByteString.copyFrom(bytes);
-        System.out.println("published: byteString.size()=" + byteString.size());
-        PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
-                .setData(byteString)
-                .build();
-
+        LOGGER.info("Publishing: data with byteString size={}", byteString.size());
+        PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(byteString).build();
         ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
         String messageId = messageIdFuture.get();
         publisher.shutdown();
         publisher.awaitTermination(20, TimeUnit.SECONDS);
-        System.out.println("published: messageId=" + messageId);
+        LOGGER.info("Published: messageId={}", messageId);
     }
 
     private static byte[] compress(byte[] bytes) throws IOException {
