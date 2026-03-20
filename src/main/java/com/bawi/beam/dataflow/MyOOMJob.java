@@ -24,6 +24,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -122,7 +123,8 @@ java -agentpath:/opt/cprof/profiler_java_agent.so=-cprof_service=myoomjob,-cprof
         Pipeline pipeline = Pipeline.create(pipelineOptions);
         //pipeline.apply(Create.of(IntStream.rangeClosed(10000, 25000).boxed().collect(Collectors.toList())))
 
-        ValueProvider.NestedValueProvider<List<Integer>, String> nestedValueProvider = ValueProvider.NestedValueProvider.of(pipelineOptions.getSequenceStartCommaEnd(), startCommaStop -> {
+        ValueProvider.NestedValueProvider<List<Integer>, String> nestedValueProvider = ValueProvider.NestedValueProvider.of(pipelineOptions.getSequenceStartCommaEnd(), startCommaStopArg -> {
+            String startCommaStop = Objects.requireNonNull(startCommaStopArg);
             int start = Integer.parseInt(startCommaStop.substring(0, startCommaStop.indexOf(",")));
             int end = Integer.parseInt(startCommaStop.substring(startCommaStop.indexOf(",") + 1));
             LOGGER.info("Sequence start={}, end={}", start, end); // executed by each worker thread
@@ -141,7 +143,7 @@ java -agentpath:/opt/cprof/profiler_java_agent.so=-cprof_service=myoomjob,-cprof
                         record.put("local_host_address", localHostAddress.toString());
                     }
                     Thread thread = Thread.currentThread();
-                    record.put("thread_id", thread.getId());
+                    record.put("thread_id", thread.threadId());
                     record.put("thread_name", thread.getName());
                     ThreadGroup threadGroup = thread.getThreadGroup();
                     if (threadGroup != null) {
@@ -156,7 +158,7 @@ java -agentpath:/opt/cprof/profiler_java_agent.so=-cprof_service=myoomjob,-cprof
                     String max = format(Runtime.getRuntime().maxMemory());
                     record.put("heap_max", max);
                     LOGGER.info("i={},localHostAddress={},thread_id={},thread_name={},threadGroup={},heap_total={},heap_free={},heap_used={},heap_max={}",
-                            i, localHostAddress, thread.getId(), thread.getName(), thread.getThreadGroup(), total, free, used, max);
+                            i, localHostAddress, thread.threadId(), thread.getName(), thread.getThreadGroup(), total, free, used, max);
                     return record;
                 })).setCoder(AvroGenericCoder.of(SCHEMA))
 
