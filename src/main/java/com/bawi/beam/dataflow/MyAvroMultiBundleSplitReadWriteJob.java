@@ -5,7 +5,7 @@ import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.reflect.Nullable;
-import org.apache.beam.repackaged.core.org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.extensions.avro.coders.AvroGenericCoder;
@@ -21,6 +21,8 @@ import org.apache.beam.sdk.schemas.JavaFieldSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.TypeDescriptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.math.BigInteger;
@@ -31,6 +33,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class MyAvroMultiBundleSplitReadWriteJob {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MyAvroMultiBundleSplitReadWriteJob.class);
     private static final String JOB_NAME = "bartek-" + MyAvroReadWriteJob.class.getSimpleName().toLowerCase();
     private static final String PROJECT_ID = System.getenv("GCP_PROJECT");
     private static final String BUCKET_NAME = PROJECT_ID + "-" + JOB_NAME;
@@ -62,7 +65,7 @@ public class MyAvroMultiBundleSplitReadWriteJob {
 
         generatorPipeline.apply(Create.of(IntStream.rangeClosed(1, 100 * 1000).boxed().collect(Collectors.toList())))
                 .apply(MapElements.into(TypeDescriptor.of(MyData.class)).via(i ->
-                                new MyData(UUID.randomUUID().toString(), System.currentTimeMillis(), new Random().nextInt(100), RandomStringUtils.randomAlphanumeric(1000))))
+                                new MyData(UUID.randomUUID().toString(), System.currentTimeMillis(), new Random().nextInt(100), RandomStringUtils.secure().nextAlphanumeric(1000))))
                 .apply(AvroIO.write(MyData.class).to(generatorOptions.getOutput())
 //                        .withCodec(CodecFactory.nullCodec()) // DEFAULT_CODEC = CodecFactory.snappyCodec() // CodecFactory.nullCodec() for no compression
                         .withoutSharding()); // to single file
@@ -108,10 +111,11 @@ public class MyAvroMultiBundleSplitReadWriteJob {
                 + " --parameters output=gs://" + BUCKET_NAME + "/writing/output/*";
 
         runBashProcessAndWaitForStatus(cmd);
-        
+
+
     }
 
-    private static int runBashProcessAndWaitForStatus(String cmd) throws IOException, InterruptedException {
+    private static void runBashProcessAndWaitForStatus(String cmd) throws IOException, InterruptedException {
         System.out.println(cmd);
         ProcessBuilder processBuilder = new ProcessBuilder();
         processBuilder.inheritIO();
@@ -119,8 +123,7 @@ public class MyAvroMultiBundleSplitReadWriteJob {
         Process process = processBuilder.start();
         logProcess(process);
         int status = process.waitFor();
-        System.out.println(status);
-        return status;
+        LOGGER.info("Process exited with status {}", status);
     }
 
     private static void logProcess(Process process) throws IOException {
