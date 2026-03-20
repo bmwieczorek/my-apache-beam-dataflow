@@ -79,4 +79,15 @@ public class LogUtils {
     static long getThreadNameAndId() {
         return Thread.currentThread().threadId();
     }
+
+    static String getRuntimeInfo() {
+        InetAddress localHostAddress = getLocalHostAddress();
+        Thread thread = Thread.currentThread();
+        String total = format(Runtime.getRuntime().totalMemory());
+        String free = format(Runtime.getRuntime().freeMemory());
+        String used = format(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
+        String max = format(Runtime.getRuntime().maxMemory());
+        return String.format("%s|i:%s|n:%s|g:%s|c:%s|u:%s|f:%s|t:%s|m:%s",
+                localHostAddress, thread.threadId(), thread.getName(), thread.getThreadGroup().getName(), Runtime.getRuntime().availableProcessors(), used, free, total, max);
+    }
 }
