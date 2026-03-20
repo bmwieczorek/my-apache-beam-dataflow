@@ -7,6 +7,7 @@ import com.google.cloud.bigtable.admin.v2.BigtableInstanceAdminSettings;
 import com.google.cloud.bigtable.data.v2.BigtableDataClient;
 import com.google.cloud.bigtable.data.v2.models.Query;
 import com.google.cloud.bigtable.data.v2.models.RowCell;
+import com.google.cloud.bigtable.data.v2.models.TableId;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import org.apache.beam.sdk.Pipeline;
@@ -183,7 +184,7 @@ public class MyBigtableWriteReadTest {
         @ProcessElement
         public void process(@Element String key, OutputReceiver<com.google.cloud.bigtable.data.v2.models.Row> outputReceiver) {
             ServerStream<com.google.cloud.bigtable.data.v2.models.Row> rows
-                    = dataClient.readRows(Query.create(TABLE_ID)
+                    = dataClient.readRows(Query.create(TableId.of(TABLE_ID))
                     .range(key, key + "~") // filter
                     .filter(FILTERS.chain()
                             .filter(FILTERS.limit().cellsPerColumn(1)) // include only the newest cell values
@@ -393,7 +394,7 @@ public class MyBigtableWriteReadTest {
     }
 
     private static String randomString() {
-        return RandomStringUtils.randomAlphanumeric(4);
+        return RandomStringUtils.secure().nextAlphanumeric(4);
     }
 
 
