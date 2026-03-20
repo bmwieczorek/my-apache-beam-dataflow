@@ -145,6 +145,7 @@ public class MyBigtableWriteReadTest {
                 .apply("Key prefix", Create.of("aa")) // here key prefix includes all rows
                 .apply(ParDo.of(new ReadRowsFn()))
                 .apply(MapElements.into(TypeDescriptors.strings()).via(row -> {
+                    Assert.assertNotNull(row);
                     String key = row.getKey().toStringUtf8();
                     String keyPrefix = key.substring(0, key.indexOf("#") + 1);
                     List<RowCell> cells = row.getCells();
@@ -250,13 +251,16 @@ public class MyBigtableWriteReadTest {
                         .withKeyRange(ByteKeyRange.ALL_KEYS.withStartKey(ByteKey.copyFrom("aabb#".getBytes()))) // (same as above) all keys starting with aabb# (inc) onwards
                         .withRowFilter(RowFilter.newBuilder().setCondition(condition).build()) // filter only one row with rq_id=abc123
                 )
-                .apply(MapElements.into(TypeDescriptors.strings()).via(MyBigtableWriteReadTest::toString));
+                .apply(MapElements.into(TypeDescriptors.strings()).via(row -> {
+                    Assert.assertNotNull(row);
+                    return toString(row);
+                }));
 
         PAssert.that(read).satisfies((Iterable<String> stringIterable) -> {
             LOGGER.info("Read filtered: {}", stringIterable);
-            List<String> strings = StreamSupport.stream(stringIterable.spliterator(), false).collect(Collectors.toList());
+            List<String> strings = StreamSupport.stream(stringIterable.spliterator(), false).toList();
             Assert.assertEquals(1, strings.size());
-            Assert.assertEquals("aabb#... optional_key_cf:code_cq=A1B1_,rq_id_cq=abc123|value_cf:id_cq=ab4,sub_id_cq=1", strings.get(0));
+            Assert.assertEquals("aabb#... optional_key_cf:code_cq=A1B1_,rq_id_cq=abc123|value_cf:id_cq=ab4,sub_id_cq=1", strings.getFirst());
             return null;
         });
         readPipeline.run().waitUntilFinish();
@@ -306,6 +310,7 @@ public class MyBigtableWriteReadTest {
                 .apply(FlatMapElements.into(TypeDescriptors.strings()).via(row -> {
                     AtomicBoolean rq_id_found = new AtomicBoolean(false);
                     AtomicBoolean code_ext_found = new AtomicBoolean(false);
+                    Assert.assertNotNull(row);
                     List<Family> families = row.getFamiliesList();
                     families.forEach(family -> {
                         List<Column> columns = family.getColumnsList();
