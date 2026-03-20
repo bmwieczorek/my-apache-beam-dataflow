@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-import static org.apache.beam.repackaged.core.org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric;
+import org.apache.commons.lang3.RandomStringUtils;
 
 public class MyPipelineWithListSideInputLookupJob {
     private static final String TAG = "sideInputTag";
@@ -55,7 +55,7 @@ public class MyPipelineWithListSideInputLookupJob {
         @ProcessElement
         public void process(@Element Long element, @SideInput(TAG) List<Long> lookup, OutputReceiver<Long> receiver) {
             boolean contains = lookup.contains(element);
-            LOGGER.info(contains + randomAlphanumeric(200_000));
+            LOGGER.info("{}{}", contains, RandomStringUtils.secure().nextAlphanumeric(200_000));
 //            if (lookup.contains(element)) {
 //                receiver.output(element);
 //            }

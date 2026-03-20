@@ -11,6 +11,7 @@ import org.apache.beam.sdk.transforms.View;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionView;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.slf4j.Logger;
@@ -18,7 +19,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
-import static org.apache.beam.repackaged.core.org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric;
 import static org.apache.beam.sdk.values.TypeDescriptors.*;
 
 public class MyPipelineWithHashMapSideInputLookupJob {
@@ -59,7 +59,8 @@ public class MyPipelineWithHashMapSideInputLookupJob {
         @ProcessElement
         public void process(@Element Long element, @SideInput(TAG) Map<Long, Void> lookup, OutputReceiver<Long> receiver) {
             boolean contains = lookup.containsKey(element);
-            LOGGER.info(contains + randomAlphanumeric(200_000));
+            LOGGER.info("{}{}", contains, RandomStringUtils.secure().nextAlphanumeric(200_000));
+
 //            if (lookup.contains(element)) {
 //                receiver.output(element);
 //            }
