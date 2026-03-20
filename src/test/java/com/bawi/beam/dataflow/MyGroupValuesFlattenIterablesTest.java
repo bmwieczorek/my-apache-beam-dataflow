@@ -7,6 +7,7 @@ import org.apache.beam.sdk.transforms.windowing.PaneInfo;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.joda.time.Instant;
+import org.jspecify.annotations.NonNull;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +29,7 @@ public class MyGroupValuesFlattenIterablesTest {
                 .apply(Values.create())
                 .apply(new Log<>("ExtractValsFromKV"));
 
-        PCollection<Integer> result = iterIntVals
+        iterIntVals
                 .apply(Flatten.iterables())
                 .apply(new Log<>("FlattenValues"));
 
@@ -51,13 +52,13 @@ public class MyGroupValuesFlattenIterablesTest {
             }
             @ProcessElement
             public void process(@Element E element, OutputReceiver<E> receiver, @Timestamp Instant timestamp, BoundedWindow window, PaneInfo paneInfo) {
-                LOGGER.info("[" + step + "] Processing: {} ", String.format("%s (%s %s)", element, window.getClass().getSimpleName(), window.maxTimestamp()));
+                LOGGER.info("[{}] Processing: {} ", step, String.format("%s (%s %s)", element, window.getClass().getSimpleName(), window.maxTimestamp()));
                 receiver.output(element);
             }
         }
 
         @Override
-        public PCollection<T> expand(PCollection<T> input) {
+        public @NonNull PCollection<T> expand(PCollection<T> input) {
             input.apply(ParDo.of(new Log.LogFn<>(step)));
             return input;
         }
