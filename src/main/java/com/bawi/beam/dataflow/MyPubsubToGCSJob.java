@@ -270,9 +270,9 @@ gcloud dataflow flex-template run $APP-$OWNER \
         private static final String CLASS_NAME = ConcatBodyAttrAndMsgIdFn.class.getSimpleName();
         private static final Distribution PUBSUB_MESSAGE_SIZE_BYTES = Metrics.distribution(CLASS_NAME, CLASS_NAME + "_pubsubMessageSizeBytes");
         private static final Distribution PROCESSING_TIME_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME + "_processingTimeMs");
-        private static final Distribution INPUT_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME + "_inputDataFreshnessMs");
-        private static final Distribution CUSTOM_PUBLISH_TIME_INPUT_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME + "_customPtInputDataFreshnessMs");
-        private static final Distribution CUSTOM_EVENT_TIME_INPUT_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME + "_customEtInputDataFreshnessMs");
+        private static final Distribution DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME + "_dataFreshnessMs");
+        private static final Distribution CUSTOM_PUBLISH_TIME_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME + "_customPtDataFreshnessMs");
+        private static final Distribution CUSTOM_EVENT_TIME_DATA_FRESHNESS_MS = Metrics.distribution(CLASS_NAME, CLASS_NAME + "_customEtDataFreshnessMs");
         private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("yyyy-MM-dd--HH-mm");
 
         // OOM simulation - prepare job update curl command in advance to have it ready in case OOM happens and avoid doing it in the middle of OOM
@@ -288,22 +288,22 @@ gcloud dataflow flex-template run $APP-$OWNER \
                 Metrics.counter(CLASS_NAME, "inputRecordCount_" + FORMATTER.print(startMs)).inc();
                 PUBSUB_MESSAGE_SIZE_BYTES.update(pubsubMessage.getPayload().length);
                 // LOGGER.info("experiments={}", ((DataflowPipelineOptions) ctx.getPipelineOptions()).getExperiments());
-                long inputDataFreshnessMs = startMs - timestamp.getMillis();
+                long dataFreshnessMs = startMs - timestamp.getMillis();
                 String publishTimeAttribute = pubsubMessage.getAttribute(PUBLISH_TIME_ATTRIBUTE);
                 String eventTimeAttribute = pubsubMessage.getAttribute(EVENT_TIME_ATTRIBUTE);
-                long customPublishTimeInputDataFreshnessMs = publishTimeAttribute != null ? (startMs - Instant.parse(publishTimeAttribute).getMillis()) : -1;
-                long customEventTimeInputDataFreshnessMs = eventTimeAttribute != null ? (startMs - Instant.parse(eventTimeAttribute).getMillis()) : -1;
+                long customPublishTimeDataFreshnessMs = publishTimeAttribute != null ? (startMs - Instant.parse(publishTimeAttribute).getMillis()) : -1;
+                long customEventTimeDataFreshnessMs = eventTimeAttribute != null ? (startMs - Instant.parse(eventTimeAttribute).getMillis()) : -1;
 
-                GenericData.Record record = doProcess(pubsubMessage, inputDataFreshnessMs, customPublishTimeInputDataFreshnessMs, customEventTimeInputDataFreshnessMs);
+                GenericData.Record record = doProcess(pubsubMessage, dataFreshnessMs, customPublishTimeDataFreshnessMs, customEventTimeDataFreshnessMs);
                 String windowString = window instanceof GlobalWindow ? "GlobalWindow " + window.maxTimestamp() : window.toString();
                 LOGGER.info("[{}][{}] record {} window {} {}", getIp(), getThreadNameAndId(), record, windowString, getRuntimeInfo());
                 outputReceiver.output(record);
 
-                if (inputDataFreshnessMs > 0) INPUT_DATA_FRESHNESS_MS.update(inputDataFreshnessMs);
-                if (customPublishTimeInputDataFreshnessMs > 0)
-                    CUSTOM_PUBLISH_TIME_INPUT_DATA_FRESHNESS_MS.update(customPublishTimeInputDataFreshnessMs);
-                if (customEventTimeInputDataFreshnessMs > 0)
-                    CUSTOM_EVENT_TIME_INPUT_DATA_FRESHNESS_MS.update(customEventTimeInputDataFreshnessMs);
+                if (dataFreshnessMs > 0) DATA_FRESHNESS_MS.update(dataFreshnessMs);
+                if (customPublishTimeDataFreshnessMs > 0)
+                    CUSTOM_PUBLISH_TIME_DATA_FRESHNESS_MS.update(customPublishTimeDataFreshnessMs);
+                if (customEventTimeDataFreshnessMs > 0)
+                    CUSTOM_EVENT_TIME_DATA_FRESHNESS_MS.update(customEventTimeDataFreshnessMs);
 
                 // OOM simulation - so data object is not removed by GC before OOM happens and the log with memory info is printed
                 if (bigArrayToSimulateOOM.length > 0) {
@@ -339,12 +339,12 @@ gcloud dataflow flex-template run $APP-$OWNER \
             return new byte[new Random().nextInt(arraySizeInMB - 2, arraySizeInMB + 2) * 1024 * 1024];
         }
 
-        private GenericData.Record doProcess(PubsubMessage pubsubMessage, long inputDataFreshnessMs, long customPublishTimeInputDataFreshnessMs, long customEventTimeInputDataFreshnessMs) {
+        private GenericData.Record doProcess(PubsubMessage pubsubMessage, long dataFreshnessMs, long customPublishTimeDataFreshnessMs, long customEventTimeDataFreshnessMs) {
             String body = new String(pubsubMessage.getPayload());
             GenericData.Record record = new GenericData.Record(SCHEMA);
             String value = "body=" + body + ", attrs=" + new TreeMap<>(pubsubMessage.getAttributeMap()) + ", msgId=" + pubsubMessage.getMessageId()
-                    + ", inputDataFreshnessMs=" + inputDataFreshnessMs + ", customInputDataFreshnessMs=" + customPublishTimeInputDataFreshnessMs
-                    + ", customEventTimeInputDataFreshnessMs=" + customEventTimeInputDataFreshnessMs;
+                    + ", dataFreshnessMs=" + dataFreshnessMs + ", customPublishTimeDataFreshnessMs=" + customPublishTimeDataFreshnessMs
+                    + ", customEventTimeDataFreshnessMs=" + customEventTimeDataFreshnessMs;
             record.put(BODY_WITH_ATTRIBUTES_AND_MESSAGE_ID, value);
             return record;
         }

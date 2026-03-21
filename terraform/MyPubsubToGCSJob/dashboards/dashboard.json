@@ -1001,7 +1001,7 @@
         {
           "height": 4,
           "widget": {
-            "title": "inputDataFreshnessMs",
+            "title": "dataFreshnessMs",
             "xyChart": {
               "chartOptions": {
                 "mode": "COLOR"
@@ -1016,7 +1016,7 @@
                         "alignmentPeriod": "60s",
                         "perSeriesAligner": "ALIGN_MEAN"
                       },
-                      "filter": "metric.type=\"dataflow.googleapis.com/job/user_counter\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"metric_name\"=monitoring.regex.full_match(\".*nputDataFreshnessMs_M.*\")"
+                      "filter": "metric.type=\"dataflow.googleapis.com/job/user_counter\" resource.type=\"dataflow_job\" ${dataflow_job_filter} metric.label.\"metric_name\"=monitoring.regex.full_match(\".*ataFreshnessMs_M.*\")"
                     }
                   }
                 }
