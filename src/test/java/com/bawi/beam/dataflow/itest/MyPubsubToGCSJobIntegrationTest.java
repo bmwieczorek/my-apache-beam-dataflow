@@ -127,8 +127,8 @@ public class MyPubsubToGCSJobIntegrationTest {
         filteredMessages.forEach(m -> LOGGER.info("Read message with body ending with :1 or :2: {}", m));
         @SuppressWarnings({ "ConstantValue", "unused" })
         int expectedCount = generateMessageDuplicates && dataflowDeduplicationEnabled ? 1 : 2;
-        LOGGER.info("Expected filtered {} message(s) read from GCS, got {}", expectedCount, filteredMessages.size());
-        Assert.assertEquals("Expected filtered " + expectedCount + " messages read from GCS, got " + filteredMessages.size(), expectedCount, filteredMessages.size());
+        LOGGER.info("Expected filtered {} message(s) from GCS, got {}", expectedCount, filteredMessages.size());
+        Assert.assertEquals("Expected filtered " + expectedCount + " messages from GCS, got " + filteredMessages.size(), expectedCount, filteredMessages.size());
 
 
         long actualBQRecordsCount = readWithRetriesBQTableRowsPopulatedByDataflowJob(expectedMessageCount);
@@ -262,7 +262,7 @@ public class MyPubsubToGCSJobIntegrationTest {
                     // .peek(b -> LOGGER.info("filtered blob: {}, {}", b, b.getName()))
                     .toList();
 
-            LOGGER.info("Found {} *.avro file(s) in {}", filteredBlobs.size(), objectPathPrefix);
+            LOGGER.info("Found {} *.avro in {}", filteredBlobs.size(), objectPathPrefix);
 
             if (!filteredBlobs.isEmpty()) {
                 List<String> results = new ArrayList<>();
@@ -300,15 +300,17 @@ public class MyPubsubToGCSJobIntegrationTest {
                 });
 
                 if (results.size() == expectedNumMessages) {
-                    LOGGER.info("Filtered blob paths: size {}, sample: {}", filteredBlobs.size(), filteredBlobs.getFirst());
+                    LOGGER.info("Filtered blob paths: size {}", filteredBlobs.size());
+                    LOGGER.info("Filtered sample first blob: {}", filteredBlobs.getFirst().getName());
+                    LOGGER.info("Filtered sample last blob: {}", filteredBlobs.getLast().getName());
                     return results;
                 } else {
-                    LOGGER.info("Read {}/{}, retry {}/{}, next in {}s", results.size(), expectedNumMessages, i, limitRetries, retryDelaySecs);
+                    LOGGER.info("Read {}/{} avro records, retry {}/{}", results.size(), expectedNumMessages, i, limitRetries);
                     Thread.sleep(retryDelaySecs * 1000L);
                     outputAvroRecordsAsStrings = results;
                 }
             } else {
-                LOGGER.info("Waiting for Dataflow to write, {}/{} retry in {}s", i, limitRetries, retryDelaySecs);
+                LOGGER.info("Waiting for Dataflow to write, retry {}/{}", i, limitRetries);
                 Thread.sleep(retryDelaySecs * 1000L);
             }
         }
