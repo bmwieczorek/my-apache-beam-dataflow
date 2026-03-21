@@ -47,4 +47,5 @@ resource "google_dataflow_job" "job" {
 
   labels = local.labels
   skip_wait_on_job_termination = var.skip_wait_on_job_termination
+  depends_on = [var.module_depends_on]
 }

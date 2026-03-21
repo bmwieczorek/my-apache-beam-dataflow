@@ -97,3 +97,10 @@ variable "owner" {
 variable "skip_wait_on_job_termination" {
   type = bool
 }
+
+// workaround to wait for dependant resources to be created before the job id created or resources destroyed after job deletion
+variable "module_depends_on" {
+  type        = any
+  description = "(optional) A list of external resources the module depends_on. Default is []."
+  default     = []
+}
