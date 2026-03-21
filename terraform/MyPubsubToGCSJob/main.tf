@@ -97,7 +97,12 @@ module "dataflow_classic_template_job" {
   number_of_worker_harness_threads  = local.number_of_worker_harness_threads
   enable_streaming_engine           = local.enable_streaming_engine
   dump_heap_on_oom                  = local.dump_heap_on_oom
-}
+
+  // workaround to wait for wait for before deleting resources below until the jobs is deleted to
+  // fixed Error message from worker: java.lang.RuntimeException: org.apache.beam.sdk.util.UserCodeException: java.lang.RuntimeException: unable to obtain dataset for dataset bartek_mypubsubtogcsjob in project
+  // fixed Internal Issue. Causes: Deleting watermark tracking pubsub subscription projects/project/subscriptions/bartek-topic-sub__df_internalc8b... failed with error: User not authorized to perform this action.
+  module_depends_on  = [google_bigquery_dataset_iam_member.grant_sa_data_owner_role_to_dataset, google_project_iam_member.grant_sa_pubsub_editor_role_at_project]
+ }
 
 module "dataflow_flex_template" {
   source                            = "./dataflow_flex_template"

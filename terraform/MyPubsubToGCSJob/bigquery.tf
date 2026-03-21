@@ -6,7 +6,8 @@ resource "google_bigquery_dataset" "dataset" {
   labels = local.labels
 }
 
-resource "google_bigquery_dataset_iam_member" "dataset_sa_binding" {
+// fix Access Denied: Dataset project:bartek_mypubsubtogcsjob: Permission bigquery.datasets.get denied on dataset project:bartek_mypubsubtogcsjob (or it may not exist).",
+resource "google_bigquery_dataset_iam_member" "grant_sa_data_owner_role_to_dataset" {
   dataset_id = google_bigquery_dataset.dataset.dataset_id
   project = var.project
   role = "roles/bigquery.dataOwner"
