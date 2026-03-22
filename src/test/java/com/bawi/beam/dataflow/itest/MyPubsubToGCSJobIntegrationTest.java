@@ -300,9 +300,9 @@ public class MyPubsubToGCSJobIntegrationTest {
                 });
 
                 if (results.size() == expectedNumMessages) {
-                    LOGGER.info("Filtered blob paths: size {}", filteredBlobs.size());
-                    LOGGER.info("Filtered sample first blob: {}", filteredBlobs.getFirst().getName());
-                    LOGGER.info("Filtered sample last blob: {}", filteredBlobs.getLast().getName());
+                    LOGGER.info("Filtered {} avro paths", filteredBlobs.size());
+                    LOGGER.info("Filtered first avro path: {}", filteredBlobs.getFirst().getName());
+                    LOGGER.info("Filtered last avro path: {}", filteredBlobs.getLast().getName());
                     return results;
                 } else {
                     LOGGER.info("Read {}/{} avro records, retry {}/{}", results.size(), expectedNumMessages, i, limitRetries);

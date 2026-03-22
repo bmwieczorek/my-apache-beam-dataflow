@@ -187,7 +187,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
         concatBodyAndAttrsPCollection.apply(BigQueryIO.<GenericRecord>write()
                 .withAvroFormatFunction(r -> {
                     GenericRecord element = r.getElement();
-                    LOGGER.info("[{}][{}] element {}, schema {}", getIp(), getThreadNameAndId(), element, r.getSchema());
+                    LOGGER.info("[{}] record: {}, schema: {}", getIpThreadNameAndThreadId(), element, r.getSchema());
                     return element;
                 })
                 .withAvroSchemaFactory(qTableSchema -> SCHEMA)
@@ -296,7 +296,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
                 GenericData.Record record = doProcess(pubsubMessage, dataFreshnessMs, customPublishTimeDataFreshnessMs, customEventTimeDataFreshnessMs);
                 String windowString = window instanceof GlobalWindow ? "GlobalWindow " + window.maxTimestamp() : window.toString();
-                LOGGER.info("[{}][{}] record {} window {} {}", getIp(), getThreadNameAndId(), record, windowString, getRuntimeInfo());
+                LOGGER.info("[{}] Processing {}, w={}, {}", getIpThreadNameAndThreadId(), record, windowString, getRuntimeInfo());
                 outputReceiver.output(record);
 
                 if (dataFreshnessMs > 0) DATA_FRESHNESS_MS.update(dataFreshnessMs);
@@ -307,7 +307,8 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
                 // OOM simulation - so data object is not removed by GC before OOM happens and the log with memory info is printed
                 if (bigArrayToSimulateOOM.length > 0) {
-                    LOGGER.info("MEMORY size: {}, total memory: {}, free memory: {}", bigArrayToSimulateOOM.length, Runtime.getRuntime().totalMemory(), Runtime.getRuntime().freeMemory());
+                    LOGGER.info("[{}] MEMORY size: {}, total memory: {}, free memory: {}",
+                            getIpThreadNameAndThreadId(), bigArrayToSimulateOOM.length, Runtime.getRuntime().totalMemory(), Runtime.getRuntime().freeMemory());
                 }
 
                 long endTimeMs = System.currentTimeMillis();
@@ -409,7 +410,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
                     FORMATTER_MIN_SECS.print(now), UUID.randomUUID(),
                     this.compression, this.format);
 
-            LOGGER.info("[{}][Write] Writing data to '{}',w={},p={}", ipAddressAndThread(), path, windowToString(window), pane);
+            LOGGER.info("[{}] Writing data to '{}',w={},p={}", getIpThreadNameAndThreadId(), path, windowToString(window), pane);
             return path;
         }
     }
@@ -437,7 +438,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
         public void process(@Element GenericRecord record, @Timestamp Instant timestamp, OutputReceiver<KV<String, GenericRecord>> outputReceiver) {
 //            String timestampedPath = outputDir + FORMATTER_PATH.print(timestamp);
             String timestampedPath = outputDir.get() + FORMATTER_PATH.print(timestamp);
-            LOGGER.info("[{}][{}] timestampedPath={}", getIp(), getThreadNameAndId(), timestampedPath);
+            LOGGER.info("[{}] TimestampedPath={}", getIpThreadNameAndThreadId(), timestampedPath);
             outputReceiver.output(KV.of(timestampedPath, record));
         }
     }
