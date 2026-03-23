@@ -35,10 +35,9 @@ import java.io.InputStreamReader;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.StreamSupport;
@@ -171,11 +170,6 @@ public class MyPubsubToGCSJobIntegrationTest {
             int i = counter.get();
             if (i > numMessagesToSend) return;
 
-                long timeMillisStart = System.currentTimeMillis();
-                try {
-                    // Batch settings control how the publisher batches messages
-                    long requestBytesThreshold = 5000L; // default : 1000 bytes
-                    long messageCountBatchSize = 10L; // default : 100 message
             long timeMillisStart = System.currentTimeMillis();
             try {
                 // Batch settings control how the publisher batches messages
