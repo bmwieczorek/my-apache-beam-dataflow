@@ -187,7 +187,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
         concatBodyAndAttrsPCollection.apply(BigQueryIO.<GenericRecord>write()
                 .withAvroFormatFunction(r -> {
                     GenericRecord element = r.getElement();
-                    LOGGER.info("[{}] record: {}, schema: {}", getIpThreadNameAndThreadId(), element, r.getSchema());
+                    LOGGER.info("[{}] BQ write avro record: {}, schema: {}", getIpThreadNameAndThreadId(), element, r.getSchema());
                     return element;
                 })
                 .withAvroSchemaFactory(qTableSchema -> SCHEMA)
@@ -236,7 +236,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
                                 parentDirectoryPath + "-windowedWrites", yyyyMMddHHmm, UUID.randomUUID(), System.currentTimeMillis(),
                                 getIp(), Thread.currentThread().threadId(), Thread.currentThread().getName(), window.maxTimestamp().toString().replace(":", "_").replace(" ", "_"), pathTiming,
                                 shardNumber, numShards, suffix);
-                        //                                LOGGER.info("filename='{}', {}", filename, getMessage());  // output/year=2021/month=12/day=23/hour=07/minute=52/d52a2109-f8f9-459b-b055-365be2558833-1640246141797.avro
+                        LOGGER.info("[{}] FilenamePolicy.windowedFilename writing data to {}", getIpThreadNameAndThreadId(), filename);  // output/year=2021/month=12/day=23/hour=07/minute=52/d52a2109-f8f9-459b-b055-365be2558833-1640246141797.avro
                         return resource.getCurrentDirectory().resolve(filename, ResolveOptions.StandardResolveOptions.RESOLVE_FILE);
                     }
 
@@ -321,13 +321,15 @@ gcloud dataflow flex-template run $APP-$OWNER \
                     if (jobUpdateCurlCommand == null) {
                         jobUpdateCurlCommand = getJobUpdateCurlCommand();
                     }
-                    LOGGER.error("Rethrowing OutOfMemoryError. Update the machine type from: {} to: {} by executing job update curl command: \n{}",
-                            currentMachineType, getRecommendedHighMemMachineType(currentMachineType), jobUpdateCurlCommand, t);
+                    LOGGER.error("[{}] Rethrowing OutOfMemoryError. Update the machine type from: {} to: {} by executing job update curl command: \n{}",
+                            getIpThreadNameAndThreadId(), currentMachineType, getRecommendedHighMemMachineType(currentMachineType), jobUpdateCurlCommand, t);
                     throw t;
                 } else if (t instanceof Exception) {
-                    LOGGER.error("Exception occurred during processing. Skipping rethrowing it to avoid pipeline indefinite retries. Exception: {}, Root cause: {}", t.getMessage(), rootCause.getMessage(), t);
+                    LOGGER.error("[{}] Exception occurred during processing. Skipping rethrowing it to avoid pipeline indefinite retries. Exception: {}, Root cause: {}",
+                            getIpThreadNameAndThreadId(), t.getMessage(), rootCause.getMessage(), t);
                 } else {
-                    LOGGER.error("Rethrowing non OutOfMemoryError throwable: {}, Root cause: {}", t.getMessage(), rootCause.getMessage(), t);
+                    LOGGER.error("[{}] Rethrowing non OutOfMemoryError throwable: {}, Root cause: {}",
+                            getIpThreadNameAndThreadId(), t.getMessage(), rootCause.getMessage(), t);
                     throw t;
                 }
             }
@@ -410,7 +412,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
                     FORMATTER_MIN_SECS.print(now), UUID.randomUUID(),
                     this.compression, this.format);
 
-            LOGGER.info("[{}] Writing data to '{}',w={},p={}", getIpThreadNameAndThreadId(), path, windowToString(window), pane);
+            LOGGER.info("[{}] FileIO.Write.FileNaming writing data to '{}',w={},p={}", getIpThreadNameAndThreadId(), path, windowToString(window), pane);
             return path;
         }
     }
