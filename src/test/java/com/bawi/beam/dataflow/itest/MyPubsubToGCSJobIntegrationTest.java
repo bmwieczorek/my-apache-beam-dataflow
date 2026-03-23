@@ -95,37 +95,39 @@ public class MyPubsubToGCSJobIntegrationTest {
         Thread.sleep(60 * 1000);
 
         // send messages to PubSub with fixed delay
-        int numMessagesToSend = 23 * 60; // 1380
+        int numMessagesToSend = 2 * 4 * 10 * 60; // 1380 (2*4*10*60=4800 if for 2 minutes)
         long firstEventTimeMillis = System.currentTimeMillis();
         Function<Integer, Long> fn = msgIdx -> isMessageEventTimeIncreasing ? (msgIdx == 1 ? firstEventTimeMillis : System.currentTimeMillis()) : firstEventTimeMillis;
-        Set<String> messageIds = sendNPubsubMessagesWithDelay(topic, numMessagesToSend, Duration.ofMillis(250), fn);
+        List<String> messageIds = sendNPubsubMessagesWithDelay(topic, numMessagesToSend, fn);
 
-        @SuppressWarnings({ "ConstantValue", "unused" })
+        @SuppressWarnings({"ConstantValue", "unused"})
         int expectedMessageCount = generateMessageDuplicates && dataflowDeduplicationEnabled ? numMessagesToSend / 2 : numMessagesToSend;
 
         // then
-        Assert.assertEquals("Sent " + numMessagesToSend + " messages to PubSub, got " + messageIds.size() + " messageIds", numMessagesToSend, messageIds.size());
-        LOGGER.info("Sent {} messages to PubSub, got {} messageIds", numMessagesToSend, messageIds.size());
+        LOGGER.info("Sent {} messages, got {} messageIds" , numMessagesToSend, messageIds.size());
+        Assert.assertEquals("Sent " + numMessagesToSend + " messages, got " + messageIds.size() + " messageIds", numMessagesToSend, messageIds.size());
 
-        int numberOfReadRetries = 120; // 300 retries with 5 sec deply gives 25 mins of checking for generic records in job's avro output
+        int numberOfReadRetries = 240; // 300 retries with 5 sec deply gives 25 mins of checking for generic records in job's avro output
 
         String objectPathPrefix = "output-windowedWrites/";
         List<String> outputWindowedAvroRecords = readAvroFileGeneratedByDataflowJob(bucket, objectPathPrefix, expectedMessageCount, numberOfReadRetries);
-        LOGGER.info("Sent {} messages to PubSub, read {} avro records from {}" , expectedMessageCount, outputWindowedAvroRecords.size(), objectPathPrefix);
+        LOGGER.info("Sent {} messages, read {} avro records from {}", expectedMessageCount, outputWindowedAvroRecords.size(), objectPathPrefix);
         Assert.assertEquals(expectedMessageCount, outputWindowedAvroRecords.size());
-        LOGGER.info("Sample Content of generated avro file read from GCS: {}", outputWindowedAvroRecords.getFirst());
+        LOGGER.info("Content of first avro file read from from {}: {}", objectPathPrefix, outputWindowedAvroRecords.getFirst());
+        LOGGER.info("Content of last avro file read from from {}: {}", objectPathPrefix, outputWindowedAvroRecords.getLast());
 
 
         objectPathPrefix = "output/";
         List<String> outputAvroRecords = readAvroFileGeneratedByDataflowJob(bucket, objectPathPrefix, expectedMessageCount, numberOfReadRetries);
-        LOGGER.info("Sent {} messages to PubSub, read {} avro records from {}" , expectedMessageCount, outputAvroRecords.size(), objectPathPrefix);
+        LOGGER.info("Sent {} messages, read {} avro records from {}", expectedMessageCount, outputAvroRecords.size(), objectPathPrefix);
         Assert.assertEquals(expectedMessageCount, outputAvroRecords.size());
-        LOGGER.info("Sample Content of generated avro file read from GCS: {}", outputAvroRecords.getFirst());
+        LOGGER.info("Content of first avro file read from from {}: {}", objectPathPrefix, outputAvroRecords.getFirst());
+        LOGGER.info("Content of last avro file read from from {}: {}", objectPathPrefix, outputAvroRecords.getLast());
 
         List<String> filteredMessages = outputAvroRecords.stream()
                 .filter(s -> s.contains(MSG_BODY + ":1,") || s.contains(MSG_BODY + ":2,")).toList();
         filteredMessages.forEach(m -> LOGGER.info("Read message with body ending with :1 or :2: {}", m));
-        @SuppressWarnings({ "ConstantValue", "unused" })
+        @SuppressWarnings({"ConstantValue", "unused"})
         int expectedCount = generateMessageDuplicates && dataflowDeduplicationEnabled ? 1 : 2;
         LOGGER.info("Expected filtered {} message(s) from GCS, got {}", expectedCount, filteredMessages.size());
         Assert.assertEquals("Expected filtered " + expectedCount + " messages from GCS, got " + filteredMessages.size(), expectedCount, filteredMessages.size());
@@ -151,98 +153,111 @@ public class MyPubsubToGCSJobIntegrationTest {
         return System.getProperty(variable, System.getenv(variable));
     }
 
-    private Set<String> sendNPubsubMessagesWithDelay(String topic, int numMessagesToSend, Duration sleepDuration, Function<Integer, Long> msgIdxToTimestampMillisFn) throws InterruptedException {
-        Set<String> messageIds = new HashSet<>();
+    private List<String> sendNPubsubMessagesWithDelay(String topic, int numMessagesToSend, Function<Integer, Long> msgIdxToTimestampMillisFn) throws InterruptedException {
         int logMessagesInterval = 10;
-        int messagesBatchSize = 5;
+        int messagesBatchSize = 10;
+//        Duration periodMillisBetweenScheduledThreads = Duration.ofMillis(60 * 1000); // send batch every 1m
+        Duration periodMillisBetweenScheduledThreads = Duration.ofMillis(250); // send batch every 250 ms
 
+        int totalBatches = (numMessagesToSend + messagesBatchSize - 1) / messagesBatchSize;
+        List<String> messageIds = new CopyOnWriteArrayList<>();
         AtomicInteger counter = new AtomicInteger(1);
-        CountDownLatch countDownLatch = new CountDownLatch(numMessagesToSend);
-        try (ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5)) {
+        CountDownLatch batchCompletionLatch = new CountDownLatch(totalBatches);
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
+        ScheduledFuture<?> handle = scheduler.scheduleAtFixedRate(() -> {
+            Publisher publisher = null;
+            List<ApiFuture<String>> messageIdFutures = new ArrayList<>();
 
-            ScheduledFuture<?> handle = scheduler.scheduleAtFixedRate(() -> {
-                Publisher publisher = null;
-                List<ApiFuture<String>> messageIdFutures = new ArrayList<>();
-
-                int i = counter.get();
-                if (i > numMessagesToSend) return;
+            int i = counter.get();
+            if (i > numMessagesToSend) return;
 
                 long timeMillisStart = System.currentTimeMillis();
                 try {
                     // Batch settings control how the publisher batches messages
                     long requestBytesThreshold = 5000L; // default : 1000 bytes
                     long messageCountBatchSize = 10L; // default : 100 message
+            long timeMillisStart = System.currentTimeMillis();
+            try {
+                // Batch settings control how the publisher batches messages
+                long requestBytesThreshold = 5000L; // default : 1000 bytes
+                long messageCountBatchSize = 10L; // default : 100 message
 
-                    org.threeten.bp.Duration publishDelayThreshold = org.threeten.bp.Duration.ofMillis(100); // default : 1 ms
+                org.threeten.bp.Duration publishDelayThreshold = org.threeten.bp.Duration.ofMillis(300); // default : 1 ms
 
-                    // Publish request get triggered based on request size, messages count & time since last
-                    // publish, whichever condition is met first.
-                    BatchingSettings batchingSettings =
-                            BatchingSettings.newBuilder()
-                                    .setElementCountThreshold(messageCountBatchSize)
-                                    .setRequestByteThreshold(requestBytesThreshold)
-                                    .setDelayThreshold(publishDelayThreshold)
-                                    .build();
-
-                    // Create a publisher instance with default settings bound to the topic
-                    publisher = Publisher.newBuilder(TopicName.of(get("GCP_PROJECT"), topic)).setBatchingSettings(batchingSettings).build();
-
-                    // schedule publishing one message at a time : messages get automatically batched
-                    for (int j = 1; j <= messagesBatchSize; j++) {
-                        countDownLatch.countDown();
-                        int msgCounter = counter.getAndIncrement();
-                        if (msgCounter > numMessagesToSend) return;
-
-                        // values of myMsgAttrName attribute are not unique but duplicated: 0, 2, 2, 4, 4 ...
-                        // attrs: M1: myMsgAttrName1=msgAttrValue0, M2: myMsgAttrName2=msgAttrValue=2, M3: myMsgAttrName3=msgAttrValue=2, M4: myMsgAttrName4=msgAttrValue=4
-//                    String msgAttrValue = generateMessageDuplicates ? MSG_ATTR_VALUE + (msgCounter + 1 - ((msgCounter + 1) % 2)) : MSG_ATTR_VALUE + msgCounter;
-                        String msgAttrValue = MSG_ATTR_VALUE + getFirstMessageIndex(generateMessageDuplicates, msgCounter);
-                        long eventTimeMillis = msgIdxToTimestampMillisFn.apply(msgCounter);
-                        String body = MSG_BODY + ":" + msgCounter;
-
-                        // initial logging of first messages
-                        if (msgCounter <= logMessagesInterval) {
-                            LOGGER.info("Sending message {} of {} with body {} and attrs {}={}, et={}",
-                                    msgCounter, numMessagesToSend, body, MSG_ATTR_NAME, msgAttrValue, Instant.ofEpochMilli(eventTimeMillis).toDateTime());
-                        }
-
-                        PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
-                                .setData(ByteString.copyFromUtf8(body))
-                                .putAllAttributes(ImmutableMap.of(
-                                        MSG_ATTR_NAME, msgAttrValue,
-                                        PUBLISH_TIME_ATTRIBUTE, Instant.now().toString(),
-                                        EVENT_TIME_ATTRIBUTE, Instant.ofEpochMilli(eventTimeMillis).toString()
-                                ))
+                // Publish request get triggered based on request size, messages count & time since last
+                // publish, whichever condition is met first.
+                BatchingSettings batchingSettings =
+                        BatchingSettings.newBuilder()
+                                .setElementCountThreshold(messageCountBatchSize)
+                                .setRequestByteThreshold(requestBytesThreshold)
+                                .setDelayThreshold(publishDelayThreshold)
                                 .build();
 
-                        ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
-                        messageIdFutures.add(messageIdFuture);
-                    }
-                    List<String> batchMessageIds = ApiFutures.allAsList(messageIdFutures).get();
-                    messageIds.addAll(batchMessageIds);
-                    int msgCounter = counter.get() - 1;
-                    if (msgCounter % logMessagesInterval == 0 || (counter.get() - 1) == numMessagesToSend) {
-                        LOGGER.info("Sent message {} of {} in {}ms", msgCounter, numMessagesToSend, System.currentTimeMillis() - timeMillisStart);
-                    }
-                } catch (IOException | InterruptedException | ExecutionException e) {
-                    throw new RuntimeException(e);
-                } finally {
-                    try {
-                        if (publisher != null) {
-                            // When finished with the publisher, shutdown to free up resources.
-                            publisher.shutdown();
-                            publisher.awaitTermination(1, TimeUnit.MINUTES);
-                        }
-                    } catch (InterruptedException e) {
-                        LOGGER.error("Publisher interrupted", e);
-                    }
-                }
-            }, 10, sleepDuration.toMillis(), TimeUnit.MILLISECONDS);
+                // Create a publisher instance with default settings bound to the topic
+                publisher = Publisher.newBuilder(TopicName.of(get("GCP_PROJECT"), topic)).setBatchingSettings(batchingSettings).build();
 
-            countDownLatch.await();
-            handle.cancel(false);
+                // schedule publishing one message at a time : messages get automatically batched
+                int batchSize = 0;
+                for (int j = 1; j <= messagesBatchSize; j++) {
+                    int msgCounter = counter.getAndIncrement();
+                    if (msgCounter > numMessagesToSend) return;
+
+                    // values of myMsgAttrName attribute are not unique but duplicated: 0, 2, 2, 4, 4 ...
+                    // attrs: M1: myMsgAttrName1=msgAttrValue0, M2: myMsgAttrName2=msgAttrValue=2, M3: myMsgAttrName3=msgAttrValue=2, M4: myMsgAttrName4=msgAttrValue=4
+//                    String msgAttrValue = generateMessageDuplicates ? MSG_ATTR_VALUE + (msgCounter + 1 - ((msgCounter + 1) % 2)) : MSG_ATTR_VALUE + msgCounter;
+                    String msgAttrValue = MSG_ATTR_VALUE + getFirstMessageIndex(generateMessageDuplicates, msgCounter);
+                    long eventTimeMillis = msgIdxToTimestampMillisFn.apply(msgCounter);
+                    String body = MSG_BODY + ":" + msgCounter;
+
+                    // initial logging of first messages
+                    if (msgCounter <= logMessagesInterval) {
+                        LOGGER.info("Sending message {} of {} with body {} and attrs {}={}, et={}",
+                                msgCounter, numMessagesToSend, body, MSG_ATTR_NAME, msgAttrValue, Instant.ofEpochMilli(eventTimeMillis).toDateTime());
+                    }
+
+                    PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
+                            .setData(ByteString.copyFromUtf8(body))
+                            .putAllAttributes(ImmutableMap.of(
+                                    MSG_ATTR_NAME, msgAttrValue,
+                                    PUBLISH_TIME_ATTRIBUTE, Instant.now().toString(),
+                                    EVENT_TIME_ATTRIBUTE, Instant.ofEpochMilli(eventTimeMillis).toString()
+                            ))
+                            .build();
+
+                    ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
+                    messageIdFutures.add(messageIdFuture);
+                    batchSize = j;
+                }
+                List<String> batchMessageIds = ApiFutures.allAsList(messageIdFutures).get();
+                messageIds.addAll(batchMessageIds);
+                int msgCounter = counter.get() - 1;
+                if (msgCounter % logMessagesInterval == 0 || (counter.get() - 1) == numMessagesToSend) {
+                    LOGGER.info("Sent message {} of {} in {}-element(s) batch in {}ms", msgCounter, numMessagesToSend, batchSize, System.currentTimeMillis() - timeMillisStart);
+                }
+            } catch (IOException | InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            } finally {
+                batchCompletionLatch.countDown();
+                try {
+                    if (publisher != null) {
+                        // When finished with the publisher, shutdown to free up resources.
+                        publisher.shutdown();
+                        publisher.awaitTermination(1, TimeUnit.MINUTES);
+                    }
+                } catch (InterruptedException e) {
+                    LOGGER.error("Publisher interrupted", e);
+                }
+            }
+        }, 10, periodMillisBetweenScheduledThreads.toMillis(), TimeUnit.MILLISECONDS);
+
+        batchCompletionLatch.await();
+        handle.cancel(false);
+        scheduler.shutdown();
+        if (!scheduler.awaitTermination(1, TimeUnit.MINUTES)) {
+            LOGGER.warn("Scheduler did not terminate within 1 minute");
         }
-        return messageIds;
+
+        return new ArrayList<>(messageIds);
     }
 
     private static int getFirstMessageIndex(@SuppressWarnings("SameParameterValue") boolean generateMessageDuplicates, int i) {
