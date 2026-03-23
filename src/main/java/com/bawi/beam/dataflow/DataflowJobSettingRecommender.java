@@ -14,9 +14,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.bawi.beam.dataflow.DataflowJobDetails.*;
-import static com.bawi.beam.dataflow.DataflowJobDetails.getDataflowJobDetails;
-import static com.bawi.beam.dataflow.LogUtils.getIp;
-import static com.bawi.beam.dataflow.LogUtils.getThreadNameAndId;
+import static com.bawi.beam.dataflow.LogUtils.getIpThreadNameAndThreadId;
 
 public class DataflowJobSettingRecommender {
 
@@ -45,7 +43,7 @@ public class DataflowJobSettingRecommender {
 
     public static String getJobUpdateCurlCommand() {
         String jobDetails = getDataflowJobDetails();
-        LOGGER.info("[{}][{}] Job details: {}", getIp(), getThreadNameAndId(), jobDetails);
+        LOGGER.info("[{}] Job details: {}", getIpThreadNameAndThreadId(), jobDetails);
 
         String templateLocation = getTemplateLocationFromDataflowJobDetails(jobDetails);
         if ("unknown".equals(templateLocation)) {
@@ -64,20 +62,22 @@ public class DataflowJobSettingRecommender {
             LOGGER.warn("Failed to extract job details", e);
         }
 
-        String launchTemplateUrl = String.format(
-                "https://dataflow.googleapis.com/v1b3/projects/%s/locations/%s/templates:launch?gcsPath=%s",
-                getProjectId(), getRegion(), templateLocation);
-
         String jobUpdateCurlCommand = String.format(
                 "curl -X POST -H \"Authorization: Bearer $(gcloud auth print-access-token)\" "
                         + "-H \"Content-Type: application/json\" "
                         + "\"%s\""
                         + " -d '%s' ",
-                launchTemplateUrl, extractedJobDetails);
+                getTemplateUrl(templateLocation), extractedJobDetails);
 
-        LOGGER.info("[{}][{}] Job update curl command: {}", getIp(), getThreadNameAndId(), jobUpdateCurlCommand);
+        LOGGER.info("[{}] Job update curl command: {}", getIpThreadNameAndThreadId(), jobUpdateCurlCommand);
 
         return jobUpdateCurlCommand;
+    }
+
+    private static String getTemplateUrl(String templateLocation) {
+        return String.format(
+                "https://dataflow.googleapis.com/v1b3/projects/%s/locations/%s/templates:launch?gcsPath=%s",
+                getProjectId(), getRegion(), templateLocation);
     }
 
     public static String getRecommendedHighMemMachineType(String machineType) {
