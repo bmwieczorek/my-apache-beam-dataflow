@@ -205,56 +205,8 @@ gcloud dataflow flex-template run $APP-$OWNER \
 
 
         // write to GCS 1
-        concatBodyAndAttrsPCollection
-                .apply(ParDo.of(new ToTimestampedPathKV(options.getOutput())))
-                .setCoder(KvCoder.of(StringUtf8Coder.of(), AvroGenericCoder.of(SCHEMA)))
-                .apply(ParDo.of(new MyBundleSizeInterceptor<>("ToTimestampedPathKV")))
-                .apply(getStringKVWrite(output, temp, options));
-
-
-        // write to GCS 2
-        concatBodyAndAttrsPCollection
-                .apply(AvroIO.writeGenericRecords(SCHEMA).withWindowedWrites()
-                //.to(output)
-                //.to(options.getOutput())
-                .to(new FileBasedSink.FilenamePolicy() {
-
-                    @SuppressWarnings("NullableProblems")
-                    @Override
-                    public ResourceId windowedFilename(int shardNumber, int numShards, BoundedWindow window, PaneInfo paneInfo, FileBasedSink.OutputFileHints outputFileHints) {
-                        // ResourceId resource = FileBasedSink.convertToFileResourceIfPossible(output);
-                        ResourceId resource = FileBasedSink.convertToFileResourceIfPossible(output.get());
-                        IntervalWindow intervalWindow = (IntervalWindow) window;
-                        String parentDirectoryPath = resource.isDirectory() ? "" : firstNonNullOrDefaultToEmpty(resource.getFilename());
-                        String suggestedFilenameSuffix = outputFileHints.getSuggestedFilenameSuffix();
-                        String suffix = suggestedFilenameSuffix != null && !suggestedFilenameSuffix.isEmpty() ? suggestedFilenameSuffix : ".avro";
-                        PaneInfo.Timing pathTiming = paneInfo.getTiming();
-                        String yyyyMMddHHmm = FORMATTER.print(intervalWindow.start());
-                        String filename = String.format("%s/%s/%s-%s-" +
-                                        "%s-%s-%s-" +
-                                        "%s-%s-%s-of-%s%s",
-                                parentDirectoryPath + "-windowedWrites", yyyyMMddHHmm, UUID.randomUUID(), System.currentTimeMillis(),
-                                getIp(), Thread.currentThread().threadId(), Thread.currentThread().getName(), window.maxTimestamp().toString().replace(":", "_").replace(" ", "_"), pathTiming,
-                                shardNumber, numShards, suffix);
-                        LOGGER.info("[{}] FilenamePolicy.windowedFilename writing data to {}", getIpThreadNameAndThreadId(), filename);  // output/year=2021/month=12/day=23/hour=07/minute=52/d52a2109-f8f9-459b-b055-365be2558833-1640246141797.avro
-                        return resource.getCurrentDirectory().resolve(filename, ResolveOptions.StandardResolveOptions.RESOLVE_FILE);
-                    }
-
-                    @SuppressWarnings("NullableProblems")
-                    @Override
-                    public ResourceId unwindowedFilename(int shardNumber, int numShards, FileBasedSink.OutputFileHints outputFileHints) {
-                        throw new UnsupportedOperationException("Unsupported.");
-                    }
-                })
-                // .withTempDirectory(FileBasedSink.convertToFileResourceIfPossible(output).getCurrentDirectory())
-                .withTempDirectory(ValueProvider.NestedValueProvider.of(temp, t -> t != null ? FileBasedSink.convertToFileResourceIfPossible(t).getCurrentDirectory() : null))
-                .withNumShards(2));
-
-        readingPipeline.run();
-    }
-
-    private static FileIO.Write<String, KV<String, GenericRecord>> getStringKVWrite(ValueProvider<String> output, ValueProvider<String> temp, MyPipelineOptions options) {
-        FileIO.Write<String, KV<String, GenericRecord>> fileIOWrite = FileIO.<String, KV<String, GenericRecord>>writeDynamic()
+        FileIO.Write<String, KV<String, GenericRecord>> fileIOWrite =
+            FileIO.<String, KV<String, GenericRecord>>writeDynamic()
                 .by(kv -> kv != null ? kv.getKey() : null)
                 .via(Contextful.fn(kv -> kv != null ? kv.getValue() : null), AvroIO.<GenericRecord>sink(SCHEMA).withCodec(CodecFactory.fromString("snappy")))
                 .withDestinationCoder(StringUtf8Coder.of())
@@ -262,7 +214,28 @@ gcloud dataflow flex-template run $APP-$OWNER \
                 .to(output)
                 .withTempDirectory(temp);
 
-        return options.getNumShards() == 0 ? fileIOWrite.withAutoSharding() : fileIOWrite.withNumShards(options.getNumShards());
+        concatBodyAndAttrsPCollection
+                .apply(ParDo.of(new ToTimestampedPathKV(options.getOutput())))
+                .setCoder(KvCoder.of(StringUtf8Coder.of(), AvroGenericCoder.of(SCHEMA)))
+                .apply(ParDo.of(new MyBundleSizeInterceptor<>("ToTimestampedPathKV")))
+                .apply(options.getNumShards() == 0 ? fileIOWrite.withAutoSharding() : fileIOWrite.withNumShards(options.getNumShards()));
+
+
+        // write to GCS 2
+        concatBodyAndAttrsPCollection.apply(
+                AvroIO.writeGenericRecords(SCHEMA).withWindowedWrites()
+                    //.to(output)
+                    //.to(options.getOutput())
+                    .to(new MyFilenamePolicy(options.getOutput()))
+                    // .withTempDirectory(FileBasedSink.convertToFileResourceIfPossible(output).getCurrentDirectory())
+                    .withTempDirectory(ValueProvider.NestedValueProvider.of(temp, t -> t != null ? FileBasedSink.convertToFileResourceIfPossible(t).getCurrentDirectory() : null))
+                    // numShards > 0 gives: Streaming job has set up its own fixed sharding configuration. Liquid sharding will be disabled. Parallelism will be set to default
+                    // DoFn uses keyed state. Liquid sharding will be disabled. Parallelism will be set to default
+                    .withNumShards(options.getNumShards())
+        );
+
+
+        readingPipeline.run();
     }
 
 
@@ -353,27 +326,39 @@ gcloud dataflow flex-template run $APP-$OWNER \
         }
     }
 
-    private static Throwable getRootCause(Throwable t) {
-        Throwable cause = t;
-        while (cause.getCause() != null && cause.getCause() != cause) {
-            cause = cause.getCause();
-        }
-        return cause;
-    }
+    static class MyFilenamePolicy extends FileBasedSink.FilenamePolicy {
+        private final ValueProvider<String> output;
 
-    private static boolean isUserCodeExceptionWithOomAsRootCause(Throwable t) {
-        // UserCodeException is always present in dependencies for all maven profiles in this project (via beam-sdks-java-core)
-        if (t == null) return false;
-        if (t instanceof UserCodeException) {
-            Throwable cause = t.getCause();
-            while (cause != null && cause != t) {
-                if (cause instanceof OutOfMemoryError) {
-                    return true;
-                }
-                cause = cause.getCause();
-            }
+        public MyFilenamePolicy(ValueProvider<String> output) {
+            this.output = output;
         }
-        return false;
+
+        @SuppressWarnings("NullableProblems")
+        @Override
+        public ResourceId windowedFilename(int shardNumber, int numShards, BoundedWindow window, PaneInfo paneInfo, FileBasedSink.OutputFileHints outputFileHints) {
+            // ResourceId resource = FileBasedSink.convertToFileResourceIfPossible(output);
+            ResourceId resource = FileBasedSink.convertToFileResourceIfPossible(output.get());
+            IntervalWindow intervalWindow = (IntervalWindow) window;
+            String parentDirectoryPath = resource.isDirectory() ? "" : firstNonNullOrDefaultToEmpty(resource.getFilename());
+            String suggestedFilenameSuffix = outputFileHints.getSuggestedFilenameSuffix();
+            String suffix = suggestedFilenameSuffix != null && !suggestedFilenameSuffix.isEmpty() ? suggestedFilenameSuffix : ".avro";
+            PaneInfo.Timing pathTiming = paneInfo.getTiming();
+            String yyyyMMddHHmm = FORMATTER.print(intervalWindow.start());
+            String filename = String.format("%s/%s/%s-%s-" +
+                            "%s-%s-%s-" +
+                            "%s-%s-%s-of-%s%s",
+                    parentDirectoryPath + "-windowedWrites", yyyyMMddHHmm, UUID.randomUUID(), System.currentTimeMillis(),
+                    getIp(), Thread.currentThread().threadId(), Thread.currentThread().getName(), window.maxTimestamp().toString().replace(":", "_").replace(" ", "_"), pathTiming,
+                    shardNumber, numShards, suffix);
+            LOGGER.info("[{}] FilenamePolicy.windowedFilename writing data to {}", getIpThreadNameAndThreadId(), filename);  // output/year=2021/month=12/day=23/hour=07/minute=52/d52a2109-f8f9-459b-b055-365be2558833-1640246141797.avro
+            return resource.getCurrentDirectory().resolve(filename, ResolveOptions.StandardResolveOptions.RESOLVE_FILE);
+        }
+
+        @SuppressWarnings("NullableProblems")
+        @Override
+        public ResourceId unwindowedFilename(int shardNumber, int numShards, FileBasedSink.OutputFileHints outputFileHints) {
+            throw new UnsupportedOperationException("Unsupported.");
+        }
     }
 
     static class CustomWriteFileNaming implements FileIO.Write.FileNaming {
@@ -443,6 +428,29 @@ gcloud dataflow flex-template run $APP-$OWNER \
             LOGGER.info("[{}] TimestampedPath={}", getIpThreadNameAndThreadId(), timestampedPath);
             outputReceiver.output(KV.of(timestampedPath, record));
         }
+    }
+
+    private static Throwable getRootCause(Throwable t) {
+        Throwable cause = t;
+        while (cause.getCause() != null && cause.getCause() != cause) {
+            cause = cause.getCause();
+        }
+        return cause;
+    }
+
+    private static boolean isUserCodeExceptionWithOomAsRootCause(Throwable t) {
+        // UserCodeException is always present in dependencies for all maven profiles in this project (via beam-sdks-java-core)
+        if (t == null) return false;
+        if (t instanceof UserCodeException) {
+            Throwable cause = t.getCause();
+            while (cause != null && cause != t) {
+                if (cause instanceof OutOfMemoryError) {
+                    return true;
+                }
+                cause = cause.getCause();
+            }
+        }
+        return false;
     }
 
     private static String firstNonNullOrDefaultToEmpty(String value) {
