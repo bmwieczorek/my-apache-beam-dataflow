@@ -1,18 +1,14 @@
 package com.bawi.beam.dataflow.other;
 
-import com.bawi.io.GzipUtils;
 import com.bawi.io.SplitInputStream;
 import org.junit.Test;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
-
 import static com.bawi.io.GzipUtils.gzip;
 import static org.junit.Assert.assertEquals;
 
