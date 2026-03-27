@@ -55,8 +55,6 @@ public class SplitInputStream implements AutoCloseable {
                 i = 0;
             }
 
-            // TODO: verify if condition: pos >= MAX_BYTES_READ is necessary
-            // see if we've passed the stop point:
             if (skipData && i == 0 && pos >= MAX_BYTES_READ) {
                 return false;
             }
