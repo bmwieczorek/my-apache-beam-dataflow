@@ -312,7 +312,7 @@ public class MyAvroSplitReadWriteJob {
 
 
     private static String getThreadInfo() {
-        return Thread.currentThread().getName() + "_" + Thread.currentThread().getId();
+        return Thread.currentThread().getName() + "_" + Thread.currentThread().threadId();
     }
 
     @DefaultSchema(JavaFieldSchema.class)
