@@ -89,6 +89,8 @@ public class MyDefaultCoderTest implements Serializable {
             return new Event(eventName + "-decoded");
         }
 
+        // CoderProvider is needed for @DefaultCoder to work, otherwise we would need to register coder in CoderRegistry.registerCoderForClass(Event.class, EventCoder)
+        // This method is invoked reflectively from DefaultCoder.
         @SuppressWarnings("unused") // used by CoderRegistry for classes annotated by @DefaultCoder
         public static CoderProvider getCoderProvider() {
             return new CoderProvider() {
