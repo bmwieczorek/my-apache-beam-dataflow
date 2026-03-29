@@ -125,8 +125,6 @@ public class MySeqXmlGzGroupByPerKeyParseSumSalariesParDoBatchJob {
     public interface MyPipelineOptions extends PipelineOptions {
         @Validation.Required
         long getSequenceLimit();
-
-        @SuppressWarnings("unused")
         void setSequenceLimit(long value);
     }
 }

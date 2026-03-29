@@ -86,7 +86,6 @@ public class MyBQReadWriteJob {
         @Validation.Required
 //        @Default.String("bartek_mybqreadwritejob")
         String getQueryTempDataset();
-        @SuppressWarnings("unused")
         void setQueryTempDataset(String queryTempDataset);
 
         // FileIO writeDynamic with getOutputPath() and getTempPath()
@@ -97,7 +96,6 @@ public class MyBQReadWriteJob {
 
         @Validation.Required
         ValueProvider<String> getTempPath();
-        @SuppressWarnings("unused")
         void setTempPath(ValueProvider<String> value);
 
 // optional

@@ -31,7 +31,6 @@ import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.ValueInSingleWindow;
-import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -170,7 +169,7 @@ public class MyDynamicBQWriteJob {
     static class MyDynamicBQWritePTransform extends PTransform<PBegin, PCollection<TableRowWithSchema>> {
 
         @Override
-        public @NonNull PCollection<TableRowWithSchema> expand(PBegin input) {
+        public PCollection<TableRowWithSchema> expand(PBegin input) {
 
             return input.apply(Create.of(
                             KV.of("optional_record", "{\"myOptionalString\": \"abc\"}"),
@@ -193,7 +192,6 @@ public class MyDynamicBQWriteJob {
         }
     }
 
-    @SuppressWarnings("unused")
     public interface MyPipelineOptions extends PipelineOptions {
 
         @Validation.Required

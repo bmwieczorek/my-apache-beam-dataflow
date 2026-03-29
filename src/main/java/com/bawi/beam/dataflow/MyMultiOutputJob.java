@@ -55,12 +55,10 @@ public class MyMultiOutputJob {
     public interface MyOptions extends PipelineOptions {
         @Validation.Required
         ValueProvider<String> getEvenOutput();
-        @SuppressWarnings("unused")
         void setEvenOutput(ValueProvider<String> value);
 
         @Validation.Required
         ValueProvider<String> getOddOutput();
-        @SuppressWarnings("unused")
         void setOddOutput(ValueProvider<String> value);
     }
 }

@@ -1,5 +1,8 @@
 package com.bawi.beam.my;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
@@ -50,7 +53,7 @@ public class MyBeamGenerics {
             return new MyPTransform<>() {
                 @Override
                 MyPCollection<T> transform(MyPCollection<Void> voidMyPCollection) {
-                    //noinspection unchecked
+                    @SuppressWarnings("unchecked")
                     Class<T> outClass = (Class<T>) t.getClass();
                     return new MyPCollection<>(list, outClass);
                 }
@@ -71,6 +74,7 @@ public class MyBeamGenerics {
 
 
     static class MyParDo<In, Out> extends MyPTransform<MyPCollection<In>, MyPCollection<Out>> {
+        private static final Logger LOGGER = LoggerFactory.getLogger(MyParDo.class);
         private final MyOutputReceiver<Out> myOutputReceiver = new MyOutputReceiver<>();
         private final MyDoFn<In, Out> myDoFn;
         private MyParDo(MyDoFn<In, Out> myDoFn) {
@@ -85,12 +89,12 @@ public class MyBeamGenerics {
                         try {
                             method.invoke(myDoFn, element, myOutputReceiver);
                         } catch (IllegalAccessException | InvocationTargetException ex) {
-                            ex.printStackTrace();
+                            LOGGER.error(ex.getMessage(), ex);
                         }
                     }
             );
             Type actualTypeArgument = ((ParameterizedType) myDoFn.getClass().getGenericSuperclass()).getActualTypeArguments()[1];
-            //noinspection unchecked
+            @SuppressWarnings("unchecked")
             Class<Out> actualTypeArgument1 = (Class<Out>) actualTypeArgument;
             return new MyPCollection<>(myOutputReceiver.getElements(), actualTypeArgument1);
         }
@@ -109,12 +113,10 @@ public class MyBeamGenerics {
         }
     }
 
-    @SuppressWarnings("unused")
     static abstract class MyDoFn<In, Out> {}
 
     static class MyStringToIntegerDoFn extends MyDoFn<String, Integer> {
 
-        @SuppressWarnings("unused")
         public void process(String element, MyOutputReceiver<Integer> myOutputReceiver) {
             int i = Integer.parseInt(element);
             myOutputReceiver.output(i);
@@ -153,7 +155,7 @@ public class MyBeamGenerics {
 //                    System.out.println("Converting " + actualTypeArguments[0] + " to " + actualTypeArguments[1]);
                     List<In> inElements = inMyPCollection.elements;
                     List<Out> outElements = inElements.stream().map(mapFn::map).collect(Collectors.toList());
-                    //noinspection unchecked
+                    @SuppressWarnings("unchecked")
                     Class<Out> actualTypeArgument = (Class<Out>) actualTypeArguments[1];
                     return new MyPCollection<>(outElements, actualTypeArgument);
                 }

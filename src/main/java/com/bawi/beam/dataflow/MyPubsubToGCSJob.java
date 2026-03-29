@@ -52,50 +52,40 @@ import static com.bawi.beam.dataflow.LogUtils.*;
 
 public class MyPubsubToGCSJob {
 
-    @SuppressWarnings("unused")
     public interface MyPipelineOptions extends PipelineOptions {
 
         @Validation.Required
         ValueProvider<String> getSubscription();
-
         void setSubscription(ValueProvider<String> value);
 
         @Validation.Required
         ValueProvider<String> getOutput();
-
         void setOutput(ValueProvider<String> value);
 
         @Validation.Required
         ValueProvider<String> getTemp();
-
         void setTemp(ValueProvider<String> value);
 
         @Validation.Required
         ValueProvider<String> getTableSpec();
-
         void setTableSpec(ValueProvider<String> value);
 
         @Validation.Required
         boolean getMessageDeduplicationEnabled();
-
         void setMessageDeduplicationEnabled(boolean value);
 
         @Validation.Required
         boolean getCustomEventTimeTimestampAttributeEnabled();
-
         void setCustomEventTimeTimestampAttributeEnabled(boolean value);
 
         @Validation.Required
         int getWindowSecs();
-
         void setWindowSecs(int windowSecs);
 
         String getTimestampAttribute();
-
         void setTimestampAttribute(String timestampAttribute);
 
         int getNumShards();
-
         void setNumShards(int numShards);
     }
 
@@ -333,7 +323,6 @@ gcloud dataflow flex-template run $APP-$OWNER \
             this.output = output;
         }
 
-        @SuppressWarnings("NullableProblems")
         @Override
         public ResourceId windowedFilename(int shardNumber, int numShards, BoundedWindow window, PaneInfo paneInfo, FileBasedSink.OutputFileHints outputFileHints) {
             // ResourceId resource = FileBasedSink.convertToFileResourceIfPossible(output);
@@ -354,7 +343,6 @@ gcloud dataflow flex-template run $APP-$OWNER \
             return resource.getCurrentDirectory().resolve(filename, ResolveOptions.StandardResolveOptions.RESOLVE_FILE);
         }
 
-        @SuppressWarnings("NullableProblems")
         @Override
         public ResourceId unwindowedFilename(int shardNumber, int numShards, FileBasedSink.OutputFileHints outputFileHints) {
             throw new UnsupportedOperationException("Unsupported.");
@@ -402,7 +390,6 @@ gcloud dataflow flex-template run $APP-$OWNER \
         }
     }
 
-    @SuppressWarnings("NullableProblems")
     static class ToTimestampedPathKV extends DoFn<GenericRecord, KV<String, GenericRecord>> {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(ToTimestampedPathKV.class);
