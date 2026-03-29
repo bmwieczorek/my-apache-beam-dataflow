@@ -7,39 +7,41 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.reflect.Nullable;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
-import org.apache.beam.sdk.extensions.avro.io.AvroIO;
-import org.apache.beam.sdk.extensions.avro.coders.AvroGenericCoder;
 import org.apache.beam.sdk.io.Compression;
 import org.apache.beam.sdk.io.FileBasedSink;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.io.fs.ResolveOptions;
 import org.apache.beam.sdk.io.fs.ResourceId;
-import org.apache.beam.sdk.metrics.*;
+import org.apache.beam.sdk.metrics.Counter;
+import org.apache.beam.sdk.metrics.Distribution;
+import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.Validation;
 import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.schemas.JavaFieldSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
-import org.apache.beam.sdk.transforms.*;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.Sum;
 import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
 import org.apache.beam.sdk.transforms.windowing.IntervalWindow;
 import org.apache.beam.sdk.transforms.windowing.PaneInfo;
 import org.apache.beam.sdk.values.TypeDescriptors;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Serializable;
 import java.math.BigInteger;
-import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
+import static com.bawi.beam.dataflow.PipelineUtils.*;
 import static com.bawi.beam.dataflow.PipelineUtils.getCounters;
 import static com.bawi.beam.dataflow.PipelineUtils.getDistributions;
 
@@ -87,8 +89,8 @@ public class MyAvroSplitReadWriteJob {
 
         ///////////////////////////
         String[] readWriteArgs =
-                PipelineUtils.isDataflowRunnerOnClasspath() ?
-                    PipelineUtils.updateArgsWithDataflowRunner(args
+                isDataflowRunnerOnClasspath() ?
+                    updateArgsWithDataflowRunner(args
                         , "--jobName=" + JOB_NAME + "-template-input-in-runtime-t2d8"
                         ,"--numWorkers=1"
                         ,"--maxNumWorkers=1"
@@ -98,7 +100,7 @@ public class MyAvroSplitReadWriteJob {
                         ,"--templateLocation=gs://" + BUCKET_NAME + "/templates/" + JOB_NAME + "-template"
 //                        ,"--numShards=8"
                     ) :
-                    PipelineUtils.updateArgs(args
+                    updateArgs(args
                             ,"--input=target/bartek-myseqgentogcswritejob/generator/output/mydata.csv.gz"
 //                            ,"--input=target/bartek-myseqgentogcswritejob/generator/output/mydata.snappy.avro"
             //                ,"--output=target/" + JOB_NAME + "/writing/output/mydata.snappy.avro"
@@ -142,7 +144,7 @@ public class MyAvroSplitReadWriteJob {
             LOGGER.info("distributions={}", getDistributions(result.metrics()));
         }
 
-        if (PipelineUtils.isDataflowRunnerOnClasspath()) {
+        if (isDataflowRunnerOnClasspath()) {
             String cmd = "gcloud dataflow jobs run " + JOB_NAME + "-input-in-runtime-t2d8 "
                     + System.getenv("GCP_GCLOUD_DATAFLOW_RUN_OPTS")
                     + " --gcs-location gs://" + BUCKET_NAME + "/templates/" + JOB_NAME + "-template";
@@ -380,7 +382,7 @@ public class MyAvroSplitReadWriteJob {
         public ResourceId windowedFilename(int shardNumber, int numShards, BoundedWindow window, PaneInfo paneInfo, FileBasedSink.OutputFileHints outputFileHints) {
             long windowStartMillis = ((IntervalWindow) window).start().getMillis();
             ResourceId resource = FileBasedSink.convertToFileResourceIfPossible(outputParentPath.get());
-            String outputFilePath = getFilePath(resource, windowStartMillis, shardNumber, numShards, outputFileHints);
+            String outputFilePath = getFilePath(resource, windowStartMillis, shardNumber, numShards, outputFileHints, filenameSuffix);
             return resource.getCurrentDirectory().resolve(outputFilePath, ResolveOptions.StandardResolveOptions.RESOLVE_FILE);
         }
 
@@ -388,20 +390,9 @@ public class MyAvroSplitReadWriteJob {
         public ResourceId unwindowedFilename(int shardNumber, int numShards, FileBasedSink.OutputFileHints outputFileHints) {
             long windowStartMillis = System.currentTimeMillis();
             ResourceId resource = FileBasedSink.convertToFileResourceIfPossible(outputParentPath.get());
-            String outputFilePath = getFilePath(resource, windowStartMillis, shardNumber, numShards, outputFileHints);
+            String outputFilePath = getFilePath(resource, windowStartMillis, shardNumber, numShards, outputFileHints, filenameSuffix);
             return resource.getCurrentDirectory().resolve(outputFilePath, ResolveOptions.StandardResolveOptions.RESOLVE_FILE);
 
-        }
-
-        private String getFilePath(ResourceId resource, long timestampMillis, int shardNumber, int numShards, FileBasedSink.OutputFileHints outputFileHints) {
-            String parentDirectoryPath = resource.isDirectory() ? resource.toString() : resource.getFilename();
-            String suggestedFilenameSuffix = outputFileHints.getSuggestedFilenameSuffix();
-            String suffix = suggestedFilenameSuffix == null || suggestedFilenameSuffix.isEmpty() ? filenameSuffix : suggestedFilenameSuffix;
-            String filename = String.format("%s--%s-of-%s%s", FORMATTER.print(timestampMillis), shardNumber, numShards, suffix);
-            String randomFilePrefix = DigestUtils.md5Hex(UUID.randomUUID() + filename + timestampMillis).substring(0, 6);
-            String outputFilePath = String.format("%s%s--%s", parentDirectoryPath, randomFilePrefix, filename);
-            LOGGER.info("Writing file to {}", outputFilePath);
-            return outputFilePath;
         }
     }
 }
