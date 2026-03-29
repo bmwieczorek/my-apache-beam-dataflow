@@ -139,12 +139,12 @@ public class MyWindowingTest {
                 try {
                     Files.write(path, data.getBytes());
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LOGGER.error("Failed to write to file: {}", path, e);
                 }
-                LOGGER.info("Written    '" + data + "' to " + path);
+                LOGGER.info("Written '{}' to {}", data, path);
             });
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            LOGGER.error("Interrupted while taking from queue", e);
         }
     }
 
