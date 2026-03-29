@@ -55,7 +55,7 @@ public class MyDefaultCoderTest implements Serializable {
     }
 
     @DefaultCoder(EventCoder.class) // @DefaultCoder requires coder to implement public static CoderProvider getCoderProvider(
-    static class Event {
+    public static class Event {
         private final String name;
         public Event(String name) {this.name = name;}
         public String getName() {return name;}
