@@ -115,7 +115,6 @@ public class KafkaRecordCoder<K, V> extends StructuredCoder<KafkaRecord<K, V>> {
     // TODO : do we have to implement getEncodedSize()?
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public Object structuralValue(KafkaRecord<K, V> value) {
     if (consistentWithEquals()) {

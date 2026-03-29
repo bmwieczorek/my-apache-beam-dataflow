@@ -377,7 +377,6 @@ public class MyBigtableWriteReadTest {
     public static final String SUB_ID_CQ = "sub_id_cq";
 
 
-    @SuppressWarnings("unused")
     public interface MyBigtablePipelineOptions extends PipelineOptions {
         @Default.String(INSTANCE_ID)
         @Validation.Required
@@ -388,7 +387,6 @@ public class MyBigtableWriteReadTest {
         @Validation.Required
         ValueProvider<String> getTableId();
         void setTableId(ValueProvider<String> value);
-
     }
 
     @SuppressWarnings("SameParameterValue")

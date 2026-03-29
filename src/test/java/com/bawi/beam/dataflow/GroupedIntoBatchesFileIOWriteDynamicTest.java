@@ -191,7 +191,6 @@ public class GroupedIntoBatchesFileIOWriteDynamicTest implements Serializable {
         Files.createDirectories(directoryPath);
     }
 
-    @SuppressWarnings("unused")
     public interface MyOptions extends PipelineOptions {
         @Validation.Required
         ValueProvider<String> getOutput();

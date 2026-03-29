@@ -43,7 +43,6 @@ public class PGPDecryptJob {
         pipeline.run();
     }
 
-    @SuppressWarnings("unused")
     public interface Options extends PipelineOptions {
         @Validation.Required
         String getFilePattern();

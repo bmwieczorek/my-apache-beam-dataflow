@@ -6,7 +6,6 @@ import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.beam.sdk.Pipeline;
-//import org.apache.beam.sdk.coders.AvroGenericCoder;
 import org.apache.beam.sdk.extensions.avro.coders.AvroGenericCoder;
 import org.apache.beam.sdk.coders.ListCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
@@ -49,7 +48,6 @@ public class MyAutoscalingFactToBQJob {
         @Validation.Required
         @Default.String("1000,10000")
         ValueProvider<String> getSequenceStartCommaEnd();
-        @SuppressWarnings("unused")
         void setSequenceStartCommaEnd(ValueProvider<String> value);
     }
 

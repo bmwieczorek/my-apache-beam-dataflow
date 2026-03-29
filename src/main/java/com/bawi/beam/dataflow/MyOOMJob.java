@@ -52,7 +52,6 @@ public class MyOOMJob {
         @Validation.Required
         @Default.String("100,2000000")
         ValueProvider<String> getSequenceStartCommaEnd();
-        @SuppressWarnings("unused")
         void setSequenceStartCommaEnd(ValueProvider<String> value);
     }
 

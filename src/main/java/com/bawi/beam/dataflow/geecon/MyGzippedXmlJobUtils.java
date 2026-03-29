@@ -146,8 +146,6 @@ public class MyGzippedXmlJobUtils {
     public interface MyPipelineOptions extends PipelineOptions {
         @Validation.Required
         long getSequenceRate();
-
-        @SuppressWarnings("unused")
         void setSequenceRate(long value);
     }
 
