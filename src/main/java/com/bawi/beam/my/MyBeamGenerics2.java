@@ -32,6 +32,7 @@ public class MyBeamGenerics2 {
     }
 
     static class MyCreate {
+        @SuppressWarnings("SameParameterValue")
         @SafeVarargs
         static <T> MyPTransform<MyPCollection<Void>, MyPCollection<T>> of(T t, T... tt) {
             List<T> list = new ArrayList<>();

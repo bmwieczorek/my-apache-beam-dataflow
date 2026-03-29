@@ -25,8 +25,6 @@ public class MyBeamGenerics {
         }
 
         public <Out> MyPCollection<Out> apply(MyPTransform<MyPCollection<T>, MyPCollection<Out>> myPTransform) {
-//            Class<Out> clazz = ((MyMapElements<T, Out>) myPTransform).getClazz();
-//            System.out.println("Converting to " + clazz);
             return myPTransform.transform(this);
         }
 
@@ -42,11 +40,11 @@ public class MyBeamGenerics {
         }
     }
 
-    @SuppressWarnings("SameParameterValue")
     static class MyCreate {
+        @SuppressWarnings("SameParameterValue")
         @SafeVarargs
         static <T> MyPTransform<MyPCollection<Void>, MyPCollection<T>> of(T t, T... tt) {
-//            System.out.println("Creating " + t.getClass());
+            System.out.println("Creating " + t.getClass());
             List<T> list = new ArrayList<>();
             list.add(t);
             list.addAll(Arrays.asList(tt));
@@ -113,6 +111,8 @@ public class MyBeamGenerics {
         }
     }
 
+    // requires <In, Out> type parameters to be able to use MyDoFn<In, Out> as field in MyParDo and to be able to call process method with correct types
+    // otherwise: Exception in thread "main" java.lang.ClassCastException: class java.lang.Class cannot be cast to class java.lang.reflect.ParameterizedType
     static abstract class MyDoFn<In, Out> {}
 
     static class MyStringToIntegerDoFn extends MyDoFn<String, Integer> {
@@ -152,7 +152,7 @@ public class MyBeamGenerics {
                 @Override
                 MyPCollection<Out> transform(MyPCollection<In> inMyPCollection) {
                     Type[] actualTypeArguments = ((ParameterizedType) (mapFn.getClass()).getGenericSuperclass()).getActualTypeArguments();
-//                    System.out.println("Converting " + actualTypeArguments[0] + " to " + actualTypeArguments[1]);
+                    System.out.println("Converting " + actualTypeArguments[0] + " to " + actualTypeArguments[1]);
                     List<In> inElements = inMyPCollection.elements;
                     List<Out> outElements = inElements.stream().map(mapFn::map).collect(Collectors.toList());
                     @SuppressWarnings("unchecked")

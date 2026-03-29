@@ -42,6 +42,8 @@ public class MyBeamGenerics0 {
     }
 
     static class MyCreate {
+        @SuppressWarnings("SameParameterValue")
+        @SafeVarargs
         static <T> MyPTransform2<Void, T> of(T t, T... tt) {
             List<T> list = new ArrayList<>();
             list.add(t);
