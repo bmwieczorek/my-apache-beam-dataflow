@@ -18,26 +18,20 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.transforms.windowing.*;
-import org.apache.commons.codec.digest.DigestUtils;
-import org.checkerframework.checker.initialization.qual.Initialized;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.UnknownKeyFor;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Objects;
 
+import static com.bawi.beam.dataflow.PipelineUtils.getFilePath;
 import static java.lang.System.currentTimeMillis;
 import static org.apache.beam.sdk.options.ValueProvider.NestedValueProvider.of;
 
 public class MySeqGenToGCSWriteJob {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MySeqGenToGCSWriteJob.class);
     private static final String JOB_NAME = "bartek-" + MySeqGenToGCSWriteJob.class.getSimpleName().toLowerCase();
     private static final String PROJECT_ID = System.getenv("GCP_PROJECT");
 //    private static final String BUCKET_NAME = PROJECT_ID + "-" + JOB_NAME; // single us-central1 region
@@ -134,13 +128,11 @@ pipeline.apply(GenerateSequence.from(0).to(opts.getSequenceLimit()).withTimestam
         }
     }
 
-    private static SerializableFunction<String, @UnknownKeyFor @NonNull @Initialized ResourceId> convertToFileResourceIfPossible() {
-        return FileBasedSink::convertToFileResourceIfPossible;
+    private static SerializableFunction<String, ResourceId> convertToFileResourceIfPossible() {
+        return outputPrefix -> outputPrefix != null ? FileBasedSink.convertToFileResourceIfPossible(outputPrefix) : null;
     }
 
     static class CustomFilenamePolicy extends FileBasedSink.FilenamePolicy {
-        private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("yyyy-MM-dd_HH-mm-ss");
-
         private final ValueProvider<String> outputParentPath;
         private final String filenameSuffix;
 
@@ -153,7 +145,7 @@ pipeline.apply(GenerateSequence.from(0).to(opts.getSequenceLimit()).withTimestam
         public ResourceId windowedFilename(int shardNumber, int numShards, BoundedWindow window, PaneInfo paneInfo, FileBasedSink.OutputFileHints outputFileHints) {
             long windowStartMillis = ((IntervalWindow) window).start().getMillis();
             ResourceId resource = FileBasedSink.convertToFileResourceIfPossible(outputParentPath.get());
-            String outputFilePath = getFilePath(resource, windowStartMillis, shardNumber, numShards, outputFileHints);
+            String outputFilePath = getFilePath(resource, windowStartMillis, shardNumber, numShards, outputFileHints, filenameSuffix);
             return resource.getCurrentDirectory().resolve(outputFilePath, ResolveOptions.StandardResolveOptions.RESOLVE_FILE);
         }
 
@@ -161,21 +153,8 @@ pipeline.apply(GenerateSequence.from(0).to(opts.getSequenceLimit()).withTimestam
         public ResourceId unwindowedFilename(int shardNumber, int numShards, FileBasedSink.OutputFileHints outputFileHints) {
             long windowStartMillis = currentTimeMillis();
             ResourceId resource = FileBasedSink.convertToFileResourceIfPossible(outputParentPath.get());
-            String outputFilePath = getFilePath(resource, windowStartMillis, shardNumber, numShards, outputFileHints);
+            String outputFilePath = getFilePath(resource, windowStartMillis, shardNumber, numShards, outputFileHints, filenameSuffix);
             return resource.getCurrentDirectory().resolve(outputFilePath, ResolveOptions.StandardResolveOptions.RESOLVE_FILE);
-        }
-
-        private String getFilePath(ResourceId resource, long timestampMillis, int shardNumber, int numShards, FileBasedSink.OutputFileHints outputFileHints) {
-            String parentDirectoryPath = resource.isDirectory() ? resource.toString() : resource.getFilename();
-            String suggestedFilenameSuffix = outputFileHints.getSuggestedFilenameSuffix();
-            String suffix = suggestedFilenameSuffix == null || suggestedFilenameSuffix.isEmpty() ? filenameSuffix : suggestedFilenameSuffix;
-            String filename = String.format("%s--%s-of-%s%s", FORMATTER.print(timestampMillis), shardNumber, numShards, suffix);
-//            String randomFilePrefix = DigestUtils.md5Hex(UUID.randomUUID() + filename + timestampMillis).substring(0, 6);
-            String randomFilePrefix = DigestUtils.md5Hex(timestampMillis + "" + shardNumber).substring(0, 6);
-            String outputFilePath = String.format("%s%s--%s", parentDirectoryPath, randomFilePrefix, filename);
-//            String outputFilePath = String.format("%s%s", parentDirectoryPath, MySeqGenToGCSWriteJob.class.getSimpleName().toLowerCase() + "/" + filename);
-            LOGGER.info("Writing file to {}", outputFilePath);
-            return outputFilePath;
         }
     }
 
