@@ -197,8 +197,8 @@ gcloud dataflow flex-template run $APP-$OWNER \
         // write to GCS 1
         FileIO.Write<String, KV<String, GenericRecord>> fileIOWrite =
             FileIO.<String, KV<String, GenericRecord>>writeDynamic()
-                .by(kv -> kv != null ? kv.getKey() : null)
-                .via(Contextful.fn(kv -> kv != null ? kv.getValue() : null), AvroIO.<GenericRecord>sink(SCHEMA).withCodec(CodecFactory.fromString("snappy")))
+                .by(KV::getKey)
+                .via(Contextful.fn(KV::getValue), AvroIO.<GenericRecord>sink(SCHEMA).withCodec(CodecFactory.fromString("snappy")))
                 .withDestinationCoder(StringUtf8Coder.of())
                 .withNaming(path -> new CustomWriteFileNaming(path, "snappy", "avro"))
                 .to(output)
@@ -218,7 +218,7 @@ gcloud dataflow flex-template run $APP-$OWNER \
                     //.to(options.getOutput())
                     .to(new MyFilenamePolicy(options.getOutput()))
                     // .withTempDirectory(FileBasedSink.convertToFileResourceIfPossible(output).getCurrentDirectory())
-                    .withTempDirectory(ValueProvider.NestedValueProvider.of(temp, t -> t != null ? FileBasedSink.convertToFileResourceIfPossible(t).getCurrentDirectory() : null))
+                    .withTempDirectory(ValueProvider.NestedValueProvider.of(temp, t -> FileBasedSink.convertToFileResourceIfPossible(t).getCurrentDirectory()))
                     // numShards > 0 gives: Streaming job has set up its own fixed sharding configuration. Liquid sharding will be disabled. Parallelism will be set to default
                     // DoFn uses keyed state. Liquid sharding will be disabled. Parallelism will be set to default
                     .withNumShards(options.getNumShards())
