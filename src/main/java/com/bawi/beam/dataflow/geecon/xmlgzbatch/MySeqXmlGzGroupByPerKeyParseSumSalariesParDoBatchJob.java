@@ -2,7 +2,6 @@ package com.bawi.beam.dataflow.geecon.xmlgzbatch;
 
 import com.bawi.VtdXmlParser;
 import com.bawi.VtdXmlParser.Entry;
-import com.bawi.beam.dataflow.PipelineUtils;
 import com.bawi.parser.StringLengthParser;
 import com.bawi.parser.SumValuesParser;
 import org.apache.beam.sdk.Pipeline;
@@ -57,7 +56,7 @@ public class MySeqXmlGzGroupByPerKeyParseSumSalariesParDoBatchJob {
 
 
                         ) :
-                        PipelineUtils.updateArgs(args
+                        updateArgs(args
                                 , "--sequenceLimit=10"
                         );
 
