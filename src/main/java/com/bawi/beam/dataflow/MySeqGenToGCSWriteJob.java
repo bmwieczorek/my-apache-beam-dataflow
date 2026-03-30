@@ -16,7 +16,6 @@ import org.apache.beam.sdk.schemas.JavaFieldSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.transforms.windowing.*;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
@@ -72,7 +71,7 @@ pipeline.apply(GenerateSequence.from(0).to(opts.getSequenceLimit()).withTimestam
   .apply(Window.into(FixedWindows.of(Duration.standardSeconds(1))))
   .apply(ParDo.of(new GeneratePayload()))
   .apply(TextIO.write().withWindowedWrites().to(new CustomFilenamePolicy(opts.getOutputDir(), ".csv"))
-    .withTempDirectory(of(opts.getTempDir(), convertToFileResourceIfPossible()))
+    .withTempDirectory(of(opts.getTempDir(), FileBasedSink::convertToFileResourceIfPossible))
     .withNumShards(opts.getNumShards()));
 
 //                .withoutSharding().to(NestedValueProvider.of(outputDirectory, path -> path + "mydata.csv")));
@@ -126,10 +125,6 @@ pipeline.apply(GenerateSequence.from(0).to(opts.getSequenceLimit()).withTimestam
 //            LOGGER.info("[{}][Window] Processing {},ts={},w={},p={}", LogUtils.ipAddressAndThread(), i, timestamp, windowString, paneInfo);
             receiver.output(i + "," + PAYLOAD);
         }
-    }
-
-    private static SerializableFunction<String, ResourceId> convertToFileResourceIfPossible() {
-        return outputPrefix -> outputPrefix != null ? FileBasedSink.convertToFileResourceIfPossible(outputPrefix) : null;
     }
 
     static class CustomFilenamePolicy extends FileBasedSink.FilenamePolicy {

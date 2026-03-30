@@ -63,7 +63,7 @@ public class MySeqCsvToGcsWriteBatchJob {
                 .apply(TextIO.write()
 //                        .withWindowedWrites() // single vs multi region to generate small files
                         .to(new CustomFilenamePolicy(opts.getOutputDir(), ".csv"))
-                        .withTempDirectory(ValueProvider.NestedValueProvider.of(opts.getTempDir(), outputPrefix -> outputPrefix != null ? FileBasedSink.convertToFileResourceIfPossible(outputPrefix) : null))
+                        .withTempDirectory(ValueProvider.NestedValueProvider.of(opts.getTempDir(), FileBasedSink::convertToFileResourceIfPossible))
                         .withNumShards(opts.getNumShards()));
 
         pipeline.run().waitUntilFinish();

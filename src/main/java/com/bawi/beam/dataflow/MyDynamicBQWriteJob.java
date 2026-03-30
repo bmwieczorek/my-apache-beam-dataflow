@@ -216,7 +216,7 @@ public class MyDynamicBQWriteJob {
         pipeline.apply(new MyDynamicBQWritePTransform())
                 .apply(BigQueryIO.<TableRowWithSchema>write()
                         .to((ValueInSingleWindow<TableRowWithSchema> input) -> getTableDestination(input, bqLoadProjectId, dataset))
-                        .withFormatFunction(tableRowWithSchema -> tableRowWithSchema != null ? tableRowWithSchema.getTableRow() : null)
+                        .withFormatFunction(TableRowWithSchema::getTableRow)
                         .withMethod(BigQueryIO.Write.Method.FILE_LOADS)
                         .withLoadJobProjectId(bqLoadProjectId)
                         .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_TRUNCATE)
