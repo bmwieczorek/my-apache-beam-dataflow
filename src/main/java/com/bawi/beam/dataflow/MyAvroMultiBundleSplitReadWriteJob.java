@@ -32,25 +32,26 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static com.bawi.beam.dataflow.PipelineUtils.*;
+
 public class MyAvroMultiBundleSplitReadWriteJob {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyAvroMultiBundleSplitReadWriteJob.class);
-    private static final String JOB_NAME = "bartek-" + MyAvroReadWriteJob.class.getSimpleName().toLowerCase();
-    private static final String PROJECT_ID = System.getenv("GCP_PROJECT");
-    private static final String BUCKET_NAME = PROJECT_ID + "-" + JOB_NAME;
+    private static final String JOB_NAME = "bartek-" + MyAvroMultiBundleSplitReadWriteJob.class.getSimpleName().toLowerCase();
+    private static final String BUCKET_NAME = JOB_NAME;
 
     public static void main(String[] args) throws IOException, InterruptedException {
         
         
-        String[] generatorArgs = PipelineUtils.updateArgsWithDataflowRunner(args
+        String[] generatorArgs = isDataflowRunnerOnClasspath() ?
+            updateArgsWithDataflowRunner(args
                 , "--jobName=bartek-" + JOB_NAME + "-generator"
                 ,"--numWorkers=1"
                 ,"--workerMachineType=n1-standard-4"
                 ,"--output=gs://" + BUCKET_NAME + "/generator/output/mydata.snappy.avro"
-        );
-
-//        String[] generatorArgs = PipelineUtils.updateArgs(args
-//                ,"--output=target/" + JOB_NAME + "/generator/output/mydata.snappy.avro"//
-//        );
+        ):
+            updateArgs(args
+                ,"--output=target/" + JOB_NAME + "/generator/output/mydata.snappy.avro"
+    );
 
         MyPipelineOptions generatorOptions = PipelineOptionsFactory.fromArgs(generatorArgs).withValidation().as(MyPipelineOptions.class);
         Pipeline generatorPipeline = Pipeline.create(generatorOptions);
@@ -75,19 +76,15 @@ public class MyAvroMultiBundleSplitReadWriteJob {
         ///////////////////////////
 
 
-        String[] readWriteArgs = PipelineUtils.updateArgsWithDataflowRunner(args
+        String[] readWriteArgs = isDataflowRunnerOnClasspath() ?
+            updateArgsWithDataflowRunner(args
                 , "--jobName=" + JOB_NAME + "-generator"
-                ,"--numWorkers=1"
-                ,"--maxNumWorkers=2"
-                ,"--workerMachineType=n1-standard-4" // same number of bundles when using t2d-standard-8
-                ,"--input=gs://" + BUCKET_NAME + "/generator/output/*"
                 ,"--templateLocation=gs://" + BUCKET_NAME + "/templates/" + JOB_NAME + "-template"
+        ):
+            updateArgs(args
+                    ,"--input=target/" + JOB_NAME + "/generator/output/*.snappy.avro*"
+                    ,"--output=target/" + JOB_NAME + "/writing/output/mydata.snappy.avro"
         );
-
-//        String[] readWriteArgs = PipelineUtils.updateArgs(args
-//                ,"--input=target/" + JOB_NAME + "/generator/output/*.snappy.avro*"
-//                ,"--output=target/" + JOB_NAME + "/writing/output/mydata.snappy.avro"
-//        );
 
         Schema schema = SchemaBuilder.record("myData").fields().requiredString("uuid").requiredLong("ts").requiredInt("number").optionalString("value").endRecord();
 
@@ -100,19 +97,24 @@ public class MyAvroMultiBundleSplitReadWriteJob {
                 .apply("ParDo MyToGenRecFn", ParDo.of(new MyToGenericRecordFn(schema.toString()))).setCoder(AvroGenericCoder.of(schema)) // required to explicitly set coder for GenericRecord
                 .apply(AvroIO.writeGenericRecords(schema).to(readWriteOptions.getOutput()).withoutSharding());
         PipelineResult run = readWritePipeline.run();
-        if (run.getClass().getSimpleName().equals("DataflowPipelineJob")) {
-            run.waitUntilFinish();
+
+        if (isDataflowRunnerOnClasspath()) {
+            if (run.getClass().getSimpleName().equals("DataflowPipelineJob")) {
+                LOGGER.info("Non-templated Dataflow job submitted, waiting until finish...");
+                run.waitUntilFinish();
+            } else {
+                LOGGER.info("Template generation path");
+                String cmd = "gcloud dataflow jobs run " + JOB_NAME + "-template "
+                        + System.getenv("GCP_GCLOUD_DATAFLOW_RUN_OPTS")
+                        + " --gcs-location gs://" + BUCKET_NAME + "/templates/" + JOB_NAME + "-template"
+                        + " --num-workers 1"
+                        + " --max-workers 2"
+                        + " --worker-machine-type n1-standard-4"
+                        + " --parameters input=gs://" + BUCKET_NAME + "/generator/output/*"
+                        + " --parameters output=gs://" + BUCKET_NAME + "/writing/output/*";
+                runBashProcessAndWaitForStatus(cmd);
+            }
         }
-
-        String cmd = "gcloud dataflow jobs run " + JOB_NAME + "-template "
-                + System.getenv("GCP_GCLOUD_DATAFLOW_RUN_OPTS")
-                + " --gcs-location gs://" + BUCKET_NAME + "/templates/" + JOB_NAME + "-template"
-//                + " --parameters input=gs://" + BUCKET_NAME + "/generator/output/*,output=gs://" + BUCKET_NAME + "/writing/output/*";
-                + " --parameters output=gs://" + BUCKET_NAME + "/writing/output/*";
-
-        runBashProcessAndWaitForStatus(cmd);
-
-
     }
 
     private static void runBashProcessAndWaitForStatus(String cmd) throws IOException, InterruptedException {
@@ -136,7 +138,6 @@ public class MyAvroMultiBundleSplitReadWriteJob {
     }
 
     private static class MyToGenericRecordFn extends DoFn<MyData, GenericRecord> {
-//    private static class MyToGenericRecordFn extends DoFn<GenericRecord, GenericRecord> {
         private final Distribution elapsedTimeDistribution = Metrics.distribution(MyAvroMultiBundleSplitReadWriteJob.class.getSimpleName(), "my-metrics-elapsed-time-distribution");
         private final Counter writeCounter = Metrics.counter(MyAvroMultiBundleSplitReadWriteJob.class.getSimpleName(), "my-metrics-write-counter");
         private final String schemaString;
@@ -152,19 +153,13 @@ public class MyAvroMultiBundleSplitReadWriteJob {
         }
 
         @ProcessElement
-//        public void process(@Element GenericRecord record, OutputReceiver<GenericRecord> outputReceiver) {
         public void process(@Element MyData myData, OutputReceiver<GenericRecord> outputReceiver) {
             GenericData.Record genericRecord = new GenericData.Record(schema);
             genericRecord.put("uuid", myData.uuid);
             genericRecord.put("ts", myData.ts);
             genericRecord.put("number", myData.number);
-//            genericRecord.put("uuid", record.get("uuid"));
-//            genericRecord.put("ts", record.get("ts"));
-//            genericRecord.put("number", record.get("number"));
             long start = System.currentTimeMillis();
-//            genericRecord.put("value", factorial(20000 + myData.number));
             genericRecord.put("value", factorial(1 + myData.number));
-//            genericRecord.put("value", factorial(1 + (Integer) record.get("number")));
             elapsedTimeDistribution.update(System.currentTimeMillis() - start);
             outputReceiver.output(genericRecord);
             writeCounter.inc();
@@ -186,7 +181,10 @@ public class MyAvroMultiBundleSplitReadWriteJob {
         public Integer number;
         @Nullable public String value;
 
-        MyData() { }
+        // used by reflection
+        MyData() {
+            // System.out.println("MyData no-arg constructor called"); // logged multiple times
+        }
 
         MyData(String uuid, Long ts, Integer number, String value) {
             this.uuid = uuid;
