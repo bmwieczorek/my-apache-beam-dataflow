@@ -368,8 +368,6 @@ public class MyAvroSplitReadWriteJob {
     }
 
     static class MyFilenamePolicy extends FileBasedSink.FilenamePolicy {
-        private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("yyyy-MM-dd_HH-mm-ss");
-
         private final ValueProvider<String> outputParentPath;
         private final String filenameSuffix;
 
