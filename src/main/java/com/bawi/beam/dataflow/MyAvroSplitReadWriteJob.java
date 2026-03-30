@@ -29,8 +29,6 @@ import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
 import org.apache.beam.sdk.transforms.windowing.IntervalWindow;
 import org.apache.beam.sdk.transforms.windowing.PaneInfo;
 import org.apache.beam.sdk.values.TypeDescriptors;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,8 +40,6 @@ import java.math.BigInteger;
 import java.util.Objects;
 
 import static com.bawi.beam.dataflow.PipelineUtils.*;
-import static com.bawi.beam.dataflow.PipelineUtils.getCounters;
-import static com.bawi.beam.dataflow.PipelineUtils.getDistributions;
 
 public class MyAvroSplitReadWriteJob {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyAvroSplitReadWriteJob.class);
