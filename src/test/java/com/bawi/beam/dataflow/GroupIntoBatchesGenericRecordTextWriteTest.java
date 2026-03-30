@@ -80,8 +80,8 @@ public class GroupIntoBatchesGenericRecordTextWriteTest {
 
         flattenedWithBatchKey
                 .apply(FileIO.<String, KV<String, GenericRecord>>writeDynamic()
-                        .by(kv -> kv != null ? kv.getKey() : null)
-                        .via(Contextful.fn(kv -> kv != null ? kv.getValue().toString() : null), TextIO.sink())
+                        .by(KV::getKey)
+                        .via(Contextful.fn(kv -> kv.getValue().toString()), TextIO.sink())
                         .withDestinationCoder(StringUtf8Coder.of())
                         .withNaming(subPath -> new MyFileNaming(subPath, ".txt"))
                         .to(OUTPUT_DIR)
