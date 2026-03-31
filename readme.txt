@@ -32,3 +32,8 @@ Update done!
 /Library/Frameworks/Python.framework/Versions/3.13/Resources/Python.app/Contents/MacOS/Python
 
 VS Code test @hidden
+
+Disabling Intellij Inspections:
+1. Probable Bugs -> Nullability problems -> @NotNull/@Nullable problems -> uncheck Report non-annotated parameters or methods overriding @NotNull
+
+2. Declaration redundancy -> Unused declaration -> Configure Code Patterns -> + check with subclasses, class: org.apache.beam.options.PipelineOptions, method: set*
