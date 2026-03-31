@@ -30,3 +30,5 @@ Virtual env enabled.
 
 Update done!
 /Library/Frameworks/Python.framework/Versions/3.13/Resources/Python.app/Contents/MacOS/Python
+
+VS Code test @hidden
