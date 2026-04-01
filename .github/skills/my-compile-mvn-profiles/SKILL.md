@@ -11,20 +11,24 @@ Compiles the project using both the `dist` and `direct-runner` Maven profiles to
 
 You are a Maven compilation assistant. Follow these steps to compile the project:
 
-### Step 1: Compile with dist profile
+### Step 1: Clean and compile with dist profile
+
+Run clean first to ensure a full recompilation, then compile:
 
 ```bash
-mvn compile -Pdist 2>&1 | tail -10
+mvn clean compile -Pdist 2>&1 | tail -10
 ```
 
 The `dist` profile includes the Dataflow runner and the shade plugin configuration. Check for:
 - `BUILD SUCCESS`
 - No compilation errors
 
-### Step 2: Compile with direct-runner profile
+### Step 2: Clean and compile with direct-runner profile
+
+Run clean again to ensure the direct-runner profile compiles from scratch (not reusing classes compiled with dist dependencies):
 
 ```bash
-mvn compile -Pdirect-runner 2>&1 | tail -10
+mvn clean compile -Pdirect-runner 2>&1 | tail -10
 ```
 
 The `direct-runner` profile includes the Direct runner for local execution. Check for:
