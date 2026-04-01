@@ -39,9 +39,9 @@
         <google-cloud-storage.version>2.61.0</google-cloud-storage.version> <!-- https://mvnrepository.com/artifact/com.google.cloud/libraries-bom/26.73.0 -> https://mvnrepository.com/artifact/com.google.cloud/google-cloud-storage-bom/2.59.0 -->
 
         <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
-        <maven-exec-plugin.version>3.6.3</maven-exec-plugin.version>
+        <maven-exec-plugin.version>3.6.2</maven-exec-plugin.version>
         <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
-        <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
+        <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
         <jib-maven-plugin.version>3.5.1</jib-maven-plugin.version>
         <maven-enforcer-plugin.version>3.6.2</maven-enforcer-plugin.version>
     </properties>
