@@ -482,26 +482,9 @@
 
         <profile>
             <id>itest</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <phase>integration-test</phase>
-                                <goals>
-                                    <goal>test</goal>
-                                </goals>
-                                <configuration>
-                                    <includes>
-                                        <include>**/*IntegrationTest</include>
-                                    </includes>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <properties>
+               <test>com.bawi.beam.dataflow.itest.*IntegrationTest</test>
+            </properties>
         </profile>
 
     </profiles>
