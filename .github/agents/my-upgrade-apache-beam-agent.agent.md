@@ -23,7 +23,7 @@ Autonomous agent that executes the complete Maven dependency upgrade workflow by
 | 3 | Compile with Profiles | `.github/skills/my-compile-mvn-profiles/skill.md` |
 | 4 | Run Unit Tests | `.github/skills/my-run-mvn-tests/skill.md` |
 | 5 | Run Integration Tests | `.github/skills/my-run-mvn-integration-tests/skill.md` |
-| 6 | Commit to Local Branch | `.github/skills/my-commit-pom-to-local-branch/skill.md` |
+| 6 | Commit changes to pom.xml to Local Branch | `.github/skills/my-commit-pom-to-local-branch/skill.md` |
 
 ## Execution Rules
 
@@ -64,7 +64,7 @@ For skill N:
 | 3 | Compile with Profiles | PASSED / FAILED / SKIPPED |
 | 4 | Run Unit Tests | PASSED / FAILED / SKIPPED |
 | 5 | Run Integration Tests | PASSED / FAILED / SKIPPED |
-| 6 | Commit to Local Branch | PASSED / FAILED / SKIPPED |
+| 6 | Commit changes to pom.xml to Local Branch | PASSED / FAILED / SKIPPED |
 
 **Workflow Status:** PASSED (6/6) | FAILED at step N (N-1/6 passed)
 ```
