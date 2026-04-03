@@ -32,8 +32,8 @@ import java.util.List;
 
 /** {@link Coder} for {@link KafkaRecord}. */
 @SuppressWarnings({
-        "rawtypes", // TODO(https://issues.apache.org/jira/browse/BEAM-10556)
-        "nullness" // TODO(https://issues.apache.org/jira/browse/BEAM-10402)
+        "rawtypes", // @TODO(https://issues.apache.org/jira/browse/BEAM-10556)
+        "nullness" // @TODO(https://issues.apache.org/jira/browse/BEAM-10402)
         , "unchecked", "ConstantConditions"})
 public class KafkaRecordCoder<K, V> extends StructuredCoder<KafkaRecord<K, V>> {
 
@@ -112,7 +112,7 @@ public class KafkaRecordCoder<K, V> extends StructuredCoder<KafkaRecord<K, V>> {
   @Override
   public boolean isRegisterByteSizeObserverCheap(KafkaRecord<K, V> value) {
     return kvCoder.isRegisterByteSizeObserverCheap(value.getKV());
-    // TODO : do we have to implement getEncodedSize()?
+    // @TODO : do we have to implement getEncodedSize()?
   }
 
   @Override

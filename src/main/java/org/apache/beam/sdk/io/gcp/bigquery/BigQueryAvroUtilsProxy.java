@@ -6,6 +6,7 @@ import org.apache.avro.generic.GenericRecord;
 
 public class BigQueryAvroUtilsProxy {
 
+    @SuppressWarnings("deprecation")
     public static TableRow convertGenericRecordToTableRow(GenericRecord record, TableSchema schema) {
         return BigQueryAvroUtils.convertGenericRecordToTableRow(record, schema);
     }
