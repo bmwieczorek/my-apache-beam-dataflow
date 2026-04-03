@@ -70,17 +70,23 @@ public class MyWindowingTest {
 
         Pipeline pipeline = Pipeline.create();
 
-        pipeline.apply(TextIO.read().from(INPUT + "/*.log")
+
+        @SuppressWarnings("deprecation")
+        WithTimestamps<String> stringWithTimestamps =
+                WithTimestamps
+                        .of(MyWindowingTest::extractAndParseDateTime)
+                        .withAllowedTimestampSkew(Duration.standardDays(2));
+
+        pipeline.apply(TextIO.read()
+                    .from(INPUT + "/*.log")
                     .watchForNewFiles(
-                        Duration.standardSeconds(1),
-                        Watch.Growth.afterTotalOf(Duration.standardSeconds(60))
+                            Duration.standardSeconds(1),
+                            Watch.Growth.afterTotalOf(Duration.standardSeconds(60))
                     )
                 )
                 .apply(ParDo.of(new LogElementWithWindowDetails<>("1")))
 
-                .apply(WithTimestamps.of(MyWindowingTest::extractAndParseDateTime)
-                        .withAllowedTimestampSkew(Duration.standardDays(2))
-                )
+                .apply(stringWithTimestamps)
 
                 .apply(ParDo.of(new LogElementWithWindowDetails<>("2")))
 
