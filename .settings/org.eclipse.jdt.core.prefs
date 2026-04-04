@@ -1,0 +1,2 @@
+# VS Code Java Extension Settings not to complain about @SuppressWarnings("unused")
+org.eclipse.jdt.core.compiler.problem.unusedWarningToken=ignore
