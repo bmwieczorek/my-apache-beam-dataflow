@@ -79,6 +79,7 @@
                 </configuration>
                 <executions>
                     <execution>
+                        <?m2e ignore?> <!-- https://eclipse.dev/m2e/documentation/release-notes-17.html#new-syntax-for-specifying-lifecycle-mapping-metadata -->
                         <id>convert-avro-schema-to-bigquery-table-schema</id>
                         <phase>generate-test-resources</phase>
                         <goals>
