@@ -84,23 +84,23 @@ public class DataflowJobSettingRecommender {
         if (machineType != null) {
             // Handle full machine type e.g. n1-standard-1, t2d-standard-2, n2d-highcpu-4 etc.
             // Expected format: [family]-[series]-[vcpus]
-            // Always return highmem with 4x vCPUs
+            // Always return highmem with 2x vCPUs
             String[] parts = machineType.split("-");
             if (parts.length == 3) {
                 String family = parts[0];
                 String vcpus = parts[2];
                 
-                // Parse current vCPUs and multiply by 4
+                // Parse current vCPUs and multiply by 2
                 try {
                     int currentVcpus = Integer.parseInt(vcpus);
-                    int quadrupledVcpus = currentVcpus * 4;
+                    int doubledVcpus = currentVcpus * 2;
                     
                     // Special case: if t2d prefix, recommend n2-highmem instead
                     if ("t2d".equals(family)) {
-                        return "n2-highmem-" + quadrupledVcpus;
+                        return "n2-highmem-" + doubledVcpus;
                     }
                     
-                    return family + "-highmem-" + quadrupledVcpus;
+                    return family + "-highmem-" + doubledVcpus;
                 } catch (NumberFormatException e) {
                     LOGGER.warn("Unable to parse vCPUs from machine type: {}", machineType, e);
                     return "manual check required for " + machineType;
@@ -151,18 +151,35 @@ public class DataflowJobSettingRecommender {
                     resultEnv.put("numWorkers", pool.get("numWorkers").asInt());
                 }
 
+                if (pool.has("zone")) {
+                    resultEnv.put("zone", normalizeZone(pool.get("zone").asText()));
+                }
+
+                if (pool.has("diskSizeGb")) {
+                    resultEnv.put("diskSizeGb", pool.get("diskSizeGb").asInt());
+                }
+
                 if (pool.has("machineType")) {
                     String originalMachineType = pool.get("machineType").asText();
-                    String recommendedMachineType = getRecommendedHighMemMachineType(originalMachineType);
+                    String recommendedMachineType = getRecommendedMachineTypeForUpdatePayload(originalMachineType);
                     resultEnv.put("machineType", recommendedMachineType);
                 }
 
                 if (pool.has("subnetwork")) {
-                    resultEnv.put("subnetwork", pool.get("subnetwork").asText());
+                    resultEnv.put("subnetwork", normalizeSubnetwork(pool.get("subnetwork").asText()));
                 }
 
                 if (pool.has("ipConfiguration")) {
                     resultEnv.put("ipConfiguration", pool.get("ipConfiguration").asText());
+                }
+            }
+
+            // network is sourced from sdk options when available (including explicit null)
+            if (origOptions != null && origOptions.has("network")) {
+                if (origOptions.get("network").isNull()) {
+                    resultEnv.putNull("network");
+                } else {
+                    resultEnv.put("network", origOptions.get("network").asText());
                 }
             }
 
@@ -228,9 +245,74 @@ public class DataflowJobSettingRecommender {
             }
         }
 
+        // Fallback: extract common template parameters from embedded sdk pipeline options metadata.
+        if (resultParams.isEmpty() && origEnv != null) {
+            JsonNode workerPools = origEnv.get("workerPools");
+            if (workerPools != null && workerPools.isArray() && !workerPools.isEmpty()) {
+                JsonNode pool = workerPools.get(0);
+                JsonNode metadata = pool.get("metadata");
+                if (metadata != null && metadata.has("sdk_pipeline_options")) {
+                    try {
+                        JsonNode embeddedSdk = mapper.readTree(metadata.get("sdk_pipeline_options").asText());
+                        JsonNode embeddedOptions = embeddedSdk.get("options");
+                        if (embeddedOptions != null) {
+                            copyIfPresentAsString(embeddedOptions, resultParams, "subscription");
+                            copyIfPresentAsString(embeddedOptions, resultParams, "temp");
+                            copyIfPresentAsString(embeddedOptions, resultParams, "output");
+                            copyIfPresentAsString(embeddedOptions, resultParams, "tableSpec");
+                        }
+                    } catch (Exception e) {
+                        LOGGER.warn("Failed to parse metadata.sdk_pipeline_options", e);
+                    }
+                }
+            }
+        }
+
         // 4. update: true - always hardcoded
         resultNode.put("update", true);
 
         return mapper.writeValueAsString(resultNode);
+    }
+
+    private static void copyIfPresentAsString(JsonNode source, ObjectNode target, String fieldName) {
+        if (source.has(fieldName) && !source.get(fieldName).isNull()) {
+            target.put(fieldName, source.get(fieldName).asText());
+        }
+    }
+
+    private static String normalizeZone(String zone) {
+        return zone;
+    }
+
+    private static String getRecommendedMachineTypeForUpdatePayload(String originalMachineType) {
+        if (originalMachineType == null) {
+            return getRecommendedHighMemMachineType(null);
+        }
+
+        String[] parts = originalMachineType.split("-");
+        if (parts.length == 3) {
+            String family = parts[0];
+            try {
+                int existingCores = Integer.parseInt(parts[2]);
+                int doubledCores = existingCores * 2;
+
+                // t2d does not have a highmem family, so map to n2 highmem.
+                if ("t2d".equals(family)) {
+                    family = "n2";
+                }
+                return family + "-highmem-" + doubledCores;
+            } catch (NumberFormatException e) {
+                LOGGER.warn("Unable to parse vCPUs from machine type for update payload: {}", originalMachineType, e);
+            }
+        }
+
+        return getRecommendedHighMemMachineType(originalMachineType);
+    }
+
+    private static String normalizeSubnetwork(String subnetwork) {
+        if (subnetwork == null) {
+            return null;
+        }
+        return subnetwork;
     }
 }

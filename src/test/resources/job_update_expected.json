@@ -1,0 +1,39 @@
+{
+  "jobName" : "bartek-mypubsubtogcsjob",
+  "environment" : {
+    "numWorkers" : 1,
+    "maxWorkers" : 2,
+    "zone" : "us-central1-c",
+    "serviceAccountEmail" : "my-service-account-name@my-project-id.iam.gserviceaccount.com",
+    "tempLocation" : "gs://my-project-id-bartek-mypubsubtogcsjob/temp",
+    "bypassTempDirValidation" : false,
+    "machineType" : "n2-highmem-4",
+    "additionalExperiments" : [ "enable_stackdriver_agent_metrics", "enable_streaming_engine_resource_based_billing", "disable_runner_v2" ],
+    "network": null,
+    "subnetwork" : "https://www.googleapis.com/compute/v1/projects/my-subnetwork-project-id/regions/us-central1/subnetworks/my-subnetwork-id",
+    "additionalUserLabels" : {
+      "additional_experiments3" : "enable_streaming_engine_resource_based_billing",
+      "additional_experiments1" : "enable_google_cloud_profiler",
+      "owner" : "bartek",
+      "dump_heap_on_oom" : "true",
+      "dataflow_template" : "classic",
+      "goog-terraform-provisioned" : "true",
+      "additional_experiments4" : "disable_runner_v2",
+      "additional_experiments5" : "disablestringsetmetrics",
+      "additional_experiments0" : "enable_stackdriver_agent_metrics",
+      "additional_experiments2" : "enable_google_cloud_heap_sampling",
+      "number_of_worker_harness_threads" : "0",
+      "enable_streaming_engine" : "true"
+    },
+    "ipConfiguration" : "WORKER_IP_PRIVATE",
+    "enableStreamingEngine" : true,
+    "diskSizeGb": 200
+  },
+  "parameters" : {
+    "subscription" : "projects/my-project-id/subscriptions/bartek-topic-sub",
+    "temp" : "gs://my-project-id-bartek-mypubsubtogcsjob/temp",
+    "output" : "gs://my-project-id-bartek-mypubsubtogcsjob/output",
+    "tableSpec" : "bartek_mypubsubtogcsjob.my_table"
+  },
+  "update" : true
+}
