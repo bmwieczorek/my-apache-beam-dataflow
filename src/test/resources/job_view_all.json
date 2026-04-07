@@ -1,0 +1,559 @@
+{
+  "id": "2026-04-07_03_52_10-0000000000000000000",
+  "projectId": "my-project-id",
+  "name": "bartek-mypubsubtogcsjob",
+  "type": "JOB_TYPE_STREAMING",
+  "environment": {
+    "tempStoragePrefix": "storage.googleapis.com/my-project-id-bartek-mypubsubtogcsjob/temp",
+    "experiments": [
+      "disable_runner_v2",
+      "enable_google_cloud_heap_sampling",
+      "enable_google_cloud_profiler",
+      "enable_stackdriver_agent_metrics",
+      "enable_streaming_engine_resource_based_billing",
+      "disableStringSetMetrics",
+      "enable_lineage=true",
+
+      "enable_streaming_engine",
+      "enable_throttled_based_rescaling",
+      "ek_regions=",
+      "autoscale_windmill_service_by_default",
+      "enable_recommendations",
+      "primeflex_slow_start_seconds=3600",
+      "enable_worker_memory_cloud_monitoring",
+      "enable_streaming_service_billing",
+      "use_e2_for_default_machine_type_worker_regions=africa-south1,asia-southeast3,europe-north2,europe-north3,europe-southwest1,europe-west10,europe-west12,europe-west15,europe-west8,europe-west9,me-central1,me-central2,me-west1,northamerica-south1,southamerica-west1,us-central6,us-east5,us-east7,us-south1,us-west8",
+      "enable_async_job_creation",
+      "enable_worker_cloud_monitoring_exporter",
+      "disable_prime_streaming_engine",
+      "primeflex_slow_start_pct=5",
+      "enable_always_on_exception_sampling",
+      "enable_lightweight_streaming_update",
+      "noop_experiment_inside_date_threshold",
+      "use_dataflow_service_account_in_igm",
+      "enable_containerd_runtime",
+      "enable_worker_disk_cloud_monitoring",
+      "use_ppm_for_windmill",
+      "unified_worker_enable_windmill_get_work_response_batching",
+      "enable_lightweight_streaming_update_worker_utilization_hint",
+      "use_templates_regional_bucket",
+      "enable_cmek_org_policy_check",
+      "enable_streaming_pubsub_io_stackdriver_metrics",
+      "use_workflow_job_manager_components_for_streaming",
+      "enable_billing_v_1_5",
+      "disable_baggins_exp",
+      "enable_health_checker_startup_timeout",
+      "override_controller_service_account",
+      "use_workflow_job_manager_components_for_streaming_reload",
+      "enable_streaming_scaling",
+      "use_timer_backlog_in_streaming_autoscaling",
+      "use_gce_scoped_endpoints",
+      "streaming_engine_isolation_mode=PER_JOB",
+      "enable_data_sampling_telemetry",
+      "enable_compute_default_service_account_org_policy",
+      "enable_managed_transforms",
+      "use_multi_hop_delegation",
+      "enable_cloud_permissions_checking",
+      "use_job_admission_controller",
+      "enable_memory_sampler",
+      "use_retriable_jac_in_dm",
+      "enable_remote_image_ping",
+      "enable_secure_boot",
+      "enable_oom_sampler",
+      "enable_private_ipv6_google_access",
+      "enable_windmill_service",
+      "enable_always_on_exception_sampling",
+      "enable_streaming_java_vmr",
+      "enable_cloud_permissions_checking",
+      "use_workflow_job_manager_components_for_streaming_reload",
+      "enable_compute_default_service_account_org_policy",
+      "use_ppm_for_windmill",
+      "enable_containerd_runtime",
+      "enable_recommendations",
+      "enable_streaming_service_billing",
+      "enable_memory_sampler",
+      "enable_lightweight_streaming_update",
+      "autoscale_windmill_service_by_default",
+      "unified_worker_enable_windmill_get_work_response_batching",
+      "disable_prime_streaming_engine",
+      "enable_worker_cloud_monitoring_exporter",
+      "enable_lightweight_streaming_update_worker_utilization_hint",
+      "enable_async_job_creation",
+      "primeflex_slow_start_pct=5",
+      "enable_streaming_pubsub_io_stackdriver_metrics",
+      "use_workflow_job_manager_components_for_streaming",
+      "use_e2_for_default_machine_type_worker_regions=africa-south1,asia-southeast3,europe-north2,europe-north3,europe-southwest1,europe-west10,europe-west12,europe-west15,europe-west8,europe-west9,me-central1,me-central2,me-west1,northamerica-south1,southamerica-west1,us-central6,us-east5,us-east7,us-south1,us-west8",
+      "enable_always_on_exception_sampling",
+      "enable_oom_sampler",
+      "use_job_admission_controller",
+      "noop_experiment_inside_date_threshold",
+      "enable_secure_boot",
+      "enable_health_checker_startup_timeout",
+      "use_gce_scoped_endpoints",
+      "use_dataflow_service_account_in_igm",
+      "enable_cmek_org_policy_check",
+      "enable_streaming_scaling",
+      "override_controller_service_account",
+      "disable_baggins_exp",
+      "enable_remote_image_ping",
+      "streaming_engine_isolation_mode=PER_JOB",
+      "ek_regions=",
+      "use_templates_regional_bucket",
+      "enable_throttled_based_rescaling",
+      "enable_data_sampling_telemetry",
+      "use_multi_hop_delegation",
+      "enable_worker_disk_cloud_monitoring",
+      "primeflex_slow_start_seconds=3600",
+      "enable_billing_v_1_5",
+      "enable_windmill_service",
+      "enable_worker_memory_cloud_monitoring",
+      "use_timer_backlog_in_streaming_autoscaling",
+      "enable_managed_transforms",
+      "use_retriable_jac_in_dm"
+    ],
+    "workerPools": [
+      {
+        "kind": "harness",
+        "numWorkers": 1,
+        "packages": [
+          {
+            "name": "my-apache-beam-dataflow-0.1-SNAPSHOT-wLCFO2i4yUMhUrgoJ8yg0I9sBQF9wBez0dTQ9tj5hX0.jar",
+            "location": "storage.googleapis.com/my-project-id-bartek-mypubsubtogcsjob/staging/my-apache-beam-dataflow-0.1-SNAPSHOT-wLCFO2i4yUMhUrgoJ8yg0I9sBQF9wBez0dTQ9tj5hX0.jar"
+          }
+        ],
+        "machineType": "t2d-standard-2",
+        "teardownPolicy": "TEARDOWN_ALWAYS",
+        "diskSizeGb": 200,
+        "zone": "us-central1-c",
+        "onHostMaintenance": "MIGRATE",
+        "metadata": {
+          "job_name": "bartek-mypubsubtogcsjob",
+          "enable_worker_disk_cloud_monitoring": "true",
+          "enable_containerd_runtime": "true",
+          "enable_health_checker_startup_timeout": "true",
+          "enable_data_sampling_telemetry": "true",
+          "packages": "gs://my-project-id-bartek-mypubsubtogcsjob/staging/my-apache-beam-dataflow-0.1-SNAPSHOT-wLCFO2i4yUMhUrgoJ8yg0I9sBQF9wBez0dTQ9tj5hX0.jar|my-apache-beam-dataflow-0.1-SNAPSHOT-wLCFO2i4yUMhUrgoJ8yg0I9sBQF9wBez0dTQ9tj5hX0.jar",
+          "enable_worker_cloud_monitoring_exporter": "true",
+          "enable_streaming_java_vmr": "true",
+          "enable_memory_sampler": "true",
+          "enable_worker_memory_cloud_monitoring": "true",
+          "sdk_pipeline_options": "{\"options\":{\"machineType\":\"t2d-standard-2\",\"usePublicIps\":false,\"templateLocation\":\"gs://my-project-id-bartek-mypubsubtogcsjob/templates/bartek-mypubsubtogcsjob-template\",\"gcsEndpoint\":null,\"pipelineUrl\":\"gs://my-project-id-bartek-mypubsubtogcsjob/staging/pipeline-RoJrbwTwAlVHPgDqGalFjSi7LWoH4RgA1eX8kMJH-O8.pb\",\"enableBucketReadMetricCounter\":false,\"gcsHttpRequestWriteTimeout\":null,\"impersonateServiceAccount\":null,\"saveProfilesToGcs\":null,\"sdkHarnessContainerImageOverrides\":null,\"appName\":\"MyPubsubToGCSJob\",\"defaultEnvironmentConfig\":null,\"enableBucketWriteMetricCounter\":false,\"environmentOptions\":null,\"dataflowEndpoint\":\"\",\"project\":\"my-project-id\",\"gcsRewriteDataOpBatchLimit\":null,\"enableStreamingEngine\":true,\"zone\":null,\"workerRegion\":null,\"dataflowKmsKey\":null,\"serviceAccountEmail\":\"my-service-account-name@my-project-id.iam.gserviceaccount.com\",\"region\":\"us-central1\",\"dataflowJobId\":\"2026-04-07_03_52_10-0000000000000000000\",\"overrideWindmillBinary\":null,\"tempLocation\":\"gs://my-project-id-bartek-mypubsubtogcsjob/temp\",\"apiRootUrl\":\"https://dataflow.googleapis.com/\",\"output\":\"gs://my-project-id-bartek-mypubsubtogcsjob/output\",\"updateCompatibilityVersion\":null,\"timestampAttribute\":\"et\",\"serviceAccount\":\"my-service-account-name@my-project-id.iam.gserviceaccount.com\",\"maxNumWorkers\":2,\"messageDeduplicationEnabled\":true,\"bigQueryProject\":null,\"credentialFactoryClass\":\"org.apache.beam.sdk.extensions.gcp.auth.GcpCredentialFactory\",\"hotKeyLoggingEnabled\":false,\"gcsUploadBufferSizeBytes\":null,\"subnetwork\":\"https://www.googleapis.com/compute/v1/projects/my-subnetwork-project-id/regions/us-central1/subnetworks/my-subnetwork-id\",\"customEventTimeTimestampAttributeEnabled\":true,\"optionsId\":0,\"diskSizeGb\":200,\"numWorkers\":1,\"gcsHttpRequestReadTimeout\":null,\"jobName\":\"mypubsubtogcsjob-root-0407105130-145b9b9\",\"workerMachineType\":null,\"transformsToOverride\":[],\"autoscalingAlgorithm\":\"BASIC\",\"gcsCustomAuditEntries\":null,\"runner\":\"org.apache.beam.runners.dataflow.DataflowRunner\",\"stagingLocation\":\"gs://my-project-id-bartek-mypubsubtogcsjob/staging\",\"googleApiTrace\":null,\"tableSpec\":\"bartek_mypubsubtogcsjob.my_table\",\"filesToStage\":[\"/my-apache-beam-dataflow-0.1-SNAPSHOT.jar\"],\"workerHarnessContainerImage\":null,\"gcpTempLocation\":\"gs://my-project-id-bartek-mypubsubtogcsjob/temp\",\"dumpHeapOnOOM\":true,\"resourceHints\":[],\"gbek\":null,\"windowSecs\":60,\"desiredNumUnboundedSourceSplits\":0,\"network\":null,\"streaming\":true,\"subscription\":\"projects/my-project-id/subscriptions/bartek-topic-sub\",\"gcsPerformanceMetrics\":false,\"userAgent\":\"Apache_Beam_SDK_for_Java/2.72.0(JRE_21_environment)\",\"pathValidatorClass\":\"org.apache.beam.sdk.extensions.gcp.storage.GcsPathValidator\",\"numShards\":\"0\",\"stableUniqueNames\":\"WARNING\",\"sdkContainerImage\":null,\"maxBufferingDurationMilliSec\":0,\"experiments\":[\"enable_streaming_engine\",\"enable_windmill_service\",\"use_dataflow_service_account_in_igm\",\"enable_data_sampling_telemetry\",\"enable_cmek_org_policy_check\",\"enable_streaming_pubsub_io_stackdriver_metrics\",\"use_workflow_job_manager_components_for_streaming_reload\",\"enable_streaming_scaling\",\"enable_compute_default_service_account_org_policy\",\"use_retriable_jac_in_dm\",\"enable_lightweight_streaming_update\",\"use_ppm_for_windmill\",\"use_e2_for_default_machine_type_worker_regions=africa-south1,asia-southeast3,europe-north2,europe-north3,europe-southwest1,europe-west10,europe-west12,europe-west15,europe-west8,europe-west9,me-central1,me-central2,me-west1,northamerica-south1,southamerica-west1,us-central6,us-east5,us-east7,us-south1,us-west8\",\"enable_remote_image_ping\",\"enable_streaming_service_billing\",\"enable_managed_transforms\",\"override_controller_service_account\",\"enable_worker_memory_cloud_monitoring\",\"use_workflow_job_manager_components_for_streaming\",\"disable_prime_streaming_engine\",\"enable_oom_sampler\",\"ek_regions=\",\"enable_containerd_runtime\",\"enable_memory_sampler\",\"noop_experiment_inside_date_threshold\",\"unified_worker_enable_windmill_get_work_response_batching\",\"enable_secure_boot\",\"enable_throttled_based_rescaling\",\"enable_async_job_creation\",\"enable_worker_disk_cloud_monitoring\",\"enable_lightweight_streaming_update_worker_utilization_hint\",\"use_multi_hop_delegation\",\"enable_health_checker_startup_timeout\",\"enable_recommendations\",\"use_timer_backlog_in_streaming_autoscaling\",\"primeflex_slow_start_pct=5\",\"enable_billing_v_1_5\",\"use_templates_regional_bucket\",\"use_gce_scoped_endpoints\",\"disable_baggins_exp\",\"autoscale_windmill_service_by_default\",\"streaming_engine_isolation_mode=PER_JOB\",\"primeflex_slow_start_seconds=3600\",\"enable_cloud_permissions_checking\",\"enable_always_on_exception_sampling\",\"enable_worker_cloud_monitoring_exporter\",\"use_job_admission_controller\",\"disableStringSetMetrics\",\"disable_runner_v2\",\"enable_google_cloud_heap_sampling\",\"enable_google_cloud_profiler\",\"enable_stackdriver_agent_metrics\",\"enable_streaming_engine_resource_based_billing\",\"enable_private_ipv6_google_access\",\"enable_streaming_java_vmr\"],\"jobId\":\"2026-04-07_03_52_10-0000000000000000000\",\"defaultEnvironmentType\":null,\"labels\":null,\"saveHeapDumpsToGcsPath\":\"gs://my-project-id-bartek-mypubsubtogcsjob/oom\",\"dataflowWorkerJar\":null,\"numberOfWorkerHarnessThreads\":0,\"stagerClass\":\"org.apache.beam.runners.dataflow.util.GcsStager\",\"dataflowServiceOptions\":[\"enable_lineage=true\"],\"gcpOauthScopes\":[\"https://www.googleapis.com/auth/cloud-platform\",\"https://www.googleapis.com/auth/devstorage.full_control\",\"https://www.googleapis.com/auth/userinfo.email\",\"https://www.googleapis.com/auth/datastore\",\"https://www.googleapis.com/auth/bigquery\",\"https://www.googleapis.com/auth/bigquery.insertdata\",\"https://www.googleapis.com/auth/pubsub\"],\"temp\":\"gs://my-project-id-bartek-mypubsubtogcsjob/temp\"},\"revision\":7,\"display_data\":[{\"key\":\"sdkContainerImage\",\"namespace\":\"org.apache.beam.runners.dataflow.options.DataflowPipelineWorkerPoolOptions\",\"value\":\"\",\"type\":\"STRING\"},{\"namespace\":\"org.apache.beam.sdk.options.PipelineOptions\",\"key\":\"jobName\",\"type\":\"STRING\",\"value\":\"mypubsubtogcsjob-root-0407105130-145b9b9\"},{\"key\":\"diskSizeGb\",\"namespace\":\"org.apache.beam.runners.dataflow.options.DataflowPipelineWorkerPoolOptions\",\"value\":200,\"type\":\"INTEGER\"},{\"namespace\":\"org.apache.beam.runners.dataflow.options.DataflowPipelineOptions\",\"key\":\"region\",\"type\":\"STRING\",\"value\":\"us-central1\"},{\"value\":true,\"type\":\"BOOLEAN\",\"key\":\"customEventTimeTimestampAttributeEnabled\",\"namespace\":\"com.bawi.beam.dataflow.MyPubsubToGCSJob$MyPipelineOptions\"},{\"value\":\"gs://my-project-id-bartek-mypubsubtogcsjob/templates/bartek-mypubsubtogcsjob-template\",\"type\":\"STRING\",\"key\":\"templateLocation\",\"namespace\":\"org.apache.beam.runners.dataflow.options.DataflowPipelineOptions\"},{\"namespace\":\"org.apache.beam.sdk.options.PipelineOptions\",\"key\":\"userAgent\",\"type\":\"STRING\",\"value\":\"Apache_Beam_SDK_for_Java/2.72.0(JRE_21_environment)\"},{\"namespace\":\"org.apache.beam.sdk.options.ApplicationNameOptions\",\"key\":\"appName\",\"type\":\"STRING\",\"value\":\"MyPubsubToGCSJob\"},{\"value\":\"[/my-apache-beam-dataflow-0.1-SNAPSHOT.jar]\",\"type\":\"STRING\",\"key\":\"filesToStage\",\"namespace\":\"org.apache.beam.sdk.options.FileStagingOptions\"},{\"value\":false,\"type\":\"BOOLEAN\",\"key\":\"usePublicIps\",\"namespace\":\"org.apache.beam.runners.dataflow.options.DataflowPipelineWorkerPoolOptions\"},{\"type\":\"STRING\",\"value\":\"gs://my-project-id-bartek-mypubsubtogcsjob/temp\",\"namespace\":\"org.apache.beam.sdk.options.PipelineOptions\",\"key\":\"tempLocation\"},{\"key\":\"messageDeduplicationEnabled\",\"namespace\":\"com.bawi.beam.dataflow.MyPubsubToGCSJob$MyPipelineOptions\",\"value\":true,\"type\":\"BOOLEAN\"},{\"namespace\":\"org.apache.beam.runners.dataflow.options.DataflowPipelineOptions\",\"key\":\"stagingLocation\",\"type\":\"STRING\",\"value\":\"gs://my-project-id-bartek-mypubsubtogcsjob/staging\"},{\"key\":\"pipelineUrl\",\"namespace\":\"org.apache.beam.runners.dataflow.options.DataflowPipelineOptions\",\"value\":\"gs://my-project-id-bartek-mypubsubtogcsjob/staging/pipeline-RoJrbwTwAlVHPgDqGalFjSi7LWoH4RgA1eX8kMJH-O8.pb\",\"type\":\"STRING\"},{\"value\":\"THROUGHPUT_BASED\",\"type\":\"STRING\",\"key\":\"autoscalingAlgorithm\",\"namespace\":\"org.apache.beam.runners.dataflow.options.DataflowPipelineWorkerPoolOptions\"},{\"namespace\":\"org.apache.beam.runners.dataflow.options.DataflowPipelineOptions\",\"key\":\"serviceAccount\",\"type\":\"STRING\",\"value\":\"my-service-account-name@my-project-id.iam.gserviceaccount.com\"},{\"namespace\":\"org.apache.beam.runners.dataflow.options.DataflowPipelineWorkerPoolOptions\",\"key\":\"numWorkers\",\"type\":\"INTEGER\",\"value\":1},{\"namespace\":\"com.bawi.beam.dataflow.MyPubsubToGCSJob$MyPipelineOptions\",\"key\":\"numShards\",\"type\":\"INTEGER\",\"value\":0},{\"key\":\"timestampAttribute\",\"namespace\":\"com.bawi.beam.dataflow.MyPubsubToGCSJob$MyPipelineOptions\",\"value\":\"et\",\"type\":\"STRING\"},{\"value\":60,\"type\":\"INTEGER\",\"key\":\"windowSecs\",\"namespace\":\"com.bawi.beam.dataflow.MyPubsubToGCSJob$MyPipelineOptions\"},{\"value\":true,\"type\":\"BOOLEAN\",\"key\":\"enableStreamingEngine\",\"namespace\":\"org.apache.beam.sdk.extensions.gcp.options.GcpOptions\"},{\"key\":\"runner\",\"value\":\"org.apache.beam.runners.dataflow.DataflowRunner\",\"shortValue\":\"DataflowRunner\",\"type\":\"JAVA_CLASS\",\"namespace\":\"org.apache.beam.sdk.options.PipelineOptions\"},{\"key\":\"experiments\",\"namespace\":\"org.apache.beam.sdk.options.ExperimentalOptions\",\"value\":\"[enable_streaming_engine, enable_windmill_service]\",\"type\":\"STRING\"},{\"type\":\"STRING\",\"value\":\"my-project-id\",\"namespace\":\"org.apache.beam.runners.dataflow.options.DataflowPipelineOptions\",\"key\":\"project\"},{\"type\":\"STRING\",\"value\":\"[enable_lineage=true]\",\"namespace\":\"org.apache.beam.runners.dataflow.options.DataflowPipelineOptions\",\"key\":\"dataflowServiceOptions\"},{\"namespace\":\"google.dataflow.v1beta3.TemplatesService\",\"key\":\"maxNumWorkers\",\"type\":\"INTEGER\",\"value\":2},{\"key\":\"serviceAccountEmail\",\"namespace\":\"google.dataflow.v1beta3.TemplatesService\",\"value\":\"my-service-account-name@my-project-id.iam.gserviceaccount.com\",\"type\":\"STRING\"},{\"namespace\":\"google.dataflow.v1beta3.TemplatesService\",\"key\":\"gcpTempLocation\",\"type\":\"STRING\",\"value\":\"gs://my-project-id-bartek-mypubsubtogcsjob/temp\"},{\"value\":\"t2d-standard-2\",\"type\":\"STRING\",\"key\":\"machineType\",\"namespace\":\"google.dataflow.v1beta3.TemplatesService\"},{\"type\":\"STRING\",\"value\":\"https://www.googleapis.com/compute/v1/projects/my-subnetwork-project-id/regions/us-central1/subnetworks/my-subnetwork-id\",\"namespace\":\"google.dataflow.v1beta3.TemplatesService\",\"key\":\"subnetwork\"},{\"value\":\"[\\\"disableStringSetMetrics\\\", \\\"disable_runner_v2\\\", \\\"enable_google_cloud_heap_sampling\\\", \\\"enable_google_cloud_profiler\\\", \\\"enable_stackdriver_agent_metrics\\\", \\\"enable_streaming_engine_resource_based_billing\\\", \\\"enable_streaming_engine\\\"]\",\"type\":\"STRING\",\"key\":\"additionalExperiments\",\"namespace\":\"google.dataflow.v1beta3.TemplatesService\"}]}",
+          "enable_oom_sampler": "true"
+        },
+        "autoscalingSettings": {
+          "algorithm": "AUTOSCALING_ALGORITHM_BASIC",
+          "maxNumWorkers": 2
+        },
+        "poolArgs": {},
+        "network": "default",
+        "workerHarnessContainerImage": "gcr.io/cloud-dataflow/v1beta3/beam-java21-streaming:2.72.0",
+        "subnetwork": "https://www.googleapis.com/compute/v1/projects/my-subnetwork-project-id/regions/us-central1/subnetworks/my-subnetwork-id",
+        "ipConfiguration": "WORKER_IP_PRIVATE"
+      }
+    ],
+    "userAgent": {
+      "name": "Apache Beam SDK for Java",
+      "legacy.environment.major.version": "8",
+      "support": {
+        "url": "https://github.com/apache/beam/releases",
+        "status": "SUPPORTED"
+      },
+      "os.name": "Linux",
+      "legacy.container.version": "2.72.0",
+      "version": "2.72.0",
+      "container.base_repository": "gcr.io/cloud-dataflow/v1beta3",
+      "os.version": "4.18.0-553.50.1.el8_10.x86_64",
+      "java.version": "21.0.7",
+      "os.arch": "amd64",
+      "fnapi.container.version": "2.72.0",
+      "java.vendor": "Red Hat, Inc.",
+      "fnapi.environment.major.version": "8"
+    },
+    "version": {
+      "job_type": "STREAMING",
+      "major": "8"
+    },
+    "dataset": "bigquery.googleapis.com/cloud_dataflow",
+    "sdkPipelineOptions": {
+      "revision": 7,
+      "options": {
+        "gcsUploadBufferSizeBytes": null,
+        "serviceAccountEmail": "my-service-account-name@my-project-id.iam.gserviceaccount.com",
+        "pathValidatorClass": "org.apache.beam.sdk.extensions.gcp.storage.GcsPathValidator",
+        "windowSecs": 60,
+        "maxNumWorkers": 2,
+        "gcsRewriteDataOpBatchLimit": null,
+        "zone": null,
+        "enableBucketReadMetricCounter": false,
+        "numWorkers": 1,
+        "numShards": 0,
+        "saveProfilesToGcs": null,
+        "filesToStage": [
+          "/my-apache-beam-dataflow-0.1-SNAPSHOT.jar"
+        ],
+        "tempLocation": "gs://my-project-id-bartek-mypubsubtogcsjob/temp",
+        "hotKeyLoggingEnabled": false,
+        "defaultEnvironmentConfig": null,
+        "workerMachineType": null,
+        "stagingLocation": "gs://my-project-id-bartek-mypubsubtogcsjob/staging",
+        "labels": null,
+        "saveHeapDumpsToGcsPath": "gs://my-project-id-bartek-mypubsubtogcsjob/oom",
+        "dumpHeapOnOOM": true,
+        "dataflowKmsKey": null,
+        "workerRegion": null,
+        "sdkHarnessContainerImageOverrides": null,
+        "credentialFactoryClass": "org.apache.beam.sdk.extensions.gcp.auth.GcpCredentialFactory",
+        "dataflowWorkerJar": null,
+        "streaming": true,
+        "updateCompatibilityVersion": null,
+        "maxBufferingDurationMilliSec": 0,
+        "experiments": [
+          "disable_runner_v2",
+          "enable_google_cloud_heap_sampling",
+          "enable_google_cloud_profiler",
+          "enable_stackdriver_agent_metrics",
+          "enable_streaming_engine_resource_based_billing",
+          "disableStringSetMetrics",
+          "enable_lineage=true",
+
+          "enable_streaming_engine",
+          "enable_windmill_service",
+          "use_dataflow_service_account_in_igm",
+          "enable_data_sampling_telemetry",
+          "enable_cmek_org_policy_check",
+          "enable_streaming_pubsub_io_stackdriver_metrics",
+          "use_workflow_job_manager_components_for_streaming_reload",
+          "enable_streaming_scaling",
+          "enable_compute_default_service_account_org_policy",
+          "use_retriable_jac_in_dm",
+          "enable_lightweight_streaming_update",
+          "use_ppm_for_windmill",
+          "use_e2_for_default_machine_type_worker_regions=africa-south1,asia-southeast3,europe-north2,europe-north3,europe-southwest1,europe-west10,europe-west12,europe-west15,europe-west8,europe-west9,me-central1,me-central2,me-west1,northamerica-south1,southamerica-west1,us-central6,us-east5,us-east7,us-south1,us-west8",
+          "enable_remote_image_ping",
+          "enable_streaming_service_billing",
+          "enable_managed_transforms",
+          "override_controller_service_account",
+          "enable_worker_memory_cloud_monitoring",
+          "use_workflow_job_manager_components_for_streaming",
+          "disable_prime_streaming_engine",
+          "enable_oom_sampler",
+          "ek_regions=",
+          "enable_containerd_runtime",
+          "enable_memory_sampler",
+          "noop_experiment_inside_date_threshold",
+          "unified_worker_enable_windmill_get_work_response_batching",
+          "enable_secure_boot",
+          "enable_throttled_based_rescaling",
+          "enable_async_job_creation",
+          "enable_worker_disk_cloud_monitoring",
+          "enable_lightweight_streaming_update_worker_utilization_hint",
+          "use_multi_hop_delegation",
+          "enable_health_checker_startup_timeout",
+          "enable_recommendations",
+          "use_timer_backlog_in_streaming_autoscaling",
+          "primeflex_slow_start_pct=5",
+          "enable_billing_v_1_5",
+          "use_templates_regional_bucket",
+          "use_gce_scoped_endpoints",
+          "disable_baggins_exp",
+          "autoscale_windmill_service_by_default",
+          "streaming_engine_isolation_mode=PER_JOB",
+          "primeflex_slow_start_seconds=3600",
+          "enable_cloud_permissions_checking",
+          "enable_always_on_exception_sampling",
+          "enable_worker_cloud_monitoring_exporter",
+          "use_job_admission_controller",
+          "enable_private_ipv6_google_access",
+          "enable_streaming_java_vmr"
+        ],
+        "project": "my-project-id",
+        "gcpOauthScopes": [
+          "https://www.googleapis.com/auth/cloud-platform",
+          "https://www.googleapis.com/auth/devstorage.full_control",
+          "https://www.googleapis.com/auth/userinfo.email",
+          "https://www.googleapis.com/auth/datastore",
+          "https://www.googleapis.com/auth/bigquery",
+          "https://www.googleapis.com/auth/bigquery.insertdata",
+          "https://www.googleapis.com/auth/pubsub"
+        ],
+        "timestampAttribute": "et",
+        "network": null,
+        "gcsCustomAuditEntries": null,
+        "diskSizeGb": 200,
+        "customEventTimeTimestampAttributeEnabled": true,
+        "optionsId": 0,
+        "gbek": null,
+        "apiRootUrl": "https://dataflow.googleapis.com/",
+        "bigQueryProject": null,
+        "gcpTempLocation": "gs://my-project-id-bartek-mypubsubtogcsjob/temp",
+        "tableSpec": null,
+        "messageDeduplicationEnabled": true,
+        "gcsHttpRequestReadTimeout": null,
+        "userAgent": "Apache_Beam_SDK_for_Java/2.72.0(JRE_21_environment)",
+        "gcsHttpRequestWriteTimeout": null,
+        "enableBucketWriteMetricCounter": false,
+        "usePublicIps": false,
+        "output": null,
+        "impersonateServiceAccount": null,
+        "stableUniqueNames": "WARNING",
+        "environmentOptions": null,
+        "subscription": null,
+        "resourceHints": [],
+        "workerHarnessContainerImage": null,
+        "gcsEndpoint": null,
+        "runner": "org.apache.beam.runners.dataflow.DataflowRunner",
+        "pipelineUrl": "gs://my-project-id-bartek-mypubsubtogcsjob/staging/pipeline-RoJrbwTwAlVHPgDqGalFjSi7LWoH4RgA1eX8kMJH-O8.pb",
+        "numberOfWorkerHarnessThreads": 0,
+        "gcsPerformanceMetrics": false,
+        "jobName": "mypubsubtogcsjob-root-0407105130-145b9b9",
+        "googleApiTrace": null,
+        "serviceAccount": "my-service-account-name@my-project-id.iam.gserviceaccount.com",
+        "templateLocation": "gs://my-project-id-bartek-mypubsubtogcsjob/templates/bartek-mypubsubtogcsjob-template",
+        "subnetwork": "https://www.googleapis.com/compute/v1/projects/my-subnetwork-project-id/regions/us-central1/subnetworks/my-subnetwork-id",
+        "machineType": "t2d-standard-2",
+        "stagerClass": "org.apache.beam.runners.dataflow.util.GcsStager",
+        "enableStreamingEngine": true,
+        "dataflowServiceOptions": [
+          "enable_lineage=true"
+        ],
+        "autoscalingAlgorithm": "THROUGHPUT_BASED",
+        "dataflowEndpoint": "",
+        "region": "us-central1",
+        "transformsToOverride": [],
+        "desiredNumUnboundedSourceSplits": 0,
+        "overrideWindmillBinary": null,
+        "appName": "MyPubsubToGCSJob",
+        "defaultEnvironmentType": null,
+        "sdkContainerImage": null,
+        "temp": null
+      },
+      "display_data": [
+        {
+          "value": "",
+          "type": "STRING",
+          "namespace": "org.apache.beam.runners.dataflow.options.DataflowPipelineWorkerPoolOptions",
+          "key": "sdkContainerImage"
+        },
+        {
+          "value": "mypubsubtogcsjob-root-0407105130-145b9b9",
+          "type": "STRING",
+          "namespace": "org.apache.beam.sdk.options.PipelineOptions",
+          "key": "jobName"
+        },
+        {
+          "key": "diskSizeGb",
+          "namespace": "org.apache.beam.runners.dataflow.options.DataflowPipelineWorkerPoolOptions",
+          "value": 200,
+          "type": "INTEGER"
+        },
+        {
+          "value": "us-central1",
+          "type": "STRING",
+          "key": "region",
+          "namespace": "org.apache.beam.runners.dataflow.options.DataflowPipelineOptions"
+        },
+        {
+          "key": "customEventTimeTimestampAttributeEnabled",
+          "namespace": "com.bawi.beam.dataflow.MyPubsubToGCSJob$MyPipelineOptions",
+          "value": true,
+          "type": "BOOLEAN"
+        },
+        {
+          "namespace": "org.apache.beam.runners.dataflow.options.DataflowPipelineOptions",
+          "key": "templateLocation",
+          "value": "gs://my-project-id-bartek-mypubsubtogcsjob/templates/bartek-mypubsubtogcsjob-template",
+          "type": "STRING"
+        },
+        {
+          "key": "userAgent",
+          "namespace": "org.apache.beam.sdk.options.PipelineOptions",
+          "value": "Apache_Beam_SDK_for_Java/2.72.0(JRE_21_environment)",
+          "type": "STRING"
+        },
+        {
+          "value": "MyPubsubToGCSJob",
+          "type": "STRING",
+          "namespace": "org.apache.beam.sdk.options.ApplicationNameOptions",
+          "key": "appName"
+        },
+        {
+          "namespace": "org.apache.beam.sdk.options.FileStagingOptions",
+          "key": "filesToStage",
+          "value": "[/my-apache-beam-dataflow-0.1-SNAPSHOT.jar]",
+          "type": "STRING"
+        },
+        {
+          "namespace": "org.apache.beam.runners.dataflow.options.DataflowPipelineWorkerPoolOptions",
+          "key": "usePublicIps",
+          "value": false,
+          "type": "BOOLEAN"
+        },
+        {
+          "key": "tempLocation",
+          "namespace": "org.apache.beam.sdk.options.PipelineOptions",
+          "value": "gs://my-project-id-bartek-mypubsubtogcsjob/temp",
+          "type": "STRING"
+        },
+        {
+          "key": "messageDeduplicationEnabled",
+          "namespace": "com.bawi.beam.dataflow.MyPubsubToGCSJob$MyPipelineOptions",
+          "value": true,
+          "type": "BOOLEAN"
+        },
+        {
+          "namespace": "org.apache.beam.runners.dataflow.options.DataflowPipelineOptions",
+          "key": "stagingLocation",
+          "value": "gs://my-project-id-bartek-mypubsubtogcsjob/staging",
+          "type": "STRING"
+        },
+        {
+          "value": "gs://my-project-id-bartek-mypubsubtogcsjob/staging/pipeline-RoJrbwTwAlVHPgDqGalFjSi7LWoH4RgA1eX8kMJH-O8.pb",
+          "type": "STRING",
+          "namespace": "org.apache.beam.runners.dataflow.options.DataflowPipelineOptions",
+          "key": "pipelineUrl"
+        },
+        {
+          "value": "THROUGHPUT_BASED",
+          "type": "STRING",
+          "namespace": "org.apache.beam.runners.dataflow.options.DataflowPipelineWorkerPoolOptions",
+          "key": "autoscalingAlgorithm"
+        },
+        {
+          "key": "serviceAccount",
+          "namespace": "org.apache.beam.runners.dataflow.options.DataflowPipelineOptions",
+          "value": "my-service-account-name@my-project-id.iam.gserviceaccount.com",
+          "type": "STRING"
+        },
+        {
+          "value": 1,
+          "type": "INTEGER",
+          "key": "numWorkers",
+          "namespace": "org.apache.beam.runners.dataflow.options.DataflowPipelineWorkerPoolOptions"
+        },
+        {
+          "value": 0,
+          "type": "INTEGER",
+          "key": "numShards",
+          "namespace": "com.bawi.beam.dataflow.MyPubsubToGCSJob$MyPipelineOptions"
+        },
+        {
+          "value": "et",
+          "type": "STRING",
+          "key": "timestampAttribute",
+          "namespace": "com.bawi.beam.dataflow.MyPubsubToGCSJob$MyPipelineOptions"
+        },
+        {
+          "value": 60,
+          "type": "INTEGER",
+          "namespace": "com.bawi.beam.dataflow.MyPubsubToGCSJob$MyPipelineOptions",
+          "key": "windowSecs"
+        },
+        {
+          "namespace": "org.apache.beam.sdk.extensions.gcp.options.GcpOptions",
+          "key": "enableStreamingEngine",
+          "value": true,
+          "type": "BOOLEAN"
+        },
+        {
+          "shortValue": "DataflowRunner",
+          "type": "JAVA_CLASS",
+          "key": "runner",
+          "namespace": "org.apache.beam.sdk.options.PipelineOptions",
+          "value": "org.apache.beam.runners.dataflow.DataflowRunner"
+        },
+        {
+          "key": "experiments",
+          "namespace": "org.apache.beam.sdk.options.ExperimentalOptions",
+          "value": "[enable_streaming_engine, enable_windmill_service]",
+          "type": "STRING"
+        },
+        {
+          "key": "project",
+          "namespace": "org.apache.beam.runners.dataflow.options.DataflowPipelineOptions",
+          "value": "my-project-id",
+          "type": "STRING"
+        },
+        {
+          "namespace": "org.apache.beam.runners.dataflow.options.DataflowPipelineOptions",
+          "key": "dataflowServiceOptions",
+          "value": "[enable_lineage=true]",
+          "type": "STRING"
+        },
+        {
+          "value": 2,
+          "type": "INTEGER",
+          "key": "maxNumWorkers",
+          "namespace": "google.dataflow.v1beta3.TemplatesService"
+        },
+        {
+          "value": "my-service-account-name@my-project-id.iam.gserviceaccount.com",
+          "type": "STRING",
+          "key": "serviceAccountEmail",
+          "namespace": "google.dataflow.v1beta3.TemplatesService"
+        },
+        {
+          "value": "gs://my-project-id-bartek-mypubsubtogcsjob/temp",
+          "type": "STRING",
+          "key": "gcpTempLocation",
+          "namespace": "google.dataflow.v1beta3.TemplatesService"
+        },
+        {
+          "value": "t2d-standard-2",
+          "type": "STRING",
+          "namespace": "google.dataflow.v1beta3.TemplatesService",
+          "key": "machineType"
+        },
+        {
+          "key": "subnetwork",
+          "namespace": "google.dataflow.v1beta3.TemplatesService",
+          "value": "https://www.googleapis.com/compute/v1/projects/my-network-project-id/regions/us-central1/subnetworks/my-subnetwork-id",
+          "type": "STRING"
+        },
+        {
+          "namespace": "google.dataflow.v1beta3.TemplatesService",
+          "key": "additionalExperiments",
+          "value": "[\"disableStringSetMetrics\", \"disable_runner_v2\", \"enable_google_cloud_heap_sampling\", \"enable_google_cloud_profiler\", \"enable_stackdriver_agent_metrics\", \"enable_streaming_engine_resource_based_billing\", \"enable_streaming_engine\"]",
+          "type": "STRING"
+        }
+      ]
+    },
+    "serviceAccountEmail": "my-service-account-name@my-project-id.iam.gserviceaccount.com",
+    "useStreamingEngineResourceBasedBilling": true
+  },
+  "currentState": "JOB_STATE_DRAINED",
+  "currentStateTime": "2026-04-07T11:08:14.048215Z",
+  "createTime": "2026-04-07T10:52:11.278529Z",
+  "labels": {
+    "goog-terraform-provisioned": "true",
+    "additional_experiments4": "disable_runner_v2",
+    "number_of_worker_harness_threads": "0",
+    "additional_experiments5": "disablestringsetmetrics",
+    "enable_streaming_engine": "true",
+    "additional_experiments1": "enable_google_cloud_profiler",
+    "owner": "bartek",
+    "additional_experiments3": "enable_streaming_engine_resource_based_billing",
+    "dataflow_template": "classic",
+    "additional_experiments2": "enable_google_cloud_heap_sampling",
+    "dump_heap_on_oom": "true",
+    "additional_experiments0": "enable_stackdriver_agent_metrics"
+  },
+  "location": "us-central1",
+  "jobMetadata": {
+    "sdkVersion": {
+      "version": "2.72.0",
+      "versionDisplayName": "Apache Beam SDK for Java",
+      "sdkSupportStatus": "SUPPORTED"
+    }
+  },
+  "startTime": "2026-04-07T10:52:11.278529Z",
+  "runtimeUpdatableParams": {
+    "maxNumWorkers": 2,
+    "minNumWorkers": 1,
+    "workerUtilizationHint": 0.8
+  },
+  "serviceResources": {
+    "zones": [
+      "us-central1-c"
+    ]
+  }
+}
