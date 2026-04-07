@@ -37,3 +37,11 @@ Disabling Intellij Inspections:
 1. Probable Bugs -> Nullability problems -> @NotNull/@Nullable problems -> uncheck Report non-annotated parameters or methods overriding @NotNull
 
 2. Declaration redundancy -> Unused declaration -> Configure Code Patterns -> + check with subclasses, class: org.apache.beam.options.PipelineOptions, method: set*
+
+# Get job details:
+
+curl -X GET \
+ -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+ -H "Content-Type: application/json; charset=utf-8" \
+"https://dataflow.googleapis.com/v1b3/projects/my-project-id/locations/my-region/jobs/my-job-id?view=JOB_VIEW_ALL"
+
