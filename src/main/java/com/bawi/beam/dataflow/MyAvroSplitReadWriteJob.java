@@ -93,7 +93,7 @@ public class MyAvroSplitReadWriteJob {
                         .via(i -> new MyData(
                                 UUID.randomUUID().toString(),
                                 System.currentTimeMillis(),
-                                new Random().nextInt(100), RandomStringUtils.secure().nextAlphanumeric((1000)))
+                                ThreadLocalRandom.current().nextInt(100), RandomStringUtils.secure().nextAlphanumeric((1000)))
                         )
                 );
 
