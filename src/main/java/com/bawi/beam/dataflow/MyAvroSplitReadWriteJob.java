@@ -40,9 +40,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Serializable;
 import java.math.BigInteger;
-import java.util.Objects;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -120,6 +119,7 @@ public class MyAvroSplitReadWriteJob {
         boolean useDataflowTemplateInConsumerPipeline = false;
         Set<String> additionalArgs = new HashSet<>();
         additionalArgs.add("--jobName=" + JOB_NAME + "-template-input-in-runtime-t2d8");
+        //noinspection ConstantValue
         if (useDataflowTemplateInConsumerPipeline) {
             additionalArgs.add("--templateLocation=gs://" + TEMPLATE_LOCATION);
         } else {
