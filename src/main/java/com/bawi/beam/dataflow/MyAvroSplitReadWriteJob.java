@@ -254,7 +254,7 @@ public class MyAvroSplitReadWriteJob {
     private static class MyDataToGenericRecordFn extends DoFn<MyData, GenericRecord> {
         private final Distribution elapsedTimeDistribution = Metrics.distribution(MyDataToGenericRecordFn.class.getSimpleName(), "my-elapsed-time-distribution");
         private final Counter writeCounter = Metrics.counter(MyDataToGenericRecordFn.class.getSimpleName(), "my-write-counter");
-        private final Counter bundleCounter = Metrics.counter(MyDataToGenericRecordFn.class.getSimpleName(), "my-write-counter");
+        private final Counter bundleCounter = Metrics.counter(MyDataToGenericRecordFn.class.getSimpleName(), "my-bundle-counter");
         private final String schemaString;
         private Schema schema;
 
@@ -330,7 +330,7 @@ public class MyAvroSplitReadWriteJob {
     }
 
     private static class MyDataToNumberFn extends DoFn<MyData, Integer> {
-        public static final String MY_DATA_TO_NUMBER_FN_CLASS = MyDataToGenericRecordFn.class.getSimpleName();
+        public static final String MY_DATA_TO_NUMBER_FN_CLASS = MyDataToNumberFn.class.getSimpleName();
         private final Distribution elapsedTimeDistribution = Metrics.distribution(MY_DATA_TO_NUMBER_FN_CLASS, "my-elapsed-time-distribution");
         private final Counter writeCounter = Metrics.counter(MY_DATA_TO_NUMBER_FN_CLASS, "my-write-counter");
         private final Counter bundleCounter = Metrics.counter(MY_DATA_TO_NUMBER_FN_CLASS, "my-write-counter");
