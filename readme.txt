@@ -45,3 +45,5 @@ curl -X GET \
  -H "Content-Type: application/json; charset=utf-8" \
 "https://dataflow.googleapis.com/v1b3/projects/my-project-id/locations/my-region/jobs/my-job-id?view=JOB_VIEW_ALL"
 
+# VS Code keybindings
+me@MacBook:~$ cp ~/Library/Application\ Support/Code/User/keybindings.json ~/dev/my-apache-beam-dataflow/keybindings.json 
