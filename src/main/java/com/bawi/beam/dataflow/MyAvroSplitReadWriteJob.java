@@ -117,25 +117,32 @@ public class MyAvroSplitReadWriteJob {
 
         generatorPipeline.run().waitUntilFinish();
 
+        boolean useDataflowTemplateInConsumerPipeline = false;
+        Set<String> additionalArgs = new HashSet<>();
+        additionalArgs.add("--jobName=" + JOB_NAME + "-template-input-in-runtime-t2d8");
+        if (useDataflowTemplateInConsumerPipeline) {
+            additionalArgs.add("--templateLocation=gs://" + TEMPLATE_LOCATION);
+        } else {
+            additionalArgs.addAll(
+                    Set.of("--numWorkers=1"
+                    , "--maxNumWorkers=1"
+                    , "--workerMachineType=t2d-standard-8" // same number of bundles when using t2d-standard-8
+                    , "--avroInput=gs://" + MYDATA_SNAPPY_AVRO
+                    , "--avroOutput=gs://" + MYDATA2_SNAPPY_AVRO
+                    , "--csvInput=gs://" + MYDATA_CSV_GZ
+                    , "--csvOutput=gs://" + MYDATA2_CSV_GZ
+                    , "--tempDirectory=gs://" + TEMP_DIRECTORY_PATH
+                    , "--numShards=1"
+//                        ,"--numShards=8"
+            ));
+        }
 
-        ///////////////////////////
+
+            ///////////////////////////
         String[] consumerArgs =
                 isDataflowRunnerOnClasspath() ?
-                    updateArgsWithDataflowRunner(args
-                        , "--jobName=" + JOB_NAME + "-template-input-in-runtime-t2d8"
-//                        ,"--numWorkers=1"
-//                        ,"--maxNumWorkers=1"
-//                        ,"--workerMachineType=t2d-standard-8" // same number of bundles when using t2d-standard-8
-                        , "--templateLocation=gs://" + TEMPLATE_LOCATION
-                        // loaded to the template
-//                        ,"--avroInput=gs://" + MYDATA_SNAPPY_AVRO
-//                        ,"--avroOutput=gs://" + MYDATA2_SNAPPY_AVRO
-//                        ,"--csvInput=gs://" + MYDATA_CSV_GZ
-//                        ,"--csvOutput=gs://" + MYDATA2_CSV_GZ
-//                        ,"--tempDirectory=gs://" + TEMP_DIRECTORY_PATH
-                        ,"--numShards=1"
-//                        ,"--numShards=8"
-                    ) :
+                    updateArgsWithDataflowRunner(args, additionalArgs.toArray(new String[0]))
+                        :
                     updateArgs(args
                             ,"--avroInput=target/" + MYDATA_SNAPPY_AVRO
                             ,"--avroOutput=target/" + MYDATA2_SNAPPY_AVRO
