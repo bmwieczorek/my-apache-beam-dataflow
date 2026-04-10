@@ -50,3 +50,34 @@ resource "google_dataflow_job" "job" {
   skip_wait_on_job_termination = var.skip_wait_on_job_termination
   depends_on = [var.module_depends_on]
 }
+
+# Extra destroy-time cleanup is implemented via null_resource because on_delete="drain"
+# on google_dataflow_job only targets the Terraform-tracked job instance.
+# During replacement updates, Dataflow can create a new job while the old job ends in
+# JOB_STATE_UPDATED and may remain as a same-name remnant.
+# This destroy provisioner runs the script to find and drain/cancel those remnant jobs.
+# Safety note: this intentionally drains/cancels all active jobs with this name,
+# which is not always desired in production-like environments; here it is for testing only.
+resource "null_resource" "dataflow_job_destroy_cleanup" {
+  count = var.dataflow_classic_template_enabled ? 1 : 0
+
+  triggers = {
+    project  = var.project
+    region   = var.region
+    job_name = var.job_name
+  }
+
+  provisioner "local-exec" {
+    when       = destroy
+    on_failure = continue
+    interpreter = ["/bin/bash", "-c"]
+    command = <<-EOT
+      /bin/bash "${path.module}/dataflow-cleanup-destroy.sh" \
+        --project "${self.triggers.project}" \
+        --region "${self.triggers.region}" \
+        --job-name "${self.triggers.job_name}"
+    EOT
+  }
+
+  depends_on = [google_dataflow_job.job]
+}
