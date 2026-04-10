@@ -60,7 +60,7 @@ resource "google_compute_instance" "dataflow_classic_template_compute" {
 #  comment hardcoding table_spec in template as passed dynamically at template execution
 #     "table_spec" = var.table_spec
     "query_temp_dataset" = var.query_temp_dataset
-    "wait_secs_before_delete" = 300
+    "wait_secs_before_delete" = 360
   }
   labels = {
     owner   = var.owner
