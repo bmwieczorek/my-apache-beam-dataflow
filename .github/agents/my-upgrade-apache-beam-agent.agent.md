@@ -1,6 +1,6 @@
 ---
 name: my-upgrade-apache-beam-agent
-description: Upgrade Apache Beam dependencies, Maven plugins, compile, and run tests. Use when: upgrading Beam, updating Maven dependencies, running full upgrade workflow.
+description: "Upgrade Apache Beam dependencies, Maven plugins, compile, and run tests. Use when upgrading Beam, updating Maven dependencies, running full upgrade workflow."
 
 # IDE cross compatibility warnings - no common naming for tools
 # VS Code available tools 'read', 'edit', 'search', 'execute', 'web', 'todo'
