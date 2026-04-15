@@ -47,3 +47,9 @@ curl -X GET \
 
 # VS Code keybindings
 me@MacBook:~$ cp ~/Library/Application\ Support/Code/User/keybindings.json ~/dev/my-apache-beam-dataflow/keybindings.json 
+
+# VS Code Java Extension Settings
+File: .settings/org.eclipse.jdt.core.prefs
+
+# VS Code Java Extension Settings not to complain about @SuppressWarnings("unused")
+org.eclipse.jdt.core.compiler.problem.unusedWarningToken=ignore
