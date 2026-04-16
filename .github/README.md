@@ -118,3 +118,62 @@ Only `git add pom.xml` — never `git add .`. Other working tree files (skills, 
 
 ### Skill file location
 Skills must be at `.github/skills/<name>/skill.md` — not nested deeper. Both VS Code and IntelliJ look for this exact structure.
+
+## Running from Copilot CLI
+
+Use the Copilot CLI to run the agent in fully autonomous mode with a prompt file:
+
+```bash
+copilot --agent=my-upgrade-apache-beam-agent \
+  --autopilot \
+  --allow-tool='shell(mvn:*)' \
+  --allow-tool='shell(git:*)' \
+  --allow-tool='shell(curl)' \
+  --allow-tool='shell(grep)' \
+  --allow-tool='shell(sed)' \
+  --allow-tool='shell(awk)' \
+  --allow-tool='shell(tail)' \
+  --allow-tool='shell(head)' \
+  --allow-tool='shell(echo)' \
+  --allow-tool='shell(tee)' \
+  --allow-tool='shell(cat)' \
+  --allow-tool='shell(find)' \
+  --allow-tool='write' \
+  --allow-url=repo1.maven.org \
+  --allow-url=raw.githubusercontent.com \
+  --max-autopilot-continues 100 \
+  --model=claude-sonnet-4.6 \
+  --effort=high \
+  --add-dir ~/.copilot \
+  --add-dir ~/dev/my-apache-beam-dataflow \
+  --add-dir /tmp \
+  -p "$(cat .github/prompts/my-upgrade-beam-no-itests-rca-fix-flaky-tests.prompt.md)"
+```
+
+### CLI flags explained
+
+| Flag | Purpose |
+|------|---------|
+| `--agent` | Selects the orchestrator agent |
+| `--autopilot` | Non-interactive — no user confirmations |
+| `--allow-tool='shell(cmd:*)'` | Pre-approve shell commands (required in autopilot) |
+| `--allow-tool='write'` | Allow file writes |
+| `--allow-url` | Allow HTTP fetches to Maven Central and GitHub raw content |
+| `--max-autopilot-continues` | Max autonomous steps before stopping |
+| `--model` | LLM model to use |
+| `--effort` | Reasoning effort level (`low`, `medium`, `high`) |
+| `--add-dir` | Additional directories the agent can access |
+| `-p` | Prompt text (use `$(cat ...)` to load from file) |
+
+### Model options
+
+| Model | Best for |
+|-------|----------|
+| `claude-sonnet-4.6` + `--effort=high` | Fast, cost-effective — good default for upgrades |
+| `claude-opus-4.6` | More capable reasoning — use for complex flaky test fixes |
+
+### Notes
+
+- The `-p` flag requires a literal string. The `/prompt` syntax only works inside the IDE chat, not in the CLI. Use `$(cat .github/prompts/<name>.prompt.md)` to load a prompt file.
+- Every shell command the agent might run must be in `--allow-tool`. If you see `Permission denied and could not request permission from user`, add the missing command (e.g. `--allow-tool='shell(xargs:*)'`).
+
